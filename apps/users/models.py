@@ -15,7 +15,7 @@ class UserProfile(models.Model):
     user = models.OneToOneField(User, on_delete=models.CASCADE, related_name='profile')
     department = models.CharField(max_length=50, choices=DEPARTMENT_CHOICES, default='OTHER')
     phone = models.CharField(max_length=15, blank=True)
-    avatar = models.ImageField(upload_to='avatars/', null=True, blank=True)
+    # avatar = models.ImageField(upload_to='avatars/', null=True, blank=True)  # Requires Pillow
     bio = models.TextField(blank=True)
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
