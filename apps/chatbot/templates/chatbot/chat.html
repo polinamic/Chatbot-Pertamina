@@ -1,0 +1,33 @@
+{% extends "base.html" %}
+{% block theme %}dark{% endblock %}
+
+{% block content %}
+<div class="chat-layout">
+    
+    <aside class="sidebar">
+        <h3>Percakapan</h3>
+        <ul>
+            {% for convo in conversations %}
+                <li>{{ convo.title }}</li>
+            {% endfor %}
+        </ul>
+    </aside>
+
+    <section class="chat-area">
+        <div class="messages">
+            {% for msg in messages %}
+                <div class="message {{ msg.sender_type }}">
+                    {{ msg.content }}
+                </div>
+            {% endfor %}
+        </div>
+
+        <form method="POST" class="chat-input">
+            {% csrf_token %}
+            <input type="text" name="message" placeholder="Kirim pesan...">
+            <button type="submit">→</button>
+        </form>
+    </section>
+
+</div>
+{% endblock %}

@@ -1,12 +1,8 @@
-# Byte-compiled / optimized / DLL files
+# === Python Essentials ===
 __pycache__/
 *.py[cod]
 *$py.class
-
-# C extensions
 *.so
-
-# Distribution / packaging
 .Python
 build/
 develop-eggs/
@@ -27,18 +23,40 @@ share/python-wheels/
 *.egg
 MANIFEST
 
-# PyInstaller
-*.manifest
-*.spec
-
-# Virtual environments
+# === Virtual Environments (Sangat Penting!) ===
+# Menghindari folder library masuk ke GitHub
+.venv/
 venv/
 env/
 ENV/
 env.bak/
 venv.bak/
+bin/
+include/
+share/
 
-# IDEs
+# === Chatbot & AI Specific (Vector Databases / Cache) ===
+# Jika Anda menggunakan LangChain, ChromaDB, atau FAISS
+.chroma/
+faiss_index/
+pickle_db/
+*.db
+*.sqlite3
+*.sqlite3-journal
+index/
+vector_store/
+
+# === Environment & Secrets (Keamanan Data!) ===
+# Jangan pernah push file ini karena berisi API Key (OpenAI, dll)
+.env
+.env.local
+.env.*.local
+.flaskenv
+secrets.json
+auth.json
+
+# === IDE & Editors ===
+# Menghindari conflict setting antar developer
 .vscode/
 .idea/
 *.swp
@@ -47,29 +65,41 @@ venv.bak/
 .DS_Store
 *.sublime-project
 *.sublime-workspace
+.project
+.pydevproject
+.settings/
 
-# Environment
-.env
-.env.local
-.env.*.local
-
-# Django
+# === Data & Logs ===
+# Hindari push file dokumen PDF atau Log yang berat
+data/
+inputs/
+outputs/
+storage/
 *.log
-local_settings.py
-db.sqlite3
-db.sqlite3-journal
-/media
-/staticfiles
+*.pdf
+*.csv
+*.xlsx
+*.jsonl
 
-# IDE
+# === Testing & Quality ===
+.coverage
+htmlcov/
+.tox/
+.nosetcripts
+nosetests.xml
+coverage.xml
+*.cover
+.hypothesis/
+.pytest_cache/
 .mypy_cache/
 .dmypy.json
 dmypy.json
 .pyre/
 
-# Testing
-.coverage
-htmlcov/
+# === Jupyter Notebook ===
+.ipynb_checkpoints
+*/.ipynb_checkpoints/*
 
-# OS
+# === System Files ===
 Thumbs.db
+desktop.ini
