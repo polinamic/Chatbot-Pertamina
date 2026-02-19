@@ -4,7 +4,13 @@ from rest_framework.response import Response
 from rest_framework.permissions import IsAuthenticated
 from .models import Conversation, Message
 from .serializers import ConversationSerializer, ConversationListSerializer, MessageSerializer
+from django.shortcuts import render
 
+def chat_view(request):
+    return render(request, 'chatbot/chat.html', {
+        "conversations": [],
+        "messages": []
+    })
 
 class ConversationViewSet(viewsets.ModelViewSet):
     """

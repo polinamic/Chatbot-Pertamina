@@ -1,0 +1,250 @@
+/* ===================================
+   GLOBAL
+=================================== */
+
+* {
+    box-sizing: border-box;
+}
+
+html, body {
+    height: 100%;
+}
+
+body {
+    font-family: "Inter", sans-serif;
+    transition: background 0.3s ease, color 0.3s ease;
+}
+
+/* ===================================
+   THEME VARIABLES
+=================================== */
+
+body.dark {
+    --bg: #000000;
+    --text: #ffffff;
+    --secondary-text: #cfcfcf;
+    --card: #1a1a1a;
+    --input: #2b2b2b;
+    --bubble-user: #3a3a3a;
+    --bubble-ai: #121212;
+    --primary: #4f7f73;
+}
+
+body.light {
+    --bg: #f8f9fa;
+    --text: #111111;
+    --secondary-text: #555555;
+    --card: #ffffff;
+    --input: #e9ecef;
+    --bubble-user: #d6d6d6;
+    --bubble-ai: #ffffff;
+    --primary: #4f7f73;
+}
+
+/* ===================================
+   BASE
+=================================== */
+
+body {
+    background: var(--bg);
+    color: var(--text);
+}
+
+.card,
+.sidebar {
+    background: var(--card);
+    border: none;
+}
+
+.text-muted {
+    color: var(--secondary-text) !important;
+}
+
+/* ===================================
+   NAVBAR
+=================================== */
+
+.navbar {
+    background: var(--card);
+    height: 70px;
+}
+
+#logo-pertamina {
+    height: 40px;
+}
+
+/* ===================================
+   MAIN LAYOUT
+=================================== */
+
+#app-layout {
+    height: calc(100vh - 70px);
+    overflow: hidden;
+}
+
+/* ===================================
+   SIDEBAR
+=================================== */
+
+.sidebar {
+    width: 280px;
+    padding: 20px;
+    overflow-y: auto;
+    transition: all 0.3s ease;
+    border-right: 1px solid var(--input);
+}
+
+/* Collapsed state */
+.sidebar.collapsed {
+    margin-left: -280px;
+}
+
+/* Sidebar Items */
+
+.sidebar .list-group-item {
+    background: transparent;
+    border: none;
+    color: var(--text);
+    border-radius: 8px;
+    transition: background 0.2s ease;
+}
+
+.sidebar .list-group-item:hover {
+    background: var(--input);
+}
+
+/* ===================================
+   CHAT AREA
+=================================== */
+
+.chat-area {
+    background: var(--bg);
+    display: flex;
+    flex-direction: column;
+}
+
+/* ===================================
+   MESSAGES
+=================================== */
+
+.messages {
+    flex: 1;
+    overflow-y: auto;
+    padding-right: 10px;
+}
+
+/* Scrollbar Styling */
+.messages::-webkit-scrollbar {
+    width: 6px;
+}
+
+.messages::-webkit-scrollbar-thumb {
+    background: var(--input);
+    border-radius: 10px;
+}
+
+/* Message Bubble */
+
+.message {
+    max-width: 70%;
+    padding: 14px 18px;
+    border-radius: 18px;
+    margin-bottom: 14px;
+    line-height: 1.6;
+    word-wrap: break-word;
+}
+
+.message.user {
+    margin-left: auto;
+    background: var(--bubble-user);
+}
+
+.message.assistant {
+    background: var(--bubble-ai);
+}
+
+/* ===================================
+   CHAT INPUT
+=================================== */
+
+.chat-input {
+    background: var(--card);
+}
+
+.chat-input .form-control {
+    background: var(--input);
+    border: none;
+    color: var(--text);
+}
+
+.chat-input .form-control:focus {
+    box-shadow: none;
+    border: none;
+}
+
+.chat-input .btn {
+    background: var(--primary);
+    border: none;
+    border-radius: 50%;
+    width: 45px;
+    height: 45px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.chat-input .btn:hover {
+    opacity: 0.9;
+}
+
+/* ===================================
+   SEARCH BAR
+=================================== */
+
+.search-bar {
+    background: var(--input);
+    border: none;
+    color: var(--text);
+}
+
+.search-bar:focus {
+    box-shadow: none;
+    border: none;
+}
+
+/* ===================================
+   AUTH (LOGIN / SIGNUP)
+=================================== */
+
+.auth-container {
+    max-width: 420px;
+}
+
+.auth-container .form-control {
+    background: var(--input);
+    color: var(--text);
+    border: none;
+}
+
+.auth-container .btn-primary {
+    background: var(--primary);
+    border: none;
+}
+
+/* ===================================
+   RESPONSIVE
+=================================== */
+
+@media (max-width: 992px) {
+    .sidebar {
+        position: absolute;
+        z-index: 1000;
+        height: 100%;
+        left: 0;
+        top: 70px;
+    }
+
+    .sidebar.collapsed {
+        margin-left: -280px;
+    }
+}
