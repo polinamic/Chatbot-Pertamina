@@ -65,7 +65,7 @@ class Migration(migrations.Migration):
                     ),
                 ),
                 ("content", models.TextField()),
-                ("sources", models.JSONField(blank=True, null=True)),
+                ("sources", models.TextField(blank=True, null=True, default="[]")),
                 ("created_at", models.DateTimeField(auto_now_add=True)),
                 (
                     "conversation",

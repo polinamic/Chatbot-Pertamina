@@ -1,0 +1,109 @@
+{% extends 'dashboard/base_admin.html' %}
+{% load static %}
+
+{% block title %}Users Management - Admin{% endblock %}
+
+{% block admin_content %}
+<div class="admin-header">
+    <h1>Users Management</h1>
+    <p>Manage system users and their permissions.</p>
+</div>
+
+<!-- Filters -->
+<div class="content-card" style="margin-bottom: 1.5rem;">
+    <div class="content-card-body">
+        <div style="display: flex; gap: 1rem; flex-wrap: wrap; align-items: center;">
+            <form method="get" style="display: flex; gap: 0.5rem;">
+                <select name="role" style="padding: 0.5rem 0.75rem; border: 1px solid var(--border-light); border-radius: 0.375rem;">
+                    <option value="">All Roles</option>
+                    <option value="admin" {% if role_filter == 'admin' %}selected{% endif %}>Admin</option>
+                    <option value="staff" {% if role_filter == 'staff' %}selected{% endif %}>Staff</option>
+                    <option value="users" {% if role_filter == 'users' %}selected{% endif %}>Users</option>
+                </select>
+                <button type="submit" class="btn btn-primary" style="padding: 0.5rem 1rem;">Filter</button>
+            </form>
+        </div>
+    </div>
+</div>
+
+<!-- Users Table -->
+<div class="content-card">
+    <div class="content-card-header">
+        <h2>All Users ({{ total_users }})</h2>
+    </div>
+    <div class="content-card-body">
+        {% if page_obj %}
+        <div class="table-responsive">
+            <table>
+                <thead>
+                    <tr>
+                        <th>Username</th>
+                        <th>Email</th>
+                        <th>Role</th>
+                        <th>Conversations</th>
+                        <th>Messages</th>
+                        <th>Joined</th>
+                        <th>Last Login</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for user in page_obj %}
+                    <tr>
+                        <td><strong>{{ user.username }}</strong></td>
+                        <td>{{ user.email }}</td>
+                        <td>
+                            {% if user.is_superuser %}
+                                <span class="badge badge-success">Admin</span>
+                            {% elif user.is_staff %}
+                                <span class="badge badge-warning">Staff</span>
+                            {% else %}
+                                <span class="badge" style="background-color: rgba(107, 114, 128, 0.1); color: var(--gray-600);">User</span>
+                            {% endif %}
+                        </td>
+                        <td>{{ user.conv_count }}</td>
+                        <td>{{ user.message_count }}</td>
+                        <td>{{ user.date_joined|date:"d M, Y" }}</td>
+                        <td>
+                            {% if user.last_login %}
+                                {{ user.last_login|date:"d M, Y H:i" }}
+                            {% else %}
+                                <span class="text-muted">Never</span>
+                            {% endif %}
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+        
+        <!-- Pagination -->
+        {% if page_obj.has_other_pages %}
+        <div class="pagination">
+            {% if page_obj.has_previous %}
+                <a href="?page=1{% if role_filter %}&role={{ role_filter }}{% endif %}">« First</a>
+                <a href="?page={{ page_obj.previous_page_number }}{% if role_filter %}&role={{ role_filter }}{% endif %}">‹ Previous</a>
+            {% endif %}
+            
+            {% for num in page_obj.paginator.page_range %}
+                {% if page_obj.number == num %}
+                    <span class="current">{{ num }}</span>
+                {% elif num > page_obj.number|add:'-3' and num < page_obj.number|add:'3' %}
+                    <a href="?page={{ num }}{% if role_filter %}&role={{ role_filter }}{% endif %}">{{ num }}</a>
+                {% endif %}
+            {% endfor %}
+            
+            {% if page_obj.has_next %}
+                <a href="?page={{ page_obj.next_page_number }}{% if role_filter %}&role={{ role_filter }}{% endif %}">Next ›</a>
+                <a href="?page={{ page_obj.paginator.num_pages }}{% if role_filter %}&role={{ role_filter }}{% endif %}">Last »</a>
+            {% endif %}
+        </div>
+        {% endif %}
+        {% else %}
+        <div class="empty-state">
+            <div class="empty-state-icon">👥</div>
+            <p>No users found</p>
+        </div>
+        {% endif %}
+    </div>
+</div>
+{% endblock %}

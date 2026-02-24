@@ -1,0 +1,201 @@
+{% extends 'dashboard/base_admin.html' %}
+{% load static %}
+
+{% block title %}System Settings - Admin{% endblock %}
+
+{% block admin_content %}
+<div class="admin-header">
+    <h1>System Settings</h1>
+    <p>Configure PERTABOT system parameters and advanced options</p>
+</div>
+
+<!-- System Information -->
+<div class="content-card" style="margin-bottom: 2rem;">
+    <div class="content-card-header">
+        <h2><i class="bi bi-info-circle"></i> System Information</h2>
+    </div>
+    <div class="content-card-body">
+        <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); gap: 1.5rem;">
+            <div style="padding: 1rem; background-color: var(--gray-50); border-radius: 0.5rem;">
+                <div style="font-size: 0.875rem; color: var(--gray-600); font-weight: 600; margin-bottom: 0.5rem;">System Name</div>
+                <div style="font-size: 1.25rem; font-weight: 700;">{{ settings.system_name }}</div>
+            </div>
+            
+            <div style="padding: 1rem; background-color: var(--gray-50); border-radius: 0.5rem;">
+                <div style="font-size: 0.875rem; color: var(--gray-600); font-weight: 600; margin-bottom: 0.5rem;">System Version</div>
+                <div style="font-size: 1.25rem; font-weight: 700;">{{ settings.system_version }}</div>
+            </div>
+            
+            <div style="padding: 1rem; background-color: var(--gray-50); border-radius: 0.5rem;">
+                <div style="font-size: 0.875rem; color: var(--gray-600); font-weight: 600; margin-bottom: 0.5rem;">Deployment</div>
+                <div style="font-size: 1.25rem; font-weight: 700;">{{ settings.deployment }}</div>
+            </div>
+            
+            <div style="padding: 1rem; background-color: var(--gray-50); border-radius: 0.5rem;">
+                <div style="font-size: 0.875rem; color: var(--gray-600); font-weight: 600; margin-bottom: 0.5rem;">Database</div>
+                <div style="font-size: 1.25rem; font-weight: 700;">{{ settings.database }}</div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- LLM Configuration -->
+<div class="content-card" style="margin-bottom: 2rem;">
+    <div class="content-card-header">
+        <h2><i class="bi bi-cpu"></i> LLM Configuration</h2>
+    </div>
+    <div class="content-card-body">
+        <div style="display: grid; gap: 1rem;">
+            <div style="padding: 1rem; border-left: 4px solid var(--primary); background-color: rgba(196, 30, 58, 0.02);">
+                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.5rem;">
+                    <strong>Model</strong>
+                    <span style="background-color: rgba(196, 30, 58, 0.1); padding: 0.25rem 0.75rem; border-radius: 9999px; color: var(--primary); font-size: 0.875rem;">Active</span>
+                </div>
+                <div style="font-size: 1.125rem; font-weight: 600;">{{ settings.model }}</div>
+                <p style="margin-top: 0.5rem; font-size: 0.875rem; color: var(--gray-600);">
+                    Open-source model optimized for on-premise deployment with low latency inference
+                </p>
+            </div>
+            
+            <div style="padding: 1rem; border-left: 4px solid var(--secondary); background-color: rgba(0, 58, 122, 0.02);">
+                <strong style="display: block; margin-bottom: 0.5rem;">RAG (Retrieval Augmented Generation)</strong>
+                <div style="display: flex; align-items: center; gap: 0.5rem;">
+                    <span style="width: 12px; height: 12px; background-color: var(--success); border-radius: 50%; display: inline-block;"></span>
+                    <span>{% if settings.rag_enabled %}Enabled{% else %}Disabled{% endif %}</span>
+                </div>
+                <p style="margin-top: 0.5rem; font-size: 0.875rem; color: var(--gray-600);">
+                    Grounding responses with external knowledge base to minimize hallucination
+                </p>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Document Processing -->
+<div class="content-card" style="margin-bottom: 2rem;">
+    <div class="content-card-header">
+        <h2><i class="bi bi-file-earmark"></i> Document Processing</h2>
+    </div>
+    <div class="content-card-body">
+        <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 1.5rem;">
+            <div style="padding: 1rem; background-color: var(--gray-50); border-radius: 0.5rem;">
+                <div style="font-size: 0.875rem; color: var(--gray-600); font-weight: 600; margin-bottom: 0.75rem;">Max Document Size</div>
+                <div style="font-size: 1.5rem; font-weight: 700; color: var(--primary);">{{ settings.max_document_size }}</div>
+            </div>
+            
+            <div style="padding: 1rem; background-color: var(--gray-50); border-radius: 0.5rem;">
+                <div style="font-size: 0.875rem; color: var(--gray-600); font-weight: 600; margin-bottom: 0.75rem;">Supported Formats</div>
+                <div style="display: flex; gap: 0.5rem; flex-wrap: wrap;">
+                    {% for format in settings.supported_formats %}
+                    <span style="background-color: var(--primary); color: white; padding: 0.25rem 0.75rem; border-radius: 9999px; font-size: 0.875rem;">{{ format }}</span>
+                    {% endfor %}
+                </div>
+            </div>
+            
+            <div style="padding: 1rem; background-color: var(--gray-50); border-radius: 0.5rem;">
+                <div style="font-size: 0.875rem; color: var(--gray-600); font-weight: 600; margin-bottom: 0.75rem;">Auto Refresh</div>
+                <div style="font-size: 1.5rem; font-weight: 700; color: var(--secondary);">{{ settings.auto_refresh_interval }}s</div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- RAG Pipeline -->
+<div class="content-card" style="margin-bottom: 2rem;">
+    <div class="content-card-header">
+        <h2><i class="bi bi-bezier2"></i> RAG Pipeline Steps</h2>
+    </div>
+    <div class="content-card-body">
+        <div style="display: grid; gap: 1.5rem;">
+            <!-- Step 1 -->
+            <div style="display: flex; gap: 1rem;">
+                <div style="width: 40px; height: 40px; border-radius: 50%; background-color: var(--primary); color: white; display: flex; align-items: center; justify-content: center; font-weight: 700; flex-shrink: 0;">1</div>
+                <div>
+                    <strong>Ingestion</strong>
+                    <p style="margin-top: 0.25rem; color: var(--gray-600); font-size: 0.875rem;">Upload and parse documents (PDF, DOCX, etc.) into system</p>
+                </div>
+            </div>
+            
+            <!-- Step 2 -->
+            <div style="display: flex; gap: 1rem;">
+                <div style="width: 40px; height: 40px; border-radius: 50%; background-color: var(--secondary); color: white; display: flex; align-items: center; justify-content: center; font-weight: 700; flex-shrink: 0;">2</div>
+                <div>
+                    <strong>Chunking & Embedding</strong>
+                    <p style="margin-top: 0.25rem; color: var(--gray-600); font-size: 0.875rem;">Split documents into chunks and convert to vector embeddings</p>
+                </div>
+            </div>
+            
+            <!-- Step 3 -->
+            <div style="display: flex; gap: 1rem;">
+                <div style="width: 40px; height: 40px; border-radius: 50%; background-color: var(--success); color: white; display: flex; align-items: center; justify-content: center; font-weight: 700; flex-shrink: 0;">3</div>
+                <div>
+                    <strong>Vector Storage</strong>
+                    <p style="margin-top: 0.25rem; color: var(--gray-600); font-size: 0.875rem;">Store embeddings in vector database for semantic search</p>
+                </div>
+            </div>
+            
+            <!-- Step 4 -->
+            <div style="display: flex; gap: 1rem;">
+                <div style="width: 40px; height: 40px; border-radius: 50%; background-color: var(--warning); color: white; display: flex; align-items: center; justify-content: center; font-weight: 700; flex-shrink: 0;">4</div>
+                <div>
+                    <strong>Retrieval</strong>
+                    <p style="margin-top: 0.25rem; color: var(--gray-600); font-size: 0.875rem;">Semantic search to find relevant documents based on query</p>
+                </div>
+            </div>
+            
+            <!-- Step 5 -->
+            <div style="display: flex; gap: 1rem;">
+                <div style="width: 40px; height: 40px; border-radius: 50%; background-color: var(--error); color: white; display: flex; align-items: center; justify-content: center; font-weight: 700; flex-shrink: 0;">5</div>
+                <div>
+                    <strong>Generation</strong>
+                    <p style="margin-top: 0.25rem; color: var(--gray-600); font-size: 0.875rem;">LLM generates answer grounded in retrieved documents</p>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Data Security -->
+<div class="content-card">
+    <div class="content-card-header">
+        <h2><i class="bi bi-shield-check"></i> Data Security & Compliance</h2>
+    </div>
+    <div class="content-card-body">
+        <div style="display: grid; gap: 1rem;">
+            <div style="display: flex; gap: 1rem; align-items: flex-start; padding: 1rem; background-color: var(--gray-50); border-radius: 0.5rem;">
+                <i class="bi bi-check-circle" style="color: var(--success); font-size: 1.5rem; flex-shrink: 0;"></i>
+                <div>
+                    <strong>On-Premise Deployment</strong>
+                    <p style="margin-top: 0.25rem; color: var(--gray-600); font-size: 0.875rem;">All data remains on company servers. Zero data leakage to external services.</p>
+                </div>
+            </div>
+            
+            <div style="display:flex; gap: 1rem; align-items: flex-start; padding: 1rem; background-color: var(--gray-50); border-radius: 0.5rem;">
+                <i class="bi bi-check-circle" style="color: var(--success); font-size: 1.5rem; flex-shrink: 0;"></i>
+                <div>
+                    <strong>Data Sovereignty</strong>
+                    <p style="margin-top: 0.25rem; color: var(--gray-600); font-size: 0.875rem;">Compliance with Indonesian data protection regulations and UU PDP.</p>
+                </div>
+            </div>
+            
+            <div style="display: flex; gap: 1rem; align-items: flex-start; padding: 1rem; background-color: var(--gray-50); border-radius: 0.5rem;">
+                <i class="bi bi-check-circle" style="color: var(--success); font-size: 1.5rem; flex-shrink: 0;"></i>
+                <div>
+                    <strong>Audit Trail</strong>
+                    <p style="margin-top: 0.25rem; color: var(--gray-600); font-size: 0.875rem;">Complete logging of all system activities for security monitoring.</p>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<style>
+    body.dark-mode [style*="background-color: var(--gray-50)"] {
+        background-color: var(--gray-700) !important;
+    }
+    
+    body.dark-mode [style*="background-color: rgba("] {
+        background-color: rgba(255, 255, 255, 0.05) !important;
+    }
+</style>
+{% endblock %}

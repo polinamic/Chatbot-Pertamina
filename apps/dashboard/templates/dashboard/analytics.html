@@ -1,0 +1,146 @@
+{% extends 'dashboard/base_admin.html' %}
+{% load static %}
+
+{% block title %}Analytics - Admin{% endblock %}
+
+{% block admin_content %}
+<div class="admin-header">
+    <h1>Analytics & Reports</h1>
+    <p>Detailed analytics and performance reports.</p>
+</div>
+
+<!-- Period Filter -->
+<div class="content-card" style="margin-bottom: 1.5rem;">
+    <div class="content-card-body">
+        <form method="get" style="display: flex; gap: 0.5rem; align-items: center;">
+            <label for="period" style="font-weight: 500;">Time Period:</label>
+            <select name="period" id="period" style="padding: 0.5rem 0.75rem; border: 1px solid var(--border-light); border-radius: 0.375rem;">
+                <option value="7" {% if period == '7' %}selected{% endif %}>Last 7 days</option>
+                <option value="30" {% if period == '30' %}selected{% endif %}>Last 30 days</option>
+                <option value="90" {% if period == '90' %}selected{% endif %}>Last 90 days</option>
+                <option value="365" {% if period == '365' %}selected{% endif %}>Last Year</option>
+            </select>
+            <button type="submit" class="btn btn-primary" style="padding: 0.5rem 1rem;">Apply</button>
+        </form>
+    </div>
+</div>
+
+<!-- Key Metrics -->
+<div class="stats-grid">
+    <div class="stat-card">
+        <div class="stat-card-header">
+            <span class="stat-card-title">Avg Messages/Conv</span>
+            <div class="stat-card-icon" style="background-color: rgba(196, 30, 58, 0.1); color: var(--primary);">
+                <i class="bi bi-chat"></i>
+            </div>
+        </div>
+        <div class="stat-card-value">{{ avg_messages_per_conv }}</div>
+        <div class="stat-card-change positive">
+            <i class="bi bi-info-circle"></i>
+            <span>Per conversation</span>
+        </div>
+    </div>
+</div>
+
+<!-- Conversations Trend -->
+<div class="content-card" style="margin-bottom: 1.5rem;">
+    <div class="content-card-header">
+        <h2>Conversations Trend</h2>
+    </div>
+    <div class="content-card-body">
+        <div style="overflow-x: auto;">
+            <table>
+                <thead>
+                    <tr>
+                        <th>Date</th>
+                        <th>Conversations</th>
+                        <th>Growth</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for item in conversations_data %}
+                    <tr>
+                        <td>{{ item.date }}</td>
+                        <td>
+                            <strong>{{ item.count }}</strong>
+                        </td>
+                        <td>
+                            {% if forloop.first %}
+                                <span class="text-muted">—</span>
+                            {% else %}
+                                {% with prev_count=conversations_data|add:forloop.counter0|add:"-1" %}
+                                    <span class="stat-card-change positive">
+                                        <i class="bi bi-arrow-up"></i>
+                                        {{ item.count }}
+                                    </span>
+                                {% endwith %}
+                            {% endif %}
+                        </td>
+                    </tr>
+                    {% empty %}
+                    <tr>
+                        <td colspan="3" class="text-muted">No data available</td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+
+<!-- Top Users -->
+<div class="content-card">
+    <div class="content-card-header">
+        <h2>Top Users by Conversations</h2>
+    </div>
+    <div class="content-card-body">
+        {% if top_users %}
+        <div class="table-responsive">
+            <table>
+                <thead>
+                    <tr>
+                        <th>Rank</th>
+                        <th>Username</th>
+                        <th>Email</th>
+                        <th>Conversations</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for user in top_users %}
+                    <tr>
+                        <td>
+                            {% if forloop.counter == 1 %}
+                                <span style="font-size: 1.5rem;">🥇</span>
+                            {% elif forloop.counter == 2 %}
+                                <span style="font-size: 1.5rem;">🥈</span>
+                            {% elif forloop.counter == 3 %}
+                                <span style="font-size: 1.5rem;">🥉</span>
+                            {% else %}
+                                #{{ forloop.counter }}
+                            {% endif %}
+                        </td>
+                        <td><strong>{{ user.username }}</strong></td>
+                        <td>{{ user.email }}</td>
+                        <td>
+                            <span class="badge badge-success">{{ user.conv_count }}</span>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+        {% else %}
+        <div class="empty-state">
+            <div class="empty-state-icon">📊</div>
+            <p>No data available for this period</p>
+        </div>
+        {% endif %}
+    </div>
+</div>
+
+<script>
+    // Simple chart visualization
+    const data = {{ conversations_data|safe }};
+    console.log('Analytics data:', data);
+</script>
+{% endblock %}
