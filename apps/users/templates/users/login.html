@@ -6,9 +6,10 @@
 {% block extra_css %}
 <style>
     .login-container {
-        display: grid;
-        grid-template-columns: 1fr 1fr;
-        min-height: 100vh;
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        min-height: calc(100vh - 60px);
         gap: 0;
     }
     
@@ -18,6 +19,7 @@
         justify-content: center;
         padding: 2rem;
         background-color: var(--bg-light);
+        width: 100%;
     }
     
     body.dark-mode .login-form-section {
@@ -25,18 +27,7 @@
     }
     
     .login-image-section {
-        background: linear-gradient(135deg, var(--secondary) 0%, var(--primary) 100%);
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        min-height: 100vh;
-        color: white;
-    }
-    
-    .login-image {
-        width: 100%;
-        height: 100%;
-        object-fit: cover;
+        display: none;
     }
     
     .form-wrapper {

@@ -42,6 +42,10 @@
         font-weight: 600;
         margin-bottom: 1rem;
         transition: all 0.3s ease;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        gap: 0.5rem;
     }
     
     .new-chat-btn:hover {
@@ -172,6 +176,7 @@
         font-size: 4rem;
         margin-bottom: 1rem;
         opacity: 0.7;
+        color: var(--primary);
     }
     
     .chat-empty h3 {
@@ -291,6 +296,11 @@
         font-weight: 600;
         transition: all 0.3s ease;
         white-space: nowrap;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        height: 45px;
+        width: 45px;
     }
     
     .send-btn:hover:not(:disabled) {
@@ -345,72 +355,69 @@
 
 {% block content %}
 <div class="chat-container">
-    <!-- Sidebar -->
     <div class="chat-sidebar">
         <button class="new-chat-btn" onclick="startNewChat()">
-            ➕ Chat Baru
+            <i class="bi bi-plus-lg"></i> Chat Baru
         </button>
         
         <div class="chat-history">
             <div class="chat-item active" onclick="selectChat(this)">
-                Chat dengan AI
+                Ketika laptop saya tidak bisa terhubung ke wifi, apa yang harus saya lakukan?
             </div>
             <div class="chat-item" onclick="selectChat(this)">
-                Tentang Produk
+                Bagaimana cara memperbaiki laptop yang lemot
             </div>
             <div class="chat-item" onclick="selectChat(this)">
-                FAQ Pertamina
+                Bagaimana cara menyambungkan wifi di laptop saya
             </div>
             <div class="chat-item" onclick="selectChat(this)">
-                Informasi Umum
+                Bagaimana cara membetulkan laptop yang sinyalnya eror
             </div>
         </div>
         
         <div style="border-top: 1px solid var(--border-light); padding-top: 1rem; margin-top: auto;">
-            <div style="padding: 0.75rem; fontSize: 0.875rem; color: var(--gray-600); cursor: pointer; border-radius: 0.5rem; transition: all 0.2s;" onmouseover="this.style.backgroundColor='var(--gray-100)'" onmouseout="this.style.backgroundColor='transparent'">
-                👤 Profil
+            <div style="padding: 0.75rem; font-size: 0.875rem; color: var(--gray-600); cursor: pointer; border-radius: 0.5rem; transition: all 0.2s; display: flex; align-items: center; gap: 0.5rem;" onmouseover="this.style.backgroundColor='var(--gray-100)'" onmouseout="this.style.backgroundColor='transparent'">
+                <i class="bi bi-person"></i> Profil
             </div>
-            <div style="padding: 0.75rem; fontSize: 0.875rem; color: var(--gray-600); cursor: pointer; border-radius: 0.5rem; transition: all 0.2s;" onmouseover="this.style.backgroundColor='var(--gray-100)'" onmouseout="this.style.backgroundColor='transparent'">
-                ⚙️ Pengaturan
+            <div style="padding: 0.75rem; font-size: 0.875rem; color: var(--gray-600); cursor: pointer; border-radius: 0.5rem; transition: all 0.2s; display: flex; align-items: center; gap: 0.5rem;" onmouseover="this.style.backgroundColor='var(--gray-100)'" onmouseout="this.style.backgroundColor='transparent'">
+                <i class="bi bi-gear"></i> Pengaturan
             </div>
-            <div style="padding: 0.75rem; fontSize: 0.875rem; color: var(--gray-600); cursor: pointer; border-radius: 0.5rem; transition: all 0.2s; color: var(--error);" onmouseover="this.style.backgroundColor='var(--gray-100)'" onmouseout="this.style.backgroundColor='transparent'">
-                🚪 Keluar
+            <div style="padding: 0.75rem; font-size: 0.875rem; color: var(--gray-600); cursor: pointer; border-radius: 0.5rem; transition: all 0.2s; color: var(--error); display: flex; align-items: center; gap: 0.5rem;" onmouseover="this.style.backgroundColor='var(--gray-100)'" onmouseout="this.style.backgroundColor='transparent'">
+                <i class="bi bi-box-arrow-right"></i> Keluar
             </div>
         </div>
     </div>
     
-    <!-- Main Chat -->
     <div class="chat-main">
-        <!-- Header -->
         <div class="chat-header">
             <h2>Chat dengan AI</h2>
             <div class="chat-header-actions">
-                <button class="chat-header-btn" onclick="clearChat()">Hapus Chat</button>
-                <button class="chat-header-btn" onclick="shareChat()">Bagikan</button>
+                <button class="chat-header-btn" onclick="clearChat()"><i class="bi bi-trash"></i> Hapus Chat</button>
+                <button class="chat-header-btn" onclick="shareChat()"><i class="bi bi-share"></i> Bagikan</button>
             </div>
         </div>
         
-        <!-- Messages -->
         <div class="chat-messages" id="chat-messages">
             <div class="chat-empty">
-                <div class="chat-empty-icon">🤖</div>
+                <div class="chat-empty-icon"><i class="bi bi-robot"></i></div>
                 <h3>SITI AI Assistant</h3>
                 <p>Halo! Saya SITI, Solusi Interaktif Teknologi Informasi.<br>Bagaimana saya bisa membantu Anda hari ini?</p>
             </div>
         </div>
         
-        <!-- Input -->
         <div class="chat-input-section">
             <div class="chat-input-wrapper">
                 <textarea id="message-input" placeholder="Ketik pertanyaan Anda di sini... (Shift + Enter untuk baris baru)" rows="1"></textarea>
                 <button class="send-btn" id="send-btn" onclick="sendMessage('message-input', 'chat-messages')">
-                    ➤
+                    <i class="bi bi-send-fill"></i>
                 </button>
             </div>
         </div>
     </div>
 </div>
 {% endblock %}
+
+{% block footer %}{% endblock %}
 
 {% block extra_js %}
 <script>
@@ -424,14 +431,14 @@
     document.getElementById('message-input').addEventListener('keydown', function(e) {
         if (e.key === 'Enter' && !e.shiftKey) {
             e.preventDefault();
-            sendMessage('message-input', 'chat-messages');
+            sendMessageChat('message-input', 'chat-messages'); // Pastikan memanggil fungsi yang benar
         }
     });
     
     function startNewChat() {
         document.getElementById('chat-messages').innerHTML = `
             <div class="chat-empty">
-                <div class="chat-empty-icon">🤖</div>
+                <div class="chat-empty-icon"><i class="bi bi-robot"></i></div>
                 <h3>SITI AI Assistant</h3>
                 <p>Halo! Saya SITI, Solusi Interaktif Teknologi Informasi.<br>Bagaimana saya bisa membantu Anda hari ini?</p>
             </div>
@@ -456,6 +463,22 @@
     
     function shareChat() {
         alert('Fitur berbagi chat akan segera hadir!');
+    }
+
+    // Helper function for escaping HTML to prevent XSS (if not already defined elsewhere)
+    function escapeHtml(unsafe) {
+        return unsafe
+             .replace(/&/g, "&amp;")
+             .replace(/</g, "&lt;")
+             .replace(/>/g, "&gt;")
+             .replace(/"/g, "&quot;")
+             .replace(/'/g, "&#039;");
+    }
+
+    // Helper function for getting current time
+    function getCurrentTime() {
+        const now = new Date();
+        return now.getHours().toString().padStart(2, '0') + ':' + now.getMinutes().toString().padStart(2, '0');
     }
     
     // Override sendMessage function untuk chat
@@ -493,7 +516,7 @@
         typingDiv.className = 'message bot-message';
         typingDiv.innerHTML = `
             <div class="message-content">
-                <p style="margin: 0;">typing...</p>
+                <p style="margin: 0;">mengetik <i class="bi bi-three-dots"></i></p>
             </div>
         `;
         messagesContainer.appendChild(typingDiv);
@@ -504,7 +527,7 @@
             botMessageDiv.className = 'message bot-message';
             botMessageDiv.innerHTML = `
                 <div class="message-content">
-                    <p>Terima kasih atas pertanyaan Anda! SITI sedang dalam tahap pengembangan dan akan segera siap melayani Anda dengan informasi lengkap tentang produk dan layanan Pertamina. 🤖</p>
+                    <p>Terima kasih atas pertanyaan Anda! SITI sedang dalam tahap pengembangan dan akan segera siap melayani Anda dengan informasi lengkap tentang produk dan layanan Pertamina. <i class="bi bi-robot"></i></p>
                     <span class="message-time">${getCurrentTime()}</span>
                 </div>
             `;
