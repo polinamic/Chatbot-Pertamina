@@ -20,13 +20,12 @@ urlpatterns = [
     # Template views (non-API routes)
     path('auth/', include('apps.users.urls')),
     path('', include('apps.chatbot.urls')),
+    path('dashboard/', include('apps.dashboard.urls')),
     
     # API routes
     path('api/v1/', include(api_router.urls)),
     path('api/v1/rag/', include('apps.rag.urls')),
     path('api-auth/', include('rest_framework.urls')),
-    path("chat/", include("apps.chatbot.urls")),
-
 ]
 
 if settings.DEBUG:

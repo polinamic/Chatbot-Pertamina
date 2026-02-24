@@ -1,0 +1,141 @@
+{% extends 'dashboard/base_admin.html' %}
+{% load static %}
+
+{% block title %}Chat Detail - Admin{% endblock %}
+
+{% block admin_content %}
+<div class="admin-header">
+    <div style="display: flex; align-items: center; gap: 1rem; margin-bottom: 1.5rem;">
+        <a href="{% url 'dashboard:chat_monitoring' %}" class="btn btn-secondary">
+            <i class="bi bi-arrow-left"></i> Back
+        </a>
+        <div>
+            <h1>{{ conversation.title }}</h1>
+            <p>Conversation with <strong>{{ user.username }}</strong> • Started {{ conversation.created_at|date:"d M, Y H:i" }}</p>
+        </div>
+    </div>
+</div>
+
+<!-- Conversation Info -->
+<div class="stats-grid" style="grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); margin-bottom: 2rem;">
+    <div class="stat-card">
+        <div class="stat-card-header">
+            <span class="stat-card-title">User</span>
+            <i class="bi bi-person" style="font-size: 1.5rem; color: var(--primary);"></i>
+        </div>
+        <div>
+            <strong>{{ user.username }}</strong><br>
+            <span style="font-size: 0.875rem; color: var(--gray-600);">{{ user.email }}</span>
+        </div>
+    </div>
+    
+    <div class="stat-card">
+        <div class="stat-card-header">
+            <span class="stat-card-title">Messages</span>
+            <i class="bi bi-chat-dots" style="font-size: 1.5rem; color: var(--secondary);"></i>
+        </div>
+        <div>
+            <strong style="font-size: 1.5rem;">{{ messages|length }}</strong> messages
+        </div>
+    </div>
+    
+    <div class="stat-card">
+        <div class="stat-card-header">
+            <span class="stat-card-title">Last Activity</span>
+            <i class="bi bi-clock" style="font-size: 1.5rem; color: var(--success);"></i>
+        </div>
+        <div>
+            <strong>{{ conversation.updated_at|timesince }}</strong> ago
+        </div>
+    </div>
+    
+    <div class="stat-card">
+        <div class="stat-card-header">
+            <span class="stat-card-title">Status</span>
+            {% if conversation.is_archived %}
+                <i class="bi bi-archive" style="font-size: 1.5rem; color: var(--warning);"></i>
+            {% else %}
+                <i class="bi bi-check-circle" style="font-size: 1.5rem; color: var(--success);"></i>
+            {% endif %}
+        </div>
+        <div>
+            {% if conversation.is_archived %}
+                <span class="badge badge-warning">Archived</span>
+            {% else %}
+                <span class="badge badge-success">Active</span>
+            {% endif %}
+        </div>
+    </div>
+</div>
+
+<!-- Chat Messages -->
+<div class="content-card">
+    <div class="content-card-header">
+        <h2>Conversation Messages</h2>
+    </div>
+    <div class="content-card-body">
+        <div style="height: 600px; overflow-y: auto; border: 1px solid var(--border-light); border-radius: 0.5rem; padding: 1rem;">
+            {% for message in messages %}
+            <div style="display: flex; gap: 1rem; margin-bottom: 1.5rem; align-items: flex-start;">
+                <!-- Avatar -->
+                <div style="width: 40px; height: 40px; border-radius: 50%; flex-shrink: 0; display: flex; align-items: center; justify-content: center; color: white; font-weight: 600; font-size: 0.875rem;
+                    {% if message.role == 'user' %}
+                        background: linear-gradient(135deg, var(--primary), var(--primary-light));
+                    {% else %}
+                        background: linear-gradient(135deg, var(--secondary), var(--secondary-light));
+                    {% endif %}
+                ">
+                    {% if message.role == 'user' %}
+                        {{ user.username|first|upper }}
+                    {% else %}
+                        🤖
+                    {% endif %}
+                </div>
+                
+                <!-- Message -->
+                <div style="flex: 1; min-width: 0;">
+                    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.5rem;">
+                        <strong>
+                            {% if message.role == 'user' %}
+                                {{ user.username }}
+                            {% else %}
+                                PERTABOT Assistant
+                            {% endif %}
+                        </strong>
+                        <span style="font-size: 0.75rem; color: var(--gray-500);">{{ message.created_at|time:"H:i" }}</span>
+                    </div>
+                    
+                    <div style="background-color: var(--gray-50); padding: 0.75rem 1rem; border-radius: 0.5rem; word-wrap: break-word;">
+                        <p style="margin: 0; white-space: pre-wrap;">{{ message.content }}</p>
+                        
+                        {% if message.sources and message.role == 'assistant' %}
+                        <div style="margin-top: 0.75rem; padding-top: 0.75rem; border-top: 1px solid var(--border-light);">
+                            <small style="color: var(--gray-600);">
+                                <i class="bi bi-link-45deg"></i> Sources:
+                            </small>
+                            <ul style="margin: 0.25rem 0 0 1.25rem; font-size: 0.875rem; color: var(--gray-600);">
+                                {% for source in message.sources|safe  %}
+                                <li>{{ source }}</li>
+                                {% endfor %}
+                            </ul>
+                        </div>
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+            {% empty %}
+            <div class="empty-state">
+                <div class="empty-state-icon">💬</div>
+                <p>No messages in this conversation</p>
+            </div>
+            {% endfor %}
+        </div>
+    </div>
+</div>
+
+<style>
+    body.dark-mode [style*="background-color: var(--gray-50)"] {
+        background-color: var(--gray-700) !important;
+    }
+</style>
+{% endblock %}

@@ -1,4 +1,5 @@
 from django.db import models
+from django.contrib.auth.models import User
 
 
 class BaseModel(models.Model):
@@ -37,3 +38,23 @@ class ActivityLog(models.Model):
 
     def __str__(self):
         return f"{self.action} - {self.created_at}"
+
+
+class Document(models.Model):
+    """Model untuk menyimpan documents yang di-ingest"""
+    uploaded_by = models.ForeignKey(User, on_delete=models.SET_NULL, null=True, blank=True, related_name='documents')
+    file_name = models.CharField(max_length=255)
+    file_size = models.IntegerField(null=True, blank=True)  # dalam bytes
+    file_path = models.TextField()
+    is_processed = models.BooleanField(default=False)
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        ordering = ['-created_at']
+        verbose_name = 'Document'
+        verbose_name_plural = 'Documents'
+
+    def __str__(self):
+        return self.file_name
+
