@@ -1,0 +1,333 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}Login - PertaBot{% endblock %}
+
+{% block extra_css %}
+<style>
+    .login-container {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        min-height: 100vh;
+        gap: 0;
+    }
+    
+    .login-form-section {
+        display: flex;
+        flex-direction: column;
+        justify-content: center;
+        padding: 2rem;
+        background-color: var(--bg-light);
+    }
+    
+    body.dark-mode .login-form-section {
+        background-color: var(--bg-dark);
+    }
+    
+    .login-image-section {
+        background: linear-gradient(135deg, var(--secondary) 0%, var(--primary) 100%);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        min-height: 100vh;
+        color: white;
+    }
+    
+    .login-image {
+        width: 100%;
+        height: 100%;
+        object-fit: cover;
+    }
+    
+    .form-wrapper {
+        max-width: 400px;
+        margin: 0 auto;
+        width: 100%;
+    }
+    
+    .form-group {
+        margin-bottom: 1.5rem;
+    }
+    
+    .form-group label {
+        display: block;
+        margin-bottom: 0.5rem;
+        font-weight: 500;
+        color: var(--text-light);
+    }
+    
+    body.dark-mode .form-group label {
+        color: var(--text-dark);
+    }
+    
+    .form-group input {
+        width: 100%;
+        padding: 0.75rem 1rem;
+        border: 1px solid var(--border-light);
+        border-radius: 0.5rem;
+        font-size: 0.95rem;
+        background-color: var(--bg-light);
+        color: var(--text-light);
+        transition: all 0.3s ease;
+    }
+    
+    body.dark-mode .form-group input {
+        background-color: var(--gray-900);
+        border-color: var(--border-dark);
+        color: var(--text-dark);
+    }
+    
+    .form-group input:focus {
+        outline: none;
+        border-color: var(--secondary);
+        box-shadow: 0 0 0 3px rgba(0, 58, 122, 0.1);
+    }
+    
+    body.dark-mode .form-group input:focus {
+        box-shadow: 0 0 0 3px rgba(0, 58, 122, 0.2);
+    }
+    
+    .login-header {
+        margin-bottom: 2rem;
+    }
+    
+    .login-header h1 {
+        font-size: 1.875rem;
+        margin-bottom: 0.5rem;
+        font-weight: 700;
+    }
+    
+    .login-header p {
+        color: var(--gray-600);
+        margin: 0;
+    }
+    
+    .checkbox-group {
+        display: flex;
+        align-items: center;
+        gap: 0.5rem;
+        margin-bottom: 1.5rem;
+    }
+    
+    .checkbox-group input[type="checkbox"] {
+        width: auto;
+        cursor: pointer;
+    }
+    
+    .checkbox-group label {
+        margin: 0;
+        cursor: pointer;
+        font-size: 0.875rem;
+    }
+    
+    .forgot-password {
+        text-align: right;
+        margin-bottom: 1.5rem;
+    }
+    
+    .forgot-password a {
+        color: var(--secondary);
+        text-decoration: none;
+        font-size: 0.875rem;
+        font-weight: 500;
+    }
+    
+    .forgot-password a:hover {
+        text-decoration: underline;
+    }
+    
+    .submit-btn {
+        width: 100%;
+        padding: 0.75rem;
+        background-color: var(--secondary);
+        color: white;
+        font-weight: 600;
+        border: none;
+        border-radius: 0.5rem;
+        cursor: pointer;
+        font-size: 1rem;
+        transition: all 0.3s ease;
+        margin-bottom: 1rem;
+    }
+    
+    .submit-btn:hover {
+        background-color: var(--secondary-dark);
+        transform: translateY(-2px);
+        box-shadow: 0 4px 12px rgba(0, 58, 122, 0.3);
+    }
+    
+    .divider {
+        display: flex;
+        align-items: center;
+        gap: 1rem;
+        margin: 1.5rem 0;
+        color: var(--gray-500);
+    }
+    
+    .divider::before,
+    .divider::after {
+        content: '';
+        flex: 1;
+        height: 1px;
+        background-color: var(--border-light);
+    }
+    
+    body.dark-mode .divider::before,
+    body.dark-mode .divider::after {
+        background-color: var(--border-dark);
+    }
+    
+    .oauth-btn {
+        width: 100%;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        gap: 0.75rem;
+        padding: 0.75rem;
+        border: 1px solid var(--border-light);
+        border-radius: 0.5rem;
+        background-color: var(--bg-light);
+        color: var(--text-light);
+        font-weight: 500;
+        cursor: pointer;
+        transition: all 0.3s ease;
+    }
+    
+    body.dark-mode .oauth-btn {
+        background-color: var(--gray-900);
+        border-color: var(--border-dark);
+        color: var(--text-dark);
+    }
+    
+    .oauth-btn:hover {
+        background-color: var(--gray-100);
+    }
+    
+    body.dark-mode .oauth-btn:hover {
+        background-color: var(--gray-800);
+    }
+    
+    .login-footer {
+        text-align: center;
+        margin-top: 1.5rem;
+        color: var(--gray-600);
+        font-size: 0.875rem;
+    }
+    
+    .login-footer a {
+        color: var(--secondary);
+        text-decoration: none;
+        font-weight: 600;
+    }
+    
+    .login-footer a:hover {
+        text-decoration: underline;
+    }
+    
+    @media (max-width: 768px) {
+        .login-container {
+            grid-template-columns: 1fr;
+        }
+        
+        .login-image-section {
+            display: none;
+        }
+        
+        .login-form-section {
+            min-height: calc(100vh - 60px);
+        }
+        
+        .login-header h1 {
+            font-size: 1.5rem;
+        }
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="login-container">
+    <!-- Form Section -->
+    <div class="login-form-section">
+        <div class="form-wrapper">
+            <div class="login-header">
+                <h1>Masuk</h1>
+                <p>Masuk ke akun Anda untuk melanjutkan</p>
+            </div>
+            
+            <form id="login-form" method="POST" action="{% url 'users:login' %}">
+                {% csrf_token %}
+                
+                <div class="form-group">
+                    <label for="email">Email *</label>
+                    <input type="email" id="email" name="email" placeholder="example@gmail.com" required>
+                </div>
+                
+                <div class="form-group">
+                    <label for="password">Password *</label>
+                    <input type="password" id="password" name="password" placeholder="••••••••" required>
+                </div>
+                
+                <div class="checkbox-group">
+                    <input type="checkbox" id="remember" name="remember">
+                    <label for="remember">Ingat saya</label>
+                </div>
+                
+                <div class="forgot-password">
+                    <a href="#">Lupa password?</a>
+                </div>
+                
+                <button type="button" class="submit-btn" onclick="goToChat()">Masuk</button>
+            </form>
+            
+            <div class="divider">atau</div>
+            
+            <button class="oauth-btn" onclick="completeSignup()">
+                <i class="bi bi-google" style="margin-right: 0.5rem;"></i> Daftar dengan Google
+            </button>
+            
+            <div class="login-footer">
+                Belum punya akun? <a href="{% url 'users:signup' %}">Daftar di sini</a>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Image Section -->
+    <div class="login-image-section">
+        <div style="text-align: center; color: white; padding: 2rem;">
+            <div style="font-size: 4rem; margin-bottom: 1rem;">🚀</div>
+            <h2 style="font-size: 2rem; margin-bottom: 1rem; font-weight: 700;">Selamat Datang</h2>
+            <p style="font-size: 1.125rem; margin-bottom: 2rem; opacity: 0.95;">
+                Berinteraksi dengan AI Chatbot Pertamina
+            </p>
+            <div style="background: rgba(255, 255, 255, 0.1); padding: 1.5rem; border-radius: 0.75rem; backdrop-filter: blur(10px);">
+                <div style="font-size: 1.5rem; margin-bottom: 1rem;">⚡</div>
+                <h3 style="margin-bottom: 0.75rem;">Akses Instan</h3>
+                <ul style="text-align: left; display: inline-block; margin: 0;">
+                    <li style="margin-bottom: 0.5rem;">✓ Chat Dengan AI 24/7</li>
+                    <li style="margin-bottom: 0.5rem;">✓ Dukungan Instant</li>
+                    <li style="margin-bottom: 0.5rem;">✓ Solusi Cepat</li>
+                    <li style="margin-bottom: 0.5rem;">✓ Keamanan Terjamin</li>
+                </ul>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+    function goToChat() {
+        // Langsung redirect ke chat tanpa validasi
+        window.location.href = '{% url "chatbot:chat" %}';
+    }
+    
+    document.getElementById('login-form').addEventListener('submit', function(e) {
+        e.preventDefault();
+        goToChat();
+    });
+    
+    // Auto-set some dummy values untuk testing
+    document.getElementById('email').value = 'demo@pertamina.com';
+    document.getElementById('password').value = '••••••••';
+</script>
+{% endblock %}

@@ -2,6 +2,7 @@ from rest_framework import viewsets, status
 from rest_framework.decorators import action
 from rest_framework.response import Response
 from rest_framework.permissions import IsAuthenticated
+from django.shortcuts import render
 from .models import Conversation, Message
 from .serializers import ConversationSerializer, ConversationListSerializer, MessageSerializer
 
@@ -62,3 +63,9 @@ class ConversationViewSet(viewsets.ModelViewSet):
         conversation.save()
         serializer = self.get_serializer(conversation)
         return Response(serializer.data)
+
+
+# Template Views
+def chat_page(request):
+    """Render main chat page"""
+    return render(request, 'chatbot/chat.html')
