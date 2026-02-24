@@ -34,6 +34,26 @@
         max-width: 400px;
         margin: 0 auto;
         width: 100%;
+        background-color: var(--bg-light);
+        border: 1px solid var(--border-light);
+        border-radius: 0.75rem;
+        padding: 2rem;
+        box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+        transition: all 0.3s ease;
+    }
+
+    body.dark-mode .form-wrapper {
+        background-color: var(--gray-900);
+        border-color: var(--border-dark);
+        box-shadow: 0 1px 3px rgba(0, 0, 0, 0.3);
+    }
+
+    .form-wrapper:hover {
+        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+    }
+
+    body.dark-mode .form-wrapper:hover {
+        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
     }
 
     .form-group {
