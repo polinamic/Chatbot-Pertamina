@@ -25,6 +25,8 @@ urlpatterns = [
     path('api/v1/', include(api_router.urls)),
     path('api/v1/rag/', include('apps.rag.urls')),
     path('api-auth/', include('rest_framework.urls')),
+    path("chat/", include("apps.chatbot.urls")),
+
 ]
 
 if settings.DEBUG:

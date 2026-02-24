@@ -1,0 +1,53 @@
+{% load static %}
+
+<header class="navbar navbar-expand-lg shadow-sm px-3 py-2">
+
+    <!-- LEFT SECTION -->
+    <div class="d-flex align-items-center gap-3">
+
+        <!-- Hamburger Button -->
+        <button class="btn btn-outline-secondary border-0"
+                onclick="toggleSidebar()">
+            <i class="bi bi-list fs-4"></i>
+        </button>
+
+        <!-- Logo -->
+        <div class="d-flex align-items-center gap-2">
+            <img src="{% static 'images/logo-pertamina.png' %}"
+                 alt="Logo Pertamina"
+                 id="logo-pertamina"
+                 height="35">
+            <span class="fw-bold fs-5">PERTAMINA</span>
+        </div>
+
+    </div>
+
+    <!-- RIGHT SECTION -->
+    <div class="d-flex align-items-center gap-3">
+
+        <!-- Theme Toggle -->
+        <button class="btn btn-outline-secondary border-0"
+                onclick="toggleTheme()">
+            <i id="theme-icon" class="bi bi-moon fs-5"></i>
+        </button>
+
+        <!-- User Dropdown -->
+        <div class="dropdown">
+            <button class="btn btn-outline-secondary border-0 dropdown-toggle"
+                    type="button"
+                    data-bs-toggle="dropdown"
+                    aria-expanded="false">
+                <i class="bi bi-person-circle fs-4"></i>
+            </button>
+
+            <ul class="dropdown-menu dropdown-menu-end shadow">
+                <li><a class="dropdown-item" href="#">Profile</a></li>
+                <li><a class="dropdown-item" href="#">Settings</a></li>
+                <li><hr class="dropdown-divider"></li>
+                <li><a class="dropdown-item text-danger" href="#">Logout</a></li>
+            </ul>
+        </div>
+
+    </div>
+
+</header>

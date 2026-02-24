@@ -79,14 +79,20 @@ WSGI_APPLICATION = 'config.wsgi.application'
 # Database
 DATABASES = {
     'default': {
-        'ENGINE': config('DB_ENGINE', default='django.db.backends.sqlite3'),
-        'NAME': config('DB_NAME', default=BASE_DIR / 'db.sqlite3'),
-        'USER': config('DB_USER', default=''),
-        'PASSWORD': config('DB_PASSWORD', default=''),
-        'HOST': config('DB_HOST', default=''),
-        'PORT': config('DB_PORT', default=''),
-    }
+        'ENGINE': 'mssql',
+        'NAME': 'chatbot_pertamina',
+        'HOST': 'localhost',
+        'OPTIONS': {
+            'driver': 'ODBC Driver 18 for SQL Server',
+            'trusted_connection': 'yes',
+            'extra_params': 'Encrypt=yes;TrustServerCertificate=yes;',
+            'connection_timeout': 30,
+        }
+    },
 }
+
+
+
 
 # Password validation
 AUTH_PASSWORD_VALIDATORS = [
