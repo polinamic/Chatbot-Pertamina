@@ -1,0 +1,102 @@
+{% extends 'dashboard/base_admin.html' %}
+{% load static %}
+
+{% block title %}Conversations Management - Admin{% endblock %}
+
+{% block admin_content %}
+<div class="admin-header">
+    <h1>Conversations Management</h1>
+    <p>Manage and monitor all user conversations.</p>
+</div>
+
+<!-- Filters -->
+<div class="content-card" style="margin-bottom: 1.5rem;">
+    <div class="content-card-body">
+        <div style="display: flex; gap: 1rem; flex-wrap: wrap; align-items: center;">
+            <div style="flex: 1; min-width: 200px;">
+                <form method="get" style="display: flex; gap: 0.5rem;">
+                    <select name="status" style="padding: 0.5rem 0.75rem; border: 1px solid var(--border-light); border-radius: 0.375rem;">
+                        <option value="">All Status</option>
+                        <option value="active" {% if status_filter == 'active' %}selected{% endif %}>Active</option>
+                        <option value="archived" {% if status_filter == 'archived' %}selected{% endif %}>Archived</option>
+                    </select>
+                    <button type="submit" class="btn btn-primary" style="padding: 0.5rem 1rem;">Filter</button>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Conversations Table -->
+<div class="content-card">
+    <div class="content-card-header">
+        <h2>All Conversations ({{ total_conversations }})</h2>
+    </div>
+    <div class="content-card-body">
+        {% if page_obj %}
+        <div class="table-responsive">
+            <table>
+                <thead>
+                    <tr>
+                        <th>Title</th>
+                        <th>User</th>
+                        <th>Messages</th>
+                        <th>Status</th>
+                        <th>Created</th>
+                        <th>Updated</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for conversation in page_obj %}
+                    <tr>
+                        <td><strong>{{ conversation.title }}</strong></td>
+                        <td>{{ conversation.user.username }}</td>
+                        <td>
+                            <span class="badge badge-success">{{ conversation.message_count }} msgs</span>
+                        </td>
+                        <td>
+                            {% if conversation.is_archived %}
+                                <span class="badge badge-warning">Archived</span>
+                            {% else %}
+                                <span class="badge badge-success">Active</span>
+                            {% endif %}
+                        </td>
+                        <td>{{ conversation.created_at|date:"d M, Y H:i" }}</td>
+                        <td>{{ conversation.updated_at|date:"d M, Y H:i" }}</td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+        
+        <!-- Pagination -->
+        {% if page_obj.has_other_pages %}
+        <div class="pagination">
+            {% if page_obj.has_previous %}
+                <a href="?page=1{% if status_filter %}&status={{ status_filter }}{% endif %}">« First</a>
+                <a href="?page={{ page_obj.previous_page_number }}{% if status_filter %}&status={{ status_filter }}{% endif %}">‹ Previous</a>
+            {% endif %}
+            
+            {% for num in page_obj.paginator.page_range %}
+                {% if page_obj.number == num %}
+                    <span class="current">{{ num }}</span>
+                {% elif num > page_obj.number|add:'-3' and num < page_obj.number|add:'3' %}
+                    <a href="?page={{ num }}{% if status_filter %}&status={{ status_filter }}{% endif %}">{{ num }}</a>
+                {% endif %}
+            {% endfor %}
+            
+            {% if page_obj.has_next %}
+                <a href="?page={{ page_obj.next_page_number }}{% if status_filter %}&status={{ status_filter }}{% endif %}">Next ›</a>
+                <a href="?page={{ page_obj.paginator.num_pages }}{% if status_filter %}&status={{ status_filter }}{% endif %}">Last »</a>
+            {% endif %}
+        </div>
+        {% endif %}
+        {% else %}
+        <div class="empty-state">
+            <div class="empty-state-icon">💬</div>
+            <p>No conversations found</p>
+        </div>
+        {% endif %}
+    </div>
+</div>
+{% endblock %}

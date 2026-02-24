@@ -1,0 +1,181 @@
+{% extends 'dashboard/base_admin.html' %}
+{% load static %}
+
+{% block title %}Audit Trail - Admin{% endblock %}
+
+{% block admin_content %}
+<div class="admin-header">
+    <h1>Activity Audit Trail</h1>
+    <p>Complete log of all system activities and user actions</p>
+</div>
+
+<!-- Statistics -->
+<div class="stats-grid">
+    <div class="stat-card">
+        <div class="stat-card-header">
+            <span class="stat-card-title">Total Logs</span>
+            <div class="stat-card-icon" style="background-color: rgba(196, 30, 58, 0.1); color: var(--primary);">
+                <i class="bi bi-list-check"></i>
+            </div>
+        </div>
+        <div class="stat-card-value">{{ stats.total_logs }}</div>
+        <div class="stat-card-change positive">
+            <i class="bi bi-arrow-up"></i>
+            <span>All time</span>
+        </div>
+    </div>
+    
+    <div class="stat-card">
+        <div class="stat-card-header">
+            <span class="stat-card-title">Logs Today</span>
+            <div class="stat-card-icon" style="background-color: rgba(0, 58, 122, 0.1); color: var(--secondary);">
+                <i class="bi bi-calendar-event"></i>
+            </div>
+        </div>
+        <div class="stat-card-value">{{ stats.logs_today }}</div>
+        <div class="stat-card-change positive">
+            <i class="bi bi-info-circle"></i>
+            <span>24 hours</span>
+        </div>
+    </div>
+</div>
+
+<!-- Filters -->
+<div class="content-card" style="margin-bottom: 1.5rem; margin-top: 2rem;">
+    <div class="content-card-body">
+        <form method="get" style="display: flex; gap: 1rem; flex-wrap: wrap; align-items: center;">
+            <select name="action" style="padding: 0.5rem 0.75rem; border: 1px solid var(--border-light); border-radius: 0.375rem;">
+                <option value="">All Actions</option>
+                <option value="CREATE" {% if action_filter == 'CREATE' %}selected{% endif %}>Create</option>
+                <option value="UPDATE" {% if action_filter == 'UPDATE' %}selected{% endif %}>Update</option>
+                <option value="DELETE" {% if action_filter == 'DELETE' %}selected{% endif %}>Delete</option>
+                <option value="VIEW" {% if action_filter == 'VIEW' %}selected{% endif %}>View</option>
+                <option value="SEARCH" {% if action_filter == 'SEARCH' %}selected{% endif %}>Search</option>
+            </select>
+            
+            <input type="date" name="date" value="{{ date_filter }}" style="padding: 0.5rem 0.75rem; border: 1px solid var(--border-light); border-radius: 0.375rem;">
+            
+            <button type="submit" class="btn btn-primary" style="padding: 0.5rem 1rem;">
+                <i class="bi bi-funnel"></i> Filter
+            </button>
+            
+            <a href="{% url 'dashboard:audit_trail' %}" class="btn btn-secondary" style="padding: 0.5rem 1rem;">
+                <i class="bi bi-arrow-clockwise"></i> Reset
+            </a>
+        </form>
+    </div>
+</div>
+
+<!-- Activity Log Table -->
+<div class="content-card">
+    <div class="content-card-header">
+        <h2>Activity Log</h2>
+    </div>
+    <div class="content-card-body">
+        {% if page_obj %}
+        <div class="table-responsive">
+            <table>
+                <thead>
+                    <tr>
+                        <th>Time</th>
+                        <th>Action</th>
+                        <th>User</th>
+                        <th>Description</th>
+                        <th>IP Address</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for log in page_obj %}
+                    <tr>
+                        <td>
+                            <strong>{{ log.created_at|date:"d M, Y" }}</strong><br>
+                            <span style="font-size: 0.875rem; color: var(--gray-500);">{{ log.created_at|time:"H:i:s" }}</span>
+                        </td>
+                        <td>
+                            {% if log.action == 'CREATE' %}
+                                <span class="badge badge-success">
+                                    <i class="bi bi-plus-circle"></i> CREATE
+                                </span>
+                            {% elif log.action == 'UPDATE' %}
+                                <span class="badge" style="background-color: rgba(245, 158, 11, 0.1); color: var(--warning);">
+                                    <i class="bi bi-pencil-circle"></i> UPDATE
+                                </span>
+                            {% elif log.action == 'DELETE' %}
+                                <span class="badge badge-error">
+                                    <i class="bi bi-trash-circle"></i> DELETE
+                                </span>
+                            {% elif log.action == 'VIEW' %}
+                                <span class="badge" style="background-color: rgba(0, 58, 122, 0.1); color: var(--secondary);">
+                                    <i class="bi bi-eye"></i> VIEW
+                                </span>
+                            {% elif log.action == 'SEARCH' %}
+                                <span class="badge" style="background-color: rgba(107, 114, 128, 0.1); color: var(--gray-600);">
+                                    <i class="bi bi-search"></i> SEARCH
+                                </span>
+                            {% endif %}
+                        </td>
+                        <td>
+                            {% if log.user_id %}
+                                <strong>User ID: {{ log.user_id }}</strong>
+                            {% else %}
+                                <span style="color: var(--gray-500);">System</span>
+                            {% endif %}
+                        </td>
+                        <td>{{ log.description }}</td>
+                        <td>
+                            <code style="font-size: 0.75rem; background: var(--gray-100); padding: 0.25rem 0.5rem; border-radius: 0.25rem;">
+                                {% if log.ip_address %}
+                                    {{ log.ip_address }}
+                                {% else %}
+                                    —
+                                {% endif %}
+                            </code>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+        
+        <!-- Pagination -->
+        {% if page_obj.has_other_pages %}
+        <div class="pagination">
+            {% if page_obj.has_previous %}
+                <a href="?page=1{% if action_filter %}&action={{ action_filter }}{% endif %}{% if date_filter %}&date={{ date_filter }}{% endif %}">« First</a>
+                <a href="?page={{ page_obj.previous_page_number }}{% if action_filter %}&action={{ action_filter }}{% endif %}{% if date_filter %}&date={{ date_filter }}{% endif %}">‹ Previous</a>
+            {% endif %}
+            
+            {% for num in page_obj.paginator.page_range %}
+                {% if page_obj.number == num %}
+                    <span class="current">{{ num }}</span>
+                {% elif num > page_obj.number|add:'-3' and num < page_obj.number|add:'3' %}
+                    <a href="?page={{ num }}{% if action_filter %}&action={{ action_filter }}{% endif %}{% if date_filter %}&date={{ date_filter }}{% endif %}">{{ num }}</a>
+                {% endif %}
+            {% endfor %}
+            
+            {% if page_obj.has_next %}
+                <a href="?page={{ page_obj.next_page_number }}{% if action_filter %}&action={{ action_filter }}{% endif %}{% if date_filter %}&date={{ date_filter }}{% endif %}">Next ›</a>
+                <a href="?page={{ page_obj.paginator.num_pages }}{% if action_filter %}&action={{ action_filter }}{% endif %}{% if date_filter %}&date={{ date_filter }}{% endif %}">Last »</a>
+            {% endif %}
+        </div>
+        {% endif %}
+        {% else %}
+        <div class="empty-state">
+            <div class="empty-state-icon">📋</div>
+            <p>No activity logs found</p>
+        </div>
+        {% endif %}
+    </div>
+</div>
+
+<!-- Info Box -->
+<div style="margin-top: 2rem; padding: 1rem; background-color: rgba(196, 30, 58, 0.05); border-left: 4px solid var(--primary); border-radius: 0.5rem;">
+    <div style="display: flex; gap: 1rem;">
+        <i class="bi bi-info-circle" style="font-size: 1.25rem; color: var(--primary); flex-shrink: 0;"></i>
+        <div>
+            <strong>Audit Trail</strong>
+            <p style="margin-top: 0.25rem; font-size: 0.875rem;">Complete activity log for compliance and security monitoring. All user actions and system events are recorded with timestamp and IP address.</p>
+        </div>
+    </div>
+</div>
+{% endblock %}

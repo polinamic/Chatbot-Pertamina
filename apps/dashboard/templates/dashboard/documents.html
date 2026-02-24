@@ -1,0 +1,110 @@
+{% extends 'dashboard/base_admin.html' %}
+{% load static %}
+
+{% block title %}Documents Management - Admin{% endblock %}
+
+{% block admin_content %}
+<div class="admin-header">
+    <h1>Documents Management</h1>
+    <p>Manage and monitor all ingested documents.</p>
+</div>
+
+<!-- Filters -->
+<div class="content-card" style="margin-bottom: 1.5rem;">
+    <div class="content-card-body">
+        <div style="display: flex; gap: 1rem; flex-wrap: wrap; align-items: center;">
+            <form method="get" style="display: flex; gap: 0.5rem;">
+                <select name="status" style="padding: 0.5rem 0.75rem; border: 1px solid var(--border-light); border-radius: 0.375rem;">
+                    <option value="">All Status</option>
+                    <option value="processed" {% if status_filter == 'processed' %}selected{% endif %}>Processed</option>
+                    <option value="pending" {% if status_filter == 'pending' %}selected{% endif %}>Pending</option>
+                </select>
+                <button type="submit" class="btn btn-primary" style="padding: 0.5rem 1rem;">Filter</button>
+            </form>
+        </div>
+    </div>
+</div>
+
+<!-- Documents Table -->
+<div class="content-card">
+    <div class="content-card-header">
+        <h2>All Documents ({{ total_documents }})</h2>
+    </div>
+    <div class="content-card-body">
+        {% if page_obj %}
+        <div class="table-responsive">
+            <table>
+                <thead>
+                    <tr>
+                        <th>File Name</th>
+                        <th>Uploaded By</th>
+                        <th>Size</th>
+                        <th>Status</th>
+                        <th>Created</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for document in page_obj %}
+                    <tr>
+                        <td><strong>{{ document.file_name }}</strong></td>
+                        <td>{{ document.uploaded_by.username }}</td>
+                        <td>
+                            {% if document.file_size %}
+                                {% with size=document.file_size %}
+                                    {% if size > 1048576 %}
+                                        {{ size|add:"0.0"|add:"1048576"|stringformat:".1f" }} MB
+                                    {% elif size > 1024 %}
+                                        {{ size|add:"0.0"|add:"1024"|stringformat:".1f" }} KB
+                                    {% else %}
+                                        {{ size }} B
+                                    {% endif %}
+                                {% endwith %}
+                            {% else %}
+                                N/A
+                            {% endif %}
+                        </td>
+                        <td>
+                            {% if document.is_processed %}
+                                <span class="badge badge-success">Processed</span>
+                            {% else %}
+                                <span class="badge badge-warning">Pending</span>
+                            {% endif %}
+                        </td>
+                        <td>{{ document.created_at|date:"d M, Y H:i" }}</td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+        
+        <!-- Pagination -->
+        {% if page_obj.has_other_pages %}
+        <div class="pagination">
+            {% if page_obj.has_previous %}
+                <a href="?page=1{% if status_filter %}&status={{ status_filter }}{% endif %}">« First</a>
+                <a href="?page={{ page_obj.previous_page_number }}{% if status_filter %}&status={{ status_filter }}{% endif %}">‹ Previous</a>
+            {% endif %}
+            
+            {% for num in page_obj.paginator.page_range %}
+                {% if page_obj.number == num %}
+                    <span class="current">{{ num }}</span>
+                {% elif num > page_obj.number|add:'-3' and num < page_obj.number|add:'3' %}
+                    <a href="?page={{ num }}{% if status_filter %}&status={{ status_filter }}{% endif %}">{{ num }}</a>
+                {% endif %}
+            {% endfor %}
+            
+            {% if page_obj.has_next %}
+                <a href="?page={{ page_obj.next_page_number }}{% if status_filter %}&status={{ status_filter }}{% endif %}">Next ›</a>
+                <a href="?page={{ page_obj.paginator.num_pages }}{% if status_filter %}&status={{ status_filter }}{% endif %}">Last »</a>
+            {% endif %}
+        </div>
+        {% endif %}
+        {% else %}
+        <div class="empty-state">
+            <div class="empty-state-icon">📄</div>
+            <p>No documents found</p>
+        </div>
+        {% endif %}
+    </div>
+</div>
+{% endblock %}
