@@ -1,250 +1,310 @@
-/* ===================================
-   GLOBAL
-=================================== */
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap');
+
+:root {
+  --primary: #c41e3a;
+  --primary-light: #e74c52;
+  --primary-dark: #8b1329;
+  --secondary: #003a7a;
+  --secondary-light: #0052a3;
+  --secondary-dark: #001f47;
+  --success: #10b981;
+  --warning: #f59e0b;
+  --error: #ef4444;
+  --gray-50: #f9fafb;
+  --gray-100: #f3f4f6;
+  --gray-200: #e5e7eb;
+  --gray-300: #d1d5db;
+  --gray-400: #9ca3af;
+  --gray-500: #6b7280;
+  --gray-600: #4b5563;
+  --gray-700: #374151;
+  --gray-800: #1f2937;
+  --gray-900: #111827;
+  --bg-light: #ffffff;
+  --bg-dark: #0f172a;
+  --text-light: #111827;
+  --text-dark: #f9fafb;
+  --border-light: #e5e7eb;
+  --border-dark: #1e293b;
+}
 
 * {
-    box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
 }
 
-html, body {
-    height: 100%;
+html {
+  scroll-behavior: smooth;
 }
 
 body {
-    font-family: "Inter", sans-serif;
-    transition: background 0.3s ease, color 0.3s ease;
+  font-family: 'Inter', sans-serif;
+  font-size: 16px;
+  line-height: 1.6;
+  color: var(--text-light);
+  background-color: var(--bg-light);
+  transition: background-color 0.3s ease, color 0.3s ease;
 }
 
-/* ===================================
-   THEME VARIABLES
-=================================== */
-
-body.dark {
-    --bg: #000000;
-    --text: #ffffff;
-    --secondary-text: #cfcfcf;
-    --card: #1a1a1a;
-    --input: #2b2b2b;
-    --bubble-user: #3a3a3a;
-    --bubble-ai: #121212;
-    --primary: #4f7f73;
+body.dark-mode {
+  background-color: var(--bg-dark);
+  color: var(--text-dark);
 }
 
-body.light {
-    --bg: #f8f9fa;
-    --text: #111111;
-    --secondary-text: #555555;
-    --card: #ffffff;
-    --input: #e9ecef;
-    --bubble-user: #d6d6d6;
-    --bubble-ai: #ffffff;
-    --primary: #4f7f73;
+/* Typography */
+h1, h2, h3, h4, h5, h6 {
+  font-weight: 600;
+  line-height: 1.2;
+  margin-bottom: 1rem;
 }
 
-/* ===================================
-   BASE
-=================================== */
-
-body {
-    background: var(--bg);
-    color: var(--text);
+h1 {
+  font-size: 2.25rem;
 }
 
-.card,
-.sidebar {
-    background: var(--card);
-    border: none;
+h2 {
+  font-size: 1.875rem;
 }
 
-.text-muted {
-    color: var(--secondary-text) !important;
+h3 {
+  font-size: 1.5rem;
 }
 
-/* ===================================
-   NAVBAR
-=================================== */
-
-.navbar {
-    background: var(--card);
-    height: 70px;
+h4 {
+  font-size: 1.25rem;
 }
 
-#logo-pertamina {
-    height: 40px;
+p {
+  margin-bottom: 1rem;
 }
 
-/* ===================================
-   MAIN LAYOUT
-=================================== */
-
-#app-layout {
-    height: calc(100vh - 70px);
-    overflow: hidden;
+/* Form Elements */
+input, textarea, select {
+  font-family: 'Inter', sans-serif;
+  font-size: 1rem;
+  width: 100%;
+  padding: 0.75rem 1rem;
+  border: 1px solid var(--border-light);
+  border-radius: 0.5rem;
+  background-color: var(--bg-light);
+  color: var(--text-light);
+  transition: all 0.3s ease;
 }
 
-/* ===================================
-   SIDEBAR
-=================================== */
-
-.sidebar {
-    width: 280px;
-    padding: 20px;
-    overflow-y: auto;
-    transition: all 0.3s ease;
-    border-right: 1px solid var(--input);
+body.dark-mode input,
+body.dark-mode textarea,
+body.dark-mode select {
+  background-color: var(--gray-900);
+  border-color: var(--border-dark);
+  color: var(--text-dark);
 }
 
-/* Collapsed state */
-.sidebar.collapsed {
-    margin-left: -280px;
+input:focus, textarea:focus, select:focus {
+  outline: none;
+  border-color: var(--primary);
+  box-shadow: 0 0 0 3px rgba(196, 30, 58, 0.1);
 }
 
-/* Sidebar Items */
-
-.sidebar .list-group-item {
-    background: transparent;
-    border: none;
-    color: var(--text);
-    border-radius: 8px;
-    transition: background 0.2s ease;
+body.dark-mode input:focus,
+body.dark-mode textarea:focus,
+body.dark-mode select:focus {
+  box-shadow: 0 0 0 3px rgba(196, 30, 58, 0.2);
+  background-color: var(--gray-800);
 }
 
-.sidebar .list-group-item:hover {
-    background: var(--input);
+/* Buttons */
+.btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+  padding: 0.75rem 1.5rem;
+  border: none;
+  border-radius: 0.5rem;
+  font-size: 1rem;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  text-decoration: none;
 }
 
-/* ===================================
-   CHAT AREA
-=================================== */
-
-.chat-area {
-    background: var(--bg);
-    display: flex;
-    flex-direction: column;
+.btn-primary {
+  background-color: var(--primary);
+  color: white;
 }
 
-/* ===================================
-   MESSAGES
-=================================== */
-
-.messages {
-    flex: 1;
-    overflow-y: auto;
-    padding-right: 10px;
+.btn-primary:hover {
+  background-color: var(--primary-dark);
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(196, 30, 58, 0.3);
 }
 
-/* Scrollbar Styling */
-.messages::-webkit-scrollbar {
-    width: 6px;
+.btn-primary:active {
+  transform: translateY(0);
 }
 
-.messages::-webkit-scrollbar-thumb {
-    background: var(--input);
-    border-radius: 10px;
+.btn-secondary {
+  background-color: var(--secondary);
+  color: white;
 }
 
-/* Message Bubble */
-
-.message {
-    max-width: 70%;
-    padding: 14px 18px;
-    border-radius: 18px;
-    margin-bottom: 14px;
-    line-height: 1.6;
-    word-wrap: break-word;
+.btn-secondary:hover {
+  background-color: var(--secondary-dark);
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(0, 58, 122, 0.3);
 }
 
-.message.user {
-    margin-left: auto;
-    background: var(--bubble-user);
+.btn-outline {
+  border: 1px solid var(--primary);
+  color: var(--primary);
+  background-color: transparent;
 }
 
-.message.assistant {
-    background: var(--bubble-ai);
+body.dark-mode .btn-outline {
+  border-color: var(--primary-light);
+  color: var(--primary-light);
 }
 
-/* ===================================
-   CHAT INPUT
-=================================== */
-
-.chat-input {
-    background: var(--card);
+.btn-outline:hover {
+  background-color: var(--primary);
+  color: white;
 }
 
-.chat-input .form-control {
-    background: var(--input);
-    border: none;
-    color: var(--text);
+.btn-small {
+  padding: 0.5rem 1rem;
+  font-size: 0.875rem;
 }
 
-.chat-input .form-control:focus {
-    box-shadow: none;
-    border: none;
+.btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
 }
 
-.chat-input .btn {
-    background: var(--primary);
-    border: none;
-    border-radius: 50%;
-    width: 45px;
-    height: 45px;
-    display: flex;
-    align-items: center;
-    justify-content: center;
+/* Cards */
+.card {
+  background-color: var(--bg-light);
+  border: 1px solid var(--border-light);
+  border-radius: 0.75rem;
+  padding: 1.5rem;
+  transition: all 0.3s ease;
 }
 
-.chat-input .btn:hover {
-    opacity: 0.9;
+body.dark-mode .card {
+  background-color: var(--gray-900);
+  border-color: var(--border-dark);
 }
 
-/* ===================================
-   SEARCH BAR
-=================================== */
-
-.search-bar {
-    background: var(--input);
-    border: none;
-    color: var(--text);
+.card:hover {
+  box-shadow: 0 10px 25px rgba(0, 0, 0, 0.1);
 }
 
-.search-bar:focus {
-    box-shadow: none;
-    border: none;
+body.dark-mode .card:hover {
+  box-shadow: 0 10px 25px rgba(0, 0, 0, 0.3);
 }
 
-/* ===================================
-   AUTH (LOGIN / SIGNUP)
-=================================== */
-
-.auth-container {
-    max-width: 420px;
+/* Container & Layout */
+.container {
+  max-width: 1280px;
+  margin: 0 auto;
+  padding: 0 1rem;
 }
 
-.auth-container .form-control {
-    background: var(--input);
-    color: var(--text);
-    border: none;
+.flex {
+  display: flex;
 }
 
-.auth-container .btn-primary {
-    background: var(--primary);
-    border: none;
+.flex-col {
+  flex-direction: column;
 }
 
-/* ===================================
-   RESPONSIVE
-=================================== */
+.justify-center {
+  justify-content: center;
+}
 
-@media (max-width: 992px) {
-    .sidebar {
-        position: absolute;
-        z-index: 1000;
-        height: 100%;
-        left: 0;
-        top: 70px;
-    }
+.items-center {
+  align-items: center;
+}
 
-    .sidebar.collapsed {
-        margin-left: -280px;
-    }
+.gap-1 { gap: 0.25rem; }
+.gap-2 { gap: 0.5rem; }
+.gap-3 { gap: 0.75rem; }
+.gap-4 { gap: 1rem; }
+.gap-6 { gap: 1.5rem; }
+.gap-8 { gap: 2rem; }
+
+.p-2 { padding: 0.5rem; }
+.p-3 { padding: 0.75rem; }
+.p-4 { padding: 1rem; }
+.p-6 { padding: 1.5rem; }
+.p-8 { padding: 2rem; }
+
+.m-2 { margin: 0.5rem; }
+.m-4 { margin: 1rem; }
+.m-auto { margin: auto; }
+
+.w-full { width: 100%; }
+.h-full { height: 100%; }
+
+.text-center { text-align: center; }
+
+/* Utility Classes */
+.hidden { display: none; }
+.block { display: block; }
+.inline-block { display: inline-block; }
+
+.rounded { border-radius: 0.5rem; }
+.rounded-lg { border-radius: 0.75rem; }
+
+.shadow-sm { box-shadow: 0 1px 2px rgba(0, 0, 0, 0.05); }
+.shadow { box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1); }
+.shadow-lg { box-shadow: 0 10px 15px rgba(0, 0, 0, 0.1); }
+
+.text-sm { font-size: 0.875rem; }
+.text-base { font-size: 1rem; }
+.text-lg { font-size: 1.125rem; }
+.text-xl { font-size: 1.25rem; }
+
+.font-normal { font-weight: 400; }
+.font-medium { font-weight: 500; }
+.font-semibold { font-weight: 600; }
+.font-bold { font-weight: 700; }
+
+.text-gray-500 { color: var(--gray-500); }
+.text-gray-600 { color: var(--gray-600); }
+
+body.dark-mode .text-gray-500 { color: var(--gray-400); }
+body.dark-mode .text-gray-600 { color: var(--gray-500); }
+
+/* Responsive Design */
+@media (max-width: 768px) {
+  h1 { font-size: 1.875rem; }
+  h2 { font-size: 1.5rem; }
+  h3 { font-size: 1.25rem; }
+  
+  .container {
+    padding: 0 1rem;
+  }
+  
+  .hidden-mobile {
+    display: none !important;
+  }
+}
+
+@media (max-width: 480px) {
+  h1 { font-size: 1.5rem; }
+  h2 { font-size: 1.25rem; }
+  h3 { font-size: 1.125rem; }
+  
+  body {
+    font-size: 14px;
+  }
+  
+  .btn {
+    width: 100%;
+  }
+  
+  input, textarea, select {
+    font-size: 16px;
+  }
 }

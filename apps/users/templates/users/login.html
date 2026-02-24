@@ -1,19 +1,19 @@
 {% extends 'base.html' %}
 {% load static %}
 
-{% block title %}Sign Up - SITI{% endblock %}
+{% block title %}Login - SITI{% endblock %}
 
 {% block extra_css %}
 <style>
-    .signup-container {
+    .login-container {
         display: flex;
         justify-content: center;
         align-items: center;
         min-height: calc(100vh - 60px);
         gap: 0;
     }
-
-    .signup-form-section {
+    
+    .login-form-section {
         display: flex;
         flex-direction: column;
         justify-content: center;
@@ -21,15 +21,15 @@
         background-color: var(--bg-light);
         width: 100%;
     }
-
-    body.dark-mode .signup-form-section {
+    
+    body.dark-mode .login-form-section {
         background-color: var(--bg-dark);
     }
-
-    .signup-image-section {
+    
+    .login-image-section {
         display: none;
     }
-
+    
     .form-wrapper {
         max-width: 400px;
         margin: 0 auto;
@@ -55,24 +55,23 @@
     body.dark-mode .form-wrapper:hover {
         box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
     }
-
+    
     .form-group {
         margin-bottom: 1.5rem;
     }
-
+    
     .form-group label {
         display: block;
         margin-bottom: 0.5rem;
         font-weight: 500;
         color: var(--text-light);
     }
-
+    
     body.dark-mode .form-group label {
         color: var(--text-dark);
     }
-
-    .form-group input,
-    .form-group select {
+    
+    .form-group input {
         width: 100%;
         padding: 0.75rem 1rem;
         border: 1px solid var(--border-light);
@@ -82,72 +81,76 @@
         color: var(--text-light);
         transition: all 0.3s ease;
     }
-
-    body.dark-mode .form-group input,
-    body.dark-mode .form-group select {
+    
+    body.dark-mode .form-group input {
         background-color: var(--gray-900);
         border-color: var(--border-dark);
         color: var(--text-dark);
     }
-
-    .form-group input:focus,
-    .form-group select:focus {
+    
+    .form-group input:focus {
         outline: none;
-        border-color: var(--primary);
-        box-shadow: 0 0 0 3px rgba(196, 30, 58, 0.1);
+        border-color: var(--secondary);
+        box-shadow: 0 0 0 3px rgba(0, 58, 122, 0.1);
     }
-
-    body.dark-mode .form-group input:focus,
-    body.dark-mode .form-group select:focus {
-        box-shadow: 0 0 0 3px rgba(196, 30, 58, 0.2);
+    
+    body.dark-mode .form-group input:focus {
+        box-shadow: 0 0 0 3px rgba(0, 58, 122, 0.2);
     }
-
-    .signup-header {
+    
+    .login-header {
         margin-bottom: 2rem;
     }
-
-    .signup-header h1 {
+    
+    .login-header h1 {
         font-size: 1.875rem;
         margin-bottom: 0.5rem;
         font-weight: 700;
     }
-
-    .signup-header p {
+    
+    .login-header p {
         color: var(--gray-600);
         margin: 0;
     }
-
-    .form-row {
-        display: grid;
-        grid-template-columns: 1fr 1fr;
-        gap: 1rem;
-    }
-
-    .form-row .form-group {
-        margin-bottom: 0;
-    }
-
+    
     .checkbox-group {
         display: flex;
         align-items: center;
         gap: 0.5rem;
+        margin-bottom: 1.5rem;
     }
-
+    
     .checkbox-group input[type="checkbox"] {
         width: auto;
         cursor: pointer;
     }
-
+    
     .checkbox-group label {
         margin: 0;
         cursor: pointer;
         font-size: 0.875rem;
     }
-
+    
+    .forgot-password {
+        text-align: right;
+        margin-bottom: 1.5rem;
+    }
+    
+    .forgot-password a {
+        color: var(--secondary);
+        text-decoration: none;
+        font-size: 0.875rem;
+        font-weight: 500;
+    }
+    
+    .forgot-password a:hover {
+        text-decoration: underline;
+    }
+    
     .submit-btn {
         width: 100%;
         padding: 0.75rem;
-        background-color: var(--primary);
+        background-color: var(--secondary);
         color: white;
         font-weight: 600;
         border: none;
@@ -155,15 +158,15 @@
         cursor: pointer;
         font-size: 1rem;
         transition: all 0.3s ease;
-        margin-top: 1rem;
+        margin-bottom: 1rem;
     }
-
+    
     .submit-btn:hover {
-        background-color: var(--primary-dark);
+        background-color: var(--secondary-dark);
         transform: translateY(-2px);
-        box-shadow: 0 4px 12px rgba(196, 30, 58, 0.3);
+        box-shadow: 0 4px 12px rgba(0, 58, 122, 0.3);
     }
-
+    
     .divider {
         display: flex;
         align-items: center;
@@ -171,7 +174,7 @@
         margin: 1.5rem 0;
         color: var(--gray-500);
     }
-
+    
     .divider::before,
     .divider::after {
         content: '';
@@ -179,12 +182,12 @@
         height: 1px;
         background-color: var(--border-light);
     }
-
+    
     body.dark-mode .divider::before,
     body.dark-mode .divider::after {
         background-color: var(--border-dark);
     }
-
+    
     .oauth-btn {
         width: 100%;
         display: flex;
@@ -200,145 +203,121 @@
         cursor: pointer;
         transition: all 0.3s ease;
     }
-
+    
     body.dark-mode .oauth-btn {
         background-color: var(--gray-900);
         border-color: var(--border-dark);
         color: var(--text-dark);
     }
-
+    
     .oauth-btn:hover {
         background-color: var(--gray-100);
     }
-
+    
     body.dark-mode .oauth-btn:hover {
         background-color: var(--gray-800);
     }
-
-    .signup-footer {
+    
+    .login-footer {
         text-align: center;
         margin-top: 1.5rem;
         color: var(--gray-600);
         font-size: 0.875rem;
     }
-
-    .signup-footer a {
-        color: var(--primary);
+    
+    .login-footer a {
+        color: var(--secondary);
         text-decoration: none;
         font-weight: 600;
     }
-
-    .signup-footer a:hover {
+    
+    .login-footer a:hover {
         text-decoration: underline;
     }
-
+    
     @media (max-width: 768px) {
-        .signup-container {
+        .login-container {
             grid-template-columns: 1fr;
         }
-
-        .signup-image-section {
+        
+        .login-image-section {
             display: none;
         }
-
-        .signup-form-section {
+        
+        .login-form-section {
             min-height: calc(100vh - 60px);
         }
-
-        .signup-header h1 {
+        
+        .login-header h1 {
             font-size: 1.5rem;
-        }
-
-        .form-row {
-            grid-template-columns: 1fr;
         }
     }
 </style>
 {% endblock %}
 
 {% block content %}
-<div class="signup-container">
+<div class="login-container">
     <!-- Form Section -->
-    <div class="signup-form-section">
+    <div class="login-form-section">
         <div class="form-wrapper">
-            <div class="signup-header">
-                <h1>Daftar</h1>
-                <p>Buat akun baru untuk mengakses AI Chatbot Pertamina</p>
+            <div class="login-header">
+                <h1>Masuk</h1>
+                <p>Masuk ke akun Anda untuk melanjutkan</p>
             </div>
-
-            <form id="signup-form" method="POST" action="{% url 'users:signup' %}">
+            
+            <form id="login-form" method="POST" action="{% url 'users:login' %}">
                 {% csrf_token %}
-
-                <div class="form-row">
-                    <div class="form-group">
-                        <label for="first-name">Nama Depan *</label>
-                        <input type="text" id="first-name" name="first_name" placeholder="John" required>
-                    </div>
-                    <div class="form-group">
-                        <label for="last-name">Nama Belakang *</label>
-                        <input type="text" id="last-name" name="last_name" placeholder="Doe" required>
-                    </div>
-                </div>
-
+                
                 <div class="form-group">
                     <label for="email">Email *</label>
                     <input type="email" id="email" name="email" placeholder="example@gmail.com" required>
                 </div>
-
+                
                 <div class="form-group">
-                    <label for="company">Perusahaan / Bekerja Untuk</label>
-                    <input type="text" id="company" name="company" placeholder="Pertamina Regional">
+                    <label for="password">Password *</label>
+                    <input type="password" id="password" name="password" placeholder="••••••••" required>
                 </div>
-
-                <div class="form-row">
-                    <div class="form-group">
-                        <label for="password">Password *</label>
-                        <input type="password" id="password" name="password" placeholder="••••••••" required>
-                    </div>
-                    <div class="form-group">
-                        <label for="confirm-password">Konfirmasi Password *</label>
-                        <input type="password" id="confirm-password" name="confirm_password" placeholder="••••••••"
-                            required>
-                    </div>
+                
+                <div class="checkbox-group">
+                    <input type="checkbox" id="remember" name="remember">
+                    <label for="remember">Ingat saya</label>
                 </div>
-
-                <div class="form-group checkbox-group">
-                    <input type="checkbox" id="accept-terms" name="accept_terms" required>
-                    <label for="accept-terms">Saya menerima Syarat & Ketentuan dan Kebijakan Privasi</label>
+                
+                <div class="forgot-password">
+                    <a href="#">Lupa password?</a>
                 </div>
-
-                <button type="button" class="submit-btn" onclick="completeSignup()">Daftar Sekarang</button>
+                
+                <button type="button" class="submit-btn" onclick="goToChat()">Masuk</button>
             </form>
-
+            
             <div class="divider">atau</div>
-
+            
             <button class="oauth-btn" onclick="completeSignup()">
                 <i class="bi bi-google" style="margin-right: 0.5rem;"></i> Daftar dengan Google
             </button>
-
-            <div class="signup-footer">
-                Sudah punya akun? <a href="{% url 'users:login' %}">Masuk di sini</a>
+            
+            <div class="login-footer">
+                Belum punya akun? <a href="{% url 'users:signup' %}">Daftar di sini</a>
             </div>
         </div>
     </div>
-
+    
     <!-- Image Section -->
-    <div class="signup-image-section">
+    <div class="login-image-section">
         <div style="text-align: center; color: white; padding: 2rem;">
-            <div style="font-size: 4rem; margin-bottom: 1rem;">⛽</div>
-            <h2 style="font-size: 2rem; margin-bottom: 1rem; font-weight: 700;">SITI</h2>
+            <div style="font-size: 4rem; margin-bottom: 1rem;">🚀</div>
+            <h2 style="font-size: 2rem; margin-bottom: 1rem; font-weight: 700;">Selamat Datang</h2>
             <p style="font-size: 1.125rem; margin-bottom: 2rem; opacity: 0.95;">
-                Teman AI Anda untuk solusi Pertamina
+                Berinteraksi dengan AI Chatbot Pertamina
             </p>
-            <div
-                style="background: rgba(255, 255, 255, 0.1); padding: 1.5rem; border-radius: 0.75rem; backdrop-filter: blur(10px);">
-                <div style="font-size: 1.5rem; margin-bottom: 1rem;">✨</div>
-                <h3 style="margin-bottom: 0.75rem;">Fitur Utama</h3>
+            <div style="background: rgba(255, 255, 255, 0.1); padding: 1.5rem; border-radius: 0.75rem; backdrop-filter: blur(10px);">
+                <div style="font-size: 1.5rem; margin-bottom: 1rem;">⚡</div>
+                <h3 style="margin-bottom: 0.75rem;">Akses Instan</h3>
                 <ul style="text-align: left; display: inline-block; margin: 0;">
-                    <li style="margin-bottom: 0.5rem;">✓ AI Chatbot 24/7</li>
-                    <li style="margin-bottom: 0.5rem;">✓ Respons Cepat & Akurat</li>
-                    <li style="margin-bottom: 0.5rem;">✓ Dukungan Penuh Bahasa</li>
-                    <li style="margin-bottom: 0.5rem;">✓ Keamanan Data Terjamin</li>
+                    <li style="margin-bottom: 0.5rem;">✓ Chat Dengan AI 24/7</li>
+                    <li style="margin-bottom: 0.5rem;">✓ Dukungan Instant</li>
+                    <li style="margin-bottom: 0.5rem;">✓ Solusi Cepat</li>
+                    <li style="margin-bottom: 0.5rem;">✓ Keamanan Terjamin</li>
                 </ul>
             </div>
         </div>
@@ -348,21 +327,18 @@
 
 {% block extra_js %}
 <script>
-    function completeSignup() {
-        // Langsung redirect ke login page tanpa validasi
-        window.location.href = '{% url "users:login" %}';
+    function goToChat() {
+        // Langsung redirect ke chat tanpa validasi
+        window.location.href = '{% url "chatbot:chat" %}';
     }
     
-    document.getElementById('signup-form').addEventListener('submit', function (e) {
+    document.getElementById('login-form').addEventListener('submit', function(e) {
         e.preventDefault();
-        completeSignup();
+        goToChat();
     });
     
     // Auto-set some dummy values untuk testing
-    document.getElementById('name').value = 'Demo User';
     document.getElementById('email').value = 'demo@pertamina.com';
-    document.getElementById('company').value = 'Pertamina';
     document.getElementById('password').value = '••••••••';
-    document.getElementById('confirm-password').value = '••••••••';
 </script>
 {% endblock %}

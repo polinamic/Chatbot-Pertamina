@@ -3,6 +3,7 @@ from rest_framework.decorators import action
 from rest_framework.response import Response
 from rest_framework.permissions import IsAuthenticated, AllowAny
 from django.contrib.auth.models import User
+from django.shortcuts import render
 from .models import UserProfile
 from .serializers import UserSerializer, UserProfileSerializer, UserRegistrationSerializer
 
@@ -39,3 +40,14 @@ class UserViewSet(viewsets.ModelViewSet):
             serializer.save()
             return Response(serializer.data)
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+
+# Template Views
+def signup_page(request):
+    """Render signup page"""
+    return render(request, 'users/signup.html')
+
+
+def login_page(request):
+    """Render login page"""
+    return render(request, 'users/login.html')

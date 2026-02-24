@@ -1,33 +1,544 @@
-{% extends "base.html" %}
-{% block theme %}dark{% endblock %}
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}SITI Chat - AI Assistant{% endblock %}
+
+{% block extra_css %}
+<style>
+    .chat-container {
+        display: grid;
+        grid-template-columns: 250px 1fr;
+        height: calc(100vh - 60px);
+        gap: 0;
+        background-color: var(--bg-light);
+    }
+    
+    body.dark-mode .chat-container {
+        background-color: var(--bg-dark);
+    }
+    
+    .chat-sidebar {
+        border-right: 1px solid var(--border-light);
+        background-color: var(--gray-50);
+        overflow-y: auto;
+        padding: 1rem;
+        display: flex;
+        flex-direction: column;
+    }
+    
+    body.dark-mode .chat-sidebar {
+        background-color: var(--gray-900);
+        border-right-color: var(--border-dark);
+    }
+    
+    .new-chat-btn {
+        width: 100%;
+        padding: 0.75rem 1rem;
+        background-color: var(--primary);
+        color: white;
+        border: none;
+        border-radius: 0.5rem;
+        cursor: pointer;
+        font-weight: 600;
+        margin-bottom: 1rem;
+        transition: all 0.3s ease;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        gap: 0.5rem;
+    }
+    
+    .new-chat-btn:hover {
+        background-color: var(--primary-dark);
+        transform: translateY(-2px);
+    }
+    
+    .chat-history {
+        flex: 1;
+        overflow-y: auto;
+    }
+    
+    .chat-item {
+        padding: 0.75rem;
+        margin-bottom: 0.5rem;
+        background-color: transparent;
+        border-radius: 0.5rem;
+        cursor: pointer;
+        transition: all 0.2s ease;
+        font-size: 0.875rem;
+        color: var(--gray-700);
+        border-left: 3px solid transparent;
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+    }
+    
+    body.dark-mode .chat-item {
+        color: var(--gray-400);
+    }
+    
+    .chat-item:hover {
+        background-color: var(--gray-100);
+        border-left-color: var(--primary);
+    }
+    
+    body.dark-mode .chat-item:hover {
+        background-color: var(--gray-800);
+    }
+    
+    .chat-item.active {
+        background-color: var(--primary);
+        color: white;
+        border-left-color: var(--primary-dark);
+    }
+    
+    .chat-main {
+        display: flex;
+        flex-direction: column;
+        background-color: var(--bg-light);
+    }
+    
+    body.dark-mode .chat-main {
+        background-color: var(--bg-dark);
+    }
+    
+    .chat-header {
+        border-bottom: 1px solid var(--border-light);
+        padding: 1rem;
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        background-color: var(--gray-50);
+    }
+    
+    body.dark-mode .chat-header {
+        background-color: var(--gray-900);
+        border-bottom-color: var(--border-dark);
+    }
+    
+    .chat-header h2 {
+        margin: 0;
+        font-size: 1rem;
+        font-weight: 600;
+    }
+    
+    .chat-header-actions {
+        display: flex;
+        gap: 0.5rem;
+    }
+    
+    .chat-header-btn {
+        background: none;
+        border: 1px solid var(--border-light);
+        padding: 0.5rem 0.75rem;
+        cursor: pointer;
+        border-radius: 0.4rem;
+        color: var(--gray-600);
+        transition: all 0.2s ease;
+        font-size: 0.875rem;
+    }
+    
+    body.dark-mode .chat-header-btn {
+        border-color: var(--border-dark);
+        color: var(--gray-400);
+    }
+    
+    .chat-header-btn:hover {
+        background-color: white;
+        border-color: var(--gray-300);
+    }
+    
+    body.dark-mode .chat-header-btn:hover {
+        background-color: var(--gray-800);
+        border-color: var(--gray-600);
+    }
+    
+    .chat-messages {
+        flex: 1;
+        overflow-y: auto;
+        padding: 2rem 1.5rem;
+        display: flex;
+        flex-direction: column;
+        gap: 1rem;
+    }
+    
+    .chat-empty {
+        display: flex;
+        flex-direction: column;
+        justify-content: center;
+        align-items: center;
+        height: 100%;
+        color: var(--gray-500);
+        text-align: center;
+    }
+    
+    .chat-empty-icon {
+        font-size: 4rem;
+        margin-bottom: 1rem;
+        opacity: 0.7;
+        color: var(--primary);
+    }
+    
+    .chat-empty h3 {
+        margin: 0 0 0.5rem 0;
+        font-size: 1.25rem;
+    }
+    
+    .message {
+        display: flex;
+        margin-bottom: 1rem;
+        animation: fadeIn 0.3s ease;
+    }
+    
+    @keyframes fadeIn {
+        from {
+            opacity: 0;
+            transform: translateY(10px);
+        }
+        to {
+            opacity: 1;
+            transform: translateY(0);
+        }
+    }
+    
+    .message.user-message {
+        justify-content: flex-end;
+    }
+    
+    .message.bot-message {
+        justify-content: flex-start;
+    }
+    
+    .message-content {
+        max-width: 70%;
+        padding: 0.75rem 1rem;
+        border-radius: 0.75rem;
+        word-wrap: break-word;
+    }
+    
+    .user-message .message-content {
+        background-color: var(--primary);
+        color: white;
+        border-radius: 0.75rem 0rem 0.75rem 0.75rem;
+    }
+    
+    .bot-message .message-content {
+        background-color: var(--gray-100);
+        color: var(--gray-900);
+        border-radius: 0rem 0.75rem 0.75rem 0.75rem;
+    }
+    
+    body.dark-mode .bot-message .message-content {
+        background-color: var(--gray-800);
+        color: var(--text-dark);
+    }
+    
+    .message-time {
+        display: block;
+        font-size: 0.75rem;
+        margin-top: 0.25rem;
+        opacity: 0.7;
+    }
+    
+    .chat-input-section {
+        border-top: 1px solid var(--border-light);
+        padding: 1rem;
+        background-color: var(--gray-50);
+    }
+    
+    body.dark-mode .chat-input-section {
+        background-color: var(--gray-900);
+        border-top-color: var(--border-dark);
+    }
+    
+    .chat-input-wrapper {
+        display: flex;
+        gap: 0.75rem;
+        align-items: flex-end;
+    }
+    
+    .chat-input-wrapper textarea {
+        flex: 1;
+        padding: 0.75rem 1rem;
+        border: 1px solid var(--border-light);
+        border-radius: 0.5rem;
+        resize: none;
+        max-height: 120px;
+        font-family: 'Inter', sans-serif;
+        font-size: 0.95rem;
+        background-color: var(--bg-light);
+        color: var(--text-light);
+    }
+    
+    body.dark-mode .chat-input-wrapper textarea {
+        background-color: var(--gray-800);
+        border-color: var(--border-dark);
+        color: var(--text-dark);
+    }
+    
+    .chat-input-wrapper textarea:focus {
+        outline: none;
+        border-color: var(--primary);
+        box-shadow: 0 0 0 3px rgba(196, 30, 58, 0.1);
+    }
+    
+    body.dark-mode .chat-input-wrapper textarea:focus {
+        box-shadow: 0 0 0 3px rgba(196, 30, 58, 0.2);
+    }
+    
+    .send-btn {
+        padding: 0.75rem 1rem;
+        background-color: var(--primary);
+        color: white;
+        border: none;
+        border-radius: 0.5rem;
+        cursor: pointer;
+        font-weight: 600;
+        transition: all 0.3s ease;
+        white-space: nowrap;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        height: 45px;
+        width: 45px;
+    }
+    
+    .send-btn:hover:not(:disabled) {
+        background-color: var(--primary-dark);
+        transform: translateY(-2px);
+    }
+    
+    .send-btn:disabled {
+        opacity: 0.5;
+        cursor: not-allowed;
+    }
+    
+    @media (max-width: 768px) {
+        .chat-container {
+            grid-template-columns: 1fr;
+        }
+        
+        .chat-sidebar {
+            display: none;
+        }
+        
+        .message-content {
+            max-width: 85%;
+        }
+        
+        .chat-messages {
+            padding: 1rem;
+        }
+    }
+    
+    @media (max-width: 480px) {
+        .chat-messages {
+            padding: 0.75rem 0.5rem;
+        }
+        
+        .message-content {
+            max-width: 90%;
+            padding: 0.5rem 0.75rem;
+            font-size: 0.875rem;
+        }
+        
+        .chat-input-wrapper {
+            flex-direction: column;
+        }
+        
+        .send-btn {
+            width: 100%;
+        }
+    }
+</style>
+{% endblock %}
 
 {% block content %}
-<div class="chat-layout">
-    
-    <aside class="sidebar">
-        <h3>Percakapan</h3>
-        <ul>
-            {% for convo in conversations %}
-                <li>{{ convo.title }}</li>
-            {% endfor %}
-        </ul>
-    </aside>
-
-    <section class="chat-area">
-        <div class="messages">
-            {% for msg in messages %}
-                <div class="message {{ msg.sender_type }}">
-                    {{ msg.content }}
-                </div>
-            {% endfor %}
+<div class="chat-container">
+    <div class="chat-sidebar">
+        <button class="new-chat-btn" onclick="startNewChat()">
+            <i class="bi bi-plus-lg"></i> Chat Baru
+        </button>
+        
+        <div class="chat-history">
+            <div class="chat-item active" onclick="selectChat(this)">
+                Ketika laptop saya tidak bisa terhubung ke wifi, apa yang harus saya lakukan?
+            </div>
+            <div class="chat-item" onclick="selectChat(this)">
+                Bagaimana cara memperbaiki laptop yang lemot
+            </div>
+            <div class="chat-item" onclick="selectChat(this)">
+                Bagaimana cara menyambungkan wifi di laptop saya
+            </div>
+            <div class="chat-item" onclick="selectChat(this)">
+                Bagaimana cara membetulkan laptop yang sinyalnya eror
+            </div>
         </div>
-
-        <form method="POST" class="chat-input">
-            {% csrf_token %}
-            <input type="text" name="message" placeholder="Kirim pesan...">
-            <button type="submit">→</button>
-        </form>
-    </section>
-
+        
+        <div style="border-top: 1px solid var(--border-light); padding-top: 1rem; margin-top: auto;">
+            <div style="padding: 0.75rem; font-size: 0.875rem; color: var(--gray-600); cursor: pointer; border-radius: 0.5rem; transition: all 0.2s; display: flex; align-items: center; gap: 0.5rem;" onmouseover="this.style.backgroundColor='var(--gray-100)'" onmouseout="this.style.backgroundColor='transparent'">
+                <i class="bi bi-person"></i> Profil
+            </div>
+            <div style="padding: 0.75rem; font-size: 0.875rem; color: var(--gray-600); cursor: pointer; border-radius: 0.5rem; transition: all 0.2s; display: flex; align-items: center; gap: 0.5rem;" onmouseover="this.style.backgroundColor='var(--gray-100)'" onmouseout="this.style.backgroundColor='transparent'">
+                <i class="bi bi-gear"></i> Pengaturan
+            </div>
+            <div style="padding: 0.75rem; font-size: 0.875rem; color: var(--gray-600); cursor: pointer; border-radius: 0.5rem; transition: all 0.2s; color: var(--error); display: flex; align-items: center; gap: 0.5rem;" onmouseover="this.style.backgroundColor='var(--gray-100)'" onmouseout="this.style.backgroundColor='transparent'">
+                <i class="bi bi-box-arrow-right"></i> Keluar
+            </div>
+        </div>
+    </div>
+    
+    <div class="chat-main">
+        <div class="chat-header">
+            <h2>Chat dengan AI</h2>
+            <div class="chat-header-actions">
+                <button class="chat-header-btn" onclick="clearChat()"><i class="bi bi-trash"></i> Hapus Chat</button>
+                <button class="chat-header-btn" onclick="shareChat()"><i class="bi bi-share"></i> Bagikan</button>
+            </div>
+        </div>
+        
+        <div class="chat-messages" id="chat-messages">
+            <div class="chat-empty">
+                <div class="chat-empty-icon"><i class="bi bi-robot"></i></div>
+                <h3>SITI AI Assistant</h3>
+                <p>Halo! Saya SITI, Solusi Interaktif Teknologi Informasi.<br>Bagaimana saya bisa membantu Anda hari ini?</p>
+            </div>
+        </div>
+        
+        <div class="chat-input-section">
+            <div class="chat-input-wrapper">
+                <textarea id="message-input" placeholder="Ketik pertanyaan Anda di sini... (Shift + Enter untuk baris baru)" rows="1"></textarea>
+                <button class="send-btn" id="send-btn" onclick="sendMessage('message-input', 'chat-messages')">
+                    <i class="bi bi-send-fill"></i>
+                </button>
+            </div>
+        </div>
+    </div>
 </div>
+{% endblock %}
+
+{% block footer %}{% endblock %}
+
+{% block extra_js %}
+<script>
+    // Auto-resize textarea
+    document.getElementById('message-input').addEventListener('input', function() {
+        this.style.height = 'auto';
+        this.style.height = Math.min(this.scrollHeight, 120) + 'px';
+    });
+    
+    // Enter to send (Shift+Enter for newline)
+    document.getElementById('message-input').addEventListener('keydown', function(e) {
+        if (e.key === 'Enter' && !e.shiftKey) {
+            e.preventDefault();
+            sendMessageChat('message-input', 'chat-messages'); // Pastikan memanggil fungsi yang benar
+        }
+    });
+    
+    function startNewChat() {
+        document.getElementById('chat-messages').innerHTML = `
+            <div class="chat-empty">
+                <div class="chat-empty-icon"><i class="bi bi-robot"></i></div>
+                <h3>SITI AI Assistant</h3>
+                <p>Halo! Saya SITI, Solusi Interaktif Teknologi Informasi.<br>Bagaimana saya bisa membantu Anda hari ini?</p>
+            </div>
+        `;
+        document.getElementById('message-input').value = '';
+        document.getElementById('message-input').style.height = 'auto';
+    }
+    
+    function selectChat(element) {
+        document.querySelectorAll('.chat-item').forEach(item => {
+            item.classList.remove('active');
+        });
+        element.classList.add('active');
+        clearChat();
+    }
+    
+    function clearChat() {
+        if (confirm('Yakin ingin menghapus chat ini?')) {
+            startNewChat();
+        }
+    }
+    
+    function shareChat() {
+        alert('Fitur berbagi chat akan segera hadir!');
+    }
+
+    // Helper function for escaping HTML to prevent XSS (if not already defined elsewhere)
+    function escapeHtml(unsafe) {
+        return unsafe
+             .replace(/&/g, "&amp;")
+             .replace(/</g, "&lt;")
+             .replace(/>/g, "&gt;")
+             .replace(/"/g, "&quot;")
+             .replace(/'/g, "&#039;");
+    }
+
+    // Helper function for getting current time
+    function getCurrentTime() {
+        const now = new Date();
+        return now.getHours().toString().padStart(2, '0') + ':' + now.getMinutes().toString().padStart(2, '0');
+    }
+    
+    // Override sendMessage function untuk chat
+    function sendMessageChat(inputId, messagesId) {
+        const input = document.getElementById(inputId);
+        const messagesContainer = document.getElementById(messagesId);
+        
+        if (!input || !messagesContainer || !input.value.trim()) return;
+        
+        // Remove empty state
+        const emptyState = messagesContainer.querySelector('.chat-empty');
+        if (emptyState) {
+            emptyState.remove();
+        }
+        
+        const message = input.value.trim();
+        
+        // User message
+        const userMessageDiv = document.createElement('div');
+        userMessageDiv.className = 'message user-message';
+        userMessageDiv.innerHTML = `
+            <div class="message-content">
+                <p>${escapeHtml(message)}</p>
+                <span class="message-time">${getCurrentTime()}</span>
+            </div>
+        `;
+        messagesContainer.appendChild(userMessageDiv);
+        
+        input.value = '';
+        input.style.height = 'auto';
+        messagesContainer.scrollTop = messagesContainer.scrollHeight;
+        
+        // Simulate bot response with typing indicator
+        const typingDiv = document.createElement('div');
+        typingDiv.className = 'message bot-message';
+        typingDiv.innerHTML = `
+            <div class="message-content">
+                <p style="margin: 0;">mengetik <i class="bi bi-three-dots"></i></p>
+            </div>
+        `;
+        messagesContainer.appendChild(typingDiv);
+        
+        setTimeout(() => {
+            typingDiv.remove();
+            const botMessageDiv = document.createElement('div');
+            botMessageDiv.className = 'message bot-message';
+            botMessageDiv.innerHTML = `
+                <div class="message-content">
+                    <p>Terima kasih atas pertanyaan Anda! SITI sedang dalam tahap pengembangan dan akan segera siap melayani Anda dengan informasi lengkap tentang produk dan layanan Pertamina. <i class="bi bi-robot"></i></p>
+                    <span class="message-time">${getCurrentTime()}</span>
+                </div>
+            `;
+            messagesContainer.appendChild(botMessageDiv);
+            messagesContainer.scrollTop = messagesContainer.scrollHeight;
+        }, 800);
+    }
+    
+    // Override send button
+    document.getElementById('send-btn').addEventListener('click', function() {
+        sendMessageChat('message-input', 'chat-messages');
+    });
+</script>
 {% endblock %}
