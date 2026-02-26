@@ -512,6 +512,7 @@
         messagesContainer.scrollTop = messagesContainer.scrollHeight;
         
         // Simulate bot response with typing indicator
+        // Typing indicator
         const typingDiv = document.createElement('div');
         typingDiv.className = 'message bot-message';
         typingDiv.innerHTML = `
@@ -520,25 +521,57 @@
             </div>
         `;
         messagesContainer.appendChild(typingDiv);
-        
-        setTimeout(() => {
+
+        fetch("/api/v1/rag/documents/search/", {
+            method: "POST",
+            headers: {
+                "Content-Type": "application/json",
+                "X-CSRFToken": getCookie("csrftoken")
+            },
+            body: JSON.stringify({
+                query: message
+            })
+        })
+        .then(response => response.json())
+        .then(data => {
             typingDiv.remove();
+
             const botMessageDiv = document.createElement('div');
             botMessageDiv.className = 'message bot-message';
             botMessageDiv.innerHTML = `
                 <div class="message-content">
-                    <p>Terima kasih atas pertanyaan Anda! SITI sedang dalam tahap pengembangan dan akan segera siap melayani Anda dengan informasi lengkap tentang produk dan layanan Pertamina. <i class="bi bi-robot"></i></p>
+                    <p>${escapeHtml(data.answer)}</p>
                     <span class="message-time">${getCurrentTime()}</span>
                 </div>
             `;
+
             messagesContainer.appendChild(botMessageDiv);
             messagesContainer.scrollTop = messagesContainer.scrollHeight;
-        }, 800);
+        })
+        .catch(error => {
+            typingDiv.remove();
+            alert("Terjadi kesalahan.");
+        });
     }
     
     // Override send button
     document.getElementById('send-btn').addEventListener('click', function() {
         sendMessageChat('message-input', 'chat-messages');
     });
+    
+function getCookie(name) {
+    let cookieValue = null;
+    if (document.cookie && document.cookie !== '') {
+        const cookies = document.cookie.split(';');
+        for (let i = 0; i < cookies.length; i++) {
+            const cookie = cookies[i].trim();
+            if (cookie.substring(0, name.length + 1) === (name + '=')) {
+                cookieValue = decodeURIComponent(cookie.substring(name.length + 1));
+                break;
+            }
+        }
+    }
+    return cookieValue;
+}
 </script>
 {% endblock %}

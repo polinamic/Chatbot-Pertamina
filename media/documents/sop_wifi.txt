@@ -1,0 +1,33 @@
+DOKUMEN: STANDAR OPERASIONAL PROSEDUR (SOP) TATA KELOLA JARINGAN NIRKABEL (WI-FI)
+KODE DOKUMEN: SOP-IT-NET-001-2024
+KLASIFIKASI: INTERNAL / TEKNIS
+
+1. TUJUAN DAN RUANG LINGKUP
+Dokumen ini menetapkan standar teknis untuk instalasi, konfigurasi, keamanan, dan pemeliharaan infrastruktur Wi-Fi guna memastikan ketersediaan layanan (High Availability) dan integritas data pengguna.
+
+2. STANDAR KONFIGURASI PERANGKAT (ACCESS POINT & CONTROLLER)
+* SSID Management:
+  - SSID Internal: Wajib menggunakan WPA3-Enterprise atau WPA2-AES dengan autentikasi RADIUS/802.1X.
+  - SSID Guest: Wajib menggunakan Captive Portal dengan sistem isolasi klien (L2 Client Isolation) untuk mencegah komunikasi antar host tamu.
+  - SSID IoT: Menggunakan VLAN terpisah dengan akses terbatas ke server internal.
+* Radio Frequency (RF) Planning:
+  - Band 2.4 GHz: Menggunakan kanal non-overlapping (1, 6, 11). Lebar pita (Channel Width) dibatasi 20 MHz untuk meminimalkan interferensi.
+  - Band 5 GHz: Menggunakan kanal UNII-1 atau UNII-3. Lebar pita disarankan 40 MHz atau 80 MHz untuk throughput tinggi.
+  - Power Transmit: Diatur pada level 12-18 dBm untuk mendukung seamless roaming (802.11k/v/r).
+
+3. PROSEDUR KEAMANAN (SECURITY HARDENING)
+* Nonaktifkan fitur WPS (Wi-Fi Protected Setup) karena kerentanan PIN brute-force.
+* Nonaktifkan manajemen jarak jauh (Remote Management) via WAN.
+* Pembatasan akses admin hanya melalui alamat IP statis tertentu (Management ACL).
+* Enkripsi minimal: WPA2-PSK (AES/CCMP). Penggunaan TKIP dilarang karena tidak aman.
+
+4. MONITORING DAN PEMELIHARAAN BERKALA
+* Daily: Monitoring utilisasi bandwidth per SSID dan jumlah klien aktif.
+* Monthly: Pemeriksaan log keamanan untuk mendeteksi Rogue Access Point.
+* Quarterly: Pembaruan firmware perangkat (Patch Management) pada jendela waktu pemeliharaan (Maintenance Window) pukul 00:00 - 04:00 WIB.
+* Annual: Melakukan Site Survey ulang (Heatmap) untuk mendeteksi perubahan struktur bangunan yang mempengaruhi sinyal (dead zones).
+
+5. PENANGANAN GANGGUAN (INCIDENT RESPONSE)
+* L1 (Basic): Restart perangkat, cek kabel patch UTP (Layer 1), dan verifikasi Power over Ethernet (PoE).
+* L2 (Intermediate): Analisis interferensi kanal menggunakan Spectrum Analyzer.
+* L3 (Advanced): Koordinasi dengan ISP jika terjadi kegagalan pada link internet utama (Backhaul).
