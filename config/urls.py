@@ -7,6 +7,7 @@ from django.conf import settings
 from django.conf.urls.static import static
 from rest_framework.routers import DefaultRouter
 from apps.users.views import UserViewSet
+from apps.users.urls import api_urlpatterns as users_api_urls
 from apps.chatbot.views import ConversationViewSet
 
 # API Router
@@ -23,6 +24,7 @@ urlpatterns = [
     path('dashboard/', include('apps.dashboard.urls')),
     
     # API routes
+    path('api/v1/users/', include(users_api_urls)),
     path('api/v1/', include(api_router.urls)),
     path('api/v1/rag/', include('apps.rag.urls')),
     path('api-auth/', include('rest_framework.urls')),

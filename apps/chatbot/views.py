@@ -46,7 +46,7 @@ class ConversationViewSet(viewsets.ModelViewSet):
         # Save user message
         user_message = Message.objects.create(
             conversation=conversation,
-            role='user',
+            sender_type='USER',
             content=content
         )
 
@@ -54,7 +54,7 @@ class ConversationViewSet(viewsets.ModelViewSet):
         # For now, return a placeholder response
         assistant_message = Message.objects.create(
             conversation=conversation,
-            role='assistant',
+            sender_type='BOT',
             content='This is a placeholder response. Implement RAG logic here.'
         )
 

@@ -1,5 +1,9 @@
 import numpy as np
-from sentence_transformers import SentenceTransformer
+
+try:
+    from sentence_transformers import SentenceTransformer
+except ImportError:
+    SentenceTransformer = None
 
 
 class EmbeddingService:
@@ -10,6 +14,8 @@ class EmbeddingService:
     """
 
     def __init__(self, model_name="sentence-transformers/all-MiniLM-L6-v2"):
+        if SentenceTransformer is None:
+            raise ImportError("sentence-transformers is not installed. Install it using: pip install sentence-transformers")
         self.model = SentenceTransformer(model_name)
 
     def embed_text(self, text: str) -> np.ndarray:

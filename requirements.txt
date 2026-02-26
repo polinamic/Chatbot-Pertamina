@@ -29,6 +29,8 @@ ollama>=0.1.7
 # AUTH (Optional)
 # =========================
 djangorestframework-simplejwt>=5.3.1
+PyJWT>=2.8.0
+bcrypt>=4.1.0
 
 # =========================
 # REDIS & CELERY

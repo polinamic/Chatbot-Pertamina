@@ -22,13 +22,13 @@ class Conversation(models.Model):
 
 class Message(models.Model):
     """Model untuk menyimpan pesan dalam percakapan"""
-    ROLE_CHOICES = [
-        ('user', 'User'),
-        ('assistant', 'Assistant'),
+    SENDER_TYPE_CHOICES = [
+        ('USER', 'User'),
+        ('BOT', 'Bot'),
     ]
 
     conversation = models.ForeignKey(Conversation, on_delete=models.CASCADE, related_name='message_set')
-    role = models.CharField(max_length=20, choices=ROLE_CHOICES)
+    sender_type = models.CharField(max_length=20, choices=SENDER_TYPE_CHOICES)
     content = models.TextField()
     sources = models.TextField(null=True, blank=True, default='[]')  # Untuk menyimpan RAG sources (JSON as string)
     created_at = models.DateTimeField(auto_now_add=True)
@@ -39,4 +39,4 @@ class Message(models.Model):
         verbose_name_plural = 'Messages'
 
     def __str__(self):
-        return f"{self.conversation.title} - {self.role}"
+        return f"{self.conversation.title} - {self.sender_type}"

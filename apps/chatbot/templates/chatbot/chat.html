@@ -356,23 +356,12 @@
 {% block content %}
 <div class="chat-container">
     <div class="chat-sidebar">
-        <button class="new-chat-btn" onclick="startNewChat()">
+        <button class="new-chat-btn" onclick="startNewChatUI()">
             <i class="bi bi-plus-lg"></i> Chat Baru
         </button>
         
-        <div class="chat-history">
-            <div class="chat-item active" onclick="selectChat(this)">
-                Ketika laptop saya tidak bisa terhubung ke wifi, apa yang harus saya lakukan?
-            </div>
-            <div class="chat-item" onclick="selectChat(this)">
-                Bagaimana cara memperbaiki laptop yang lemot
-            </div>
-            <div class="chat-item" onclick="selectChat(this)">
-                Bagaimana cara menyambungkan wifi di laptop saya
-            </div>
-            <div class="chat-item" onclick="selectChat(this)">
-                Bagaimana cara membetulkan laptop yang sinyalnya eror
-            </div>
+        <div class="chat-history" id="chat-history">
+            <!-- Loaded dynamically via JavaScript -->
         </div>
         
         <div style="border-top: 1px solid var(--border-light); padding-top: 1rem; margin-top: auto;">
@@ -392,6 +381,9 @@
         <div class="chat-header">
             <h2>Chat dengan AI</h2>
             <div class="chat-header-actions">
+                <button class="chat-header-btn" id="interrupt-btn" onclick="interruptBot()" style="display: none; background-color: rgba(255, 107, 107, 0.1); border-color: var(--error); color: var(--error);">
+                    <i class="bi bi-stop-fill"></i> Interupsi Bot
+                </button>
                 <button class="chat-header-btn" onclick="clearChat()"><i class="bi bi-trash"></i> Hapus Chat</button>
                 <button class="chat-header-btn" onclick="shareChat()"><i class="bi bi-share"></i> Bagikan</button>
             </div>
@@ -421,51 +413,336 @@
 
 {% block extra_js %}
 <script>
-    // Auto-resize textarea
-    document.getElementById('message-input').addEventListener('input', function() {
-        this.style.height = 'auto';
-        this.style.height = Math.min(this.scrollHeight, 120) + 'px';
+    // Global state
+    let currentConversationId = null;
+    let isWaitingForResponse = false;
+    let messageQueue = [];
+    let botResponseTimeout = null;
+    
+    // Initialize chat on page load
+    document.addEventListener('DOMContentLoaded', function() {
+        loadChatHistory();
+        setupMessageInputListener();
     });
     
-    // Enter to send (Shift+Enter for newline)
-    document.getElementById('message-input').addEventListener('keydown', function(e) {
-        if (e.key === 'Enter' && !e.shiftKey) {
-            e.preventDefault();
-            sendMessageChat('message-input', 'chat-messages'); // Pastikan memanggil fungsi yang benar
+    // Load chat history from API
+    async function loadChatHistory() {
+        try {
+            const response = await fetch('/api/v1/conversations/', {
+                method: 'GET',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-CSRFToken': getCsrfToken()
+                }
+            });
+            
+            if (!response.ok) {
+                console.error('Failed to load chat history');
+                return;
+            }
+            
+            const conversations = await response.json();
+            const historyContainer = document.getElementById('chat-history');
+            
+            if (!conversations || conversations.length === 0) {
+                historyContainer.innerHTML = '<p style="color: var(--gray-500); padding: 1rem; font-size: 0.875rem; text-align: center;">Belum ada percakapan</p>';
+                return;
+            }
+            
+            // Load first conversation as default
+            if (conversations.length > 0) {
+                selectConversationFromAPI(conversations[0].id);
+            }
+            
+            // Populate chat history
+            historyContainer.innerHTML = conversations.map((conv, index) => `
+                <div class="chat-item ${index === 0 ? 'active' : ''}" 
+                     onclick="selectConversationFromAPI(${conv.id})" 
+                     data-conv-id="${conv.id}"
+                     title="${conv.title}">
+                    ${escapeHtml(conv.title)}
+                </div>
+            `).join('');
+        } catch (error) {
+            console.error('Error loading chat history:', error);
         }
-    });
+    }
     
-    function startNewChat() {
-        document.getElementById('chat-messages').innerHTML = `
-            <div class="chat-empty">
-                <div class="chat-empty-icon"><i class="bi bi-robot"></i></div>
-                <h3>SITI AI Assistant</h3>
-                <p>Halo! Saya SITI, Solusi Interaktif Teknologi Informasi.<br>Bagaimana saya bisa membantu Anda hari ini?</p>
+    // Select a conversation and load its messages
+    async function selectConversationFromAPI(conversationId) {
+        try {
+            // Deactivate waiting for response from previous conversation
+            isWaitingForResponse = false;
+            clearTimeout(botResponseTimeout);
+            
+            // Mark as active in UI
+            document.querySelectorAll('.chat-item').forEach(item => {
+                item.classList.remove('active');
+                if (item.getAttribute('data-conv-id') == conversationId) {
+                    item.classList.add('active');
+                }
+            });
+            
+            currentConversationId = conversationId;
+            
+            // Fetch conversation data
+            const response = await fetch(`/api/v1/conversations/${conversationId}/`, {
+                method: 'GET',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-CSRFToken': getCsrfToken()
+                }
+            });
+            
+            if (!response.ok) {
+                console.error('Failed to load conversation');
+                return;
+            }
+            
+            const conversation = await response.json();
+            const messagesContainer = document.getElementById('chat-messages');
+            
+            if (!conversation.messages || conversation.messages.length === 0) {
+                // Show empty state
+                messagesContainer.innerHTML = `
+                    <div class="chat-empty">
+                        <div class="chat-empty-icon"><i class="bi bi-robot"></i></div>
+                        <h3>SITI AI Assistant</h3>
+                        <p>Halo! Saya SITI, Solusi Interaktif Teknologi Informasi.<br>Bagaimana saya bisa membantu Anda hari ini?</p>
+                    </div>
+                `;
+                return;
+            }
+            
+            // Clear empty state if exists
+            const emptyState = messagesContainer.querySelector('.chat-empty');
+            if (emptyState) {
+                emptyState.remove();
+            }
+            
+            // Load messages
+            messagesContainer.innerHTML = conversation.messages.map(msg => `
+                <div class="message ${msg.role === 'user' ? 'user-message' : 'bot-message'}">
+                    <div class="message-content">
+                        <p>${escapeHtml(msg.content)}</p>
+                        <span class="message-time">${formatTime(msg.created_at)}</span>
+                    </div>
+                </div>
+            `).join('');
+            
+            messagesContainer.scrollTop = messagesContainer.scrollHeight;
+            
+            // Enable send button if bot is not responding
+            document.getElementById('send-btn').disabled = false;
+        } catch (error) {
+            console.error('Error selecting conversation:', error);
+        }
+    }
+    
+    // Create new chat
+    async function startNewChat() {
+        try {
+            // Get first message to use as title
+            const firstMessage = document.getElementById('message-input').value.trim();
+            
+            if (!firstMessage) {
+                alert('Ketik pertanyaan Anda terlebih dahulu');
+                return;
+            }
+            
+            const response = await fetch('/api/v1/conversations/', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-CSRFToken': getCsrfToken()
+                },
+                body: JSON.stringify({
+                    title: firstMessage.substring(0, 100) + (firstMessage.length > 100 ? '...' : '')
+                })
+            });
+            
+            if (!response.ok) {
+                console.error('Failed to create new conversation');
+                return;
+            }
+            
+            const conversation = await response.json();
+            currentConversationId = conversation.id;
+            
+            // Reload chat history and select new conversation
+            await loadChatHistory();
+            selectConversationFromAPI(conversation.id);
+            
+            // Send the first message
+            sendMessageChat('message-input', 'chat-messages');
+        } catch (error) {
+            console.error('Error creating new conversation:', error);
+        }
+    }
+    
+    // Setup message input listener
+    function setupMessageInputListener() {
+        const input = document.getElementById('message-input');
+        
+        // Auto-resize textarea
+        input.addEventListener('input', function() {
+            this.style.height = 'auto';
+            this.style.height = Math.min(this.scrollHeight, 120) + 'px';
+        });
+        
+        // Enter to send (Shift+Enter for newline)
+        input.addEventListener('keydown', function(e) {
+            if (e.key === 'Enter' && !e.shiftKey) {
+                e.preventDefault();
+                sendMessageChat('message-input', 'chat-messages');
+            }
+        });
+    }
+    
+    // Send message with rate limiting
+    async function sendMessageChat(inputId, messagesId) {
+        const input = document.getElementById(inputId);
+        const messagesContainer = document.getElementById(messagesId);
+        const sendBtn = document.getElementById('send-btn');
+        
+        if (!input || !messagesContainer || !input.value.trim()) return;
+        
+        // Rate limiting check - if waiting for response, don't allow another message
+        if (isWaitingForResponse) {
+            alert('Mohon tunggu Bot menyelesaikan respons sebelum mengirim pertanyaan baru.');
+            return;
+        }
+        
+        const message = input.value.trim();
+        
+        // If no conversation, create one
+        if (!currentConversationId) {
+            startNewChat();
+            return;
+        }
+        
+    // Mark as waiting for response
+        isWaitingForResponse = true;
+        sendBtn.disabled = true;
+        
+        // Show interrupt button
+        const interruptBtn = document.getElementById('interrupt-btn');
+        if (interruptBtn) {
+            interruptBtn.style.display = 'block';
+        }
+        
+        // Remove empty state
+        const emptyState = messagesContainer.querySelector('.chat-empty');
+        if (emptyState) {
+            emptyState.remove();
+        }
+        
+        // Add user message to UI immediately
+        const userMessageDiv = document.createElement('div');
+        userMessageDiv.className = 'message user-message';
+        userMessageDiv.innerHTML = `
+            <div class="message-content">
+                <p>${escapeHtml(message)}</p>
+                <span class="message-time">${getCurrentTime()}</span>
             </div>
         `;
-        document.getElementById('message-input').value = '';
-        document.getElementById('message-input').style.height = 'auto';
-    }
-    
-    function selectChat(element) {
-        document.querySelectorAll('.chat-item').forEach(item => {
-            item.classList.remove('active');
-        });
-        element.classList.add('active');
-        clearChat();
-    }
-    
-    function clearChat() {
-        if (confirm('Yakin ingin menghapus chat ini?')) {
-            startNewChat();
+        messagesContainer.appendChild(userMessageDiv);
+        
+        input.value = '';
+        input.style.height = 'auto';
+        messagesContainer.scrollTop = messagesContainer.scrollHeight;
+        
+        try {
+            // Send message to API
+            const response = await fetch(`/api/v1/conversations/${currentConversationId}/send_message/`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-CSRFToken': getCsrfToken()
+                },
+                body: JSON.stringify({
+                    content: message
+                })
+            });
+            
+            if (!response.ok) {
+                throw new Error('Failed to send message');
+            }
+            
+            const data = await response.json();
+            
+            // Show typing indicator
+            const typingDiv = document.createElement('div');
+            typingDiv.className = 'message bot-message';
+            typingDiv.id = 'typing-indicator';
+            typingDiv.innerHTML = `
+                <div class="message-content">
+                    <p style="margin: 0;">mengetik <i class="bi bi-three-dots"></i></p>
+                </div>
+            `;
+            messagesContainer.appendChild(typingDiv);
+            messagesContainer.scrollTop = messagesContainer.scrollHeight;
+            
+            // Simulate bot response delay
+            botResponseTimeout = setTimeout(() => {
+                const typingElement = document.getElementById('typing-indicator');
+                if (typingElement) typingElement.remove();
+                
+                // Add bot response
+                const botMessageDiv = document.createElement('div');
+                botMessageDiv.className = 'message bot-message';
+                botMessageDiv.innerHTML = `
+                    <div class="message-content">
+                        <p>Terima kasih atas pertanyaan Anda! SITI sedang dalam tahap pengembangan dan akan segera siap melayani Anda dengan informasi lengkap tentang produk dan layanan Pertamina. <i class="bi bi-robot"></i></p>
+                        <span class="message-time">${getCurrentTime()}</span>
+                    </div>
+                `;
+                messagesContainer.appendChild(botMessageDiv);
+                messagesContainer.scrollTop = messagesContainer.scrollHeight;
+                
+                // Allow next message
+                isWaitingForResponse = false;
+                sendBtn.disabled = false;
+                
+                // Hide interrupt button
+                const interruptBtn = document.getElementById('interrupt-btn');
+                if (interruptBtn) {
+                    interruptBtn.style.display = 'none';
+                }
+            }, 1000);
+            
+        } catch (error) {
+            console.error('Error sending message:', error);
+            alert('Gagal mengirim pesan. Silahkan coba lagi.');
+            isWaitingForResponse = false;
+            sendBtn.disabled = false;
+            
+            // Hide interrupt button
+            const interruptBtn = document.getElementById('interrupt-btn');
+            if (interruptBtn) {
+                interruptBtn.style.display = 'none';
+            }
         }
     }
     
-    function shareChat() {
-        alert('Fitur berbagi chat akan segera hadir!');
+    // Helper function to get CSRF token
+    function getCsrfToken() {
+        const name = 'csrftoken';
+        let cookieValue = null;
+        if (document.cookie && document.cookie !== '') {
+            const cookies = document.cookie.split(';');
+            for (let i = 0; i < cookies.length; i++) {
+                const cookie = cookies[i].trim();
+                if (cookie.substring(0, name.length + 1) === (name + '=')) {
+                    cookieValue = decodeURIComponent(cookie.substring(name.length + 1));
+                    break;
+                }
+            }
+        }
+        return cookieValue;
     }
-
-    // Helper function for escaping HTML to prevent XSS (if not already defined elsewhere)
+    
+    // Helper function for escaping HTML to prevent XSS
     function escapeHtml(unsafe) {
         return unsafe
              .replace(/&/g, "&amp;")
@@ -481,64 +758,92 @@
         return now.getHours().toString().padStart(2, '0') + ':' + now.getMinutes().toString().padStart(2, '0');
     }
     
-    // Override sendMessage function untuk chat
-    function sendMessageChat(inputId, messagesId) {
-        const input = document.getElementById(inputId);
-        const messagesContainer = document.getElementById(messagesId);
+    // Helper function to format time from ISO string
+    function formatTime(isoString) {
+        const date = new Date(isoString);
+        return date.getHours().toString().padStart(2, '0') + ':' + date.getMinutes().toString().padStart(2, '0');
+    }
+    
+    // Interrupt bot response
+    function interruptBot() {
+        if (!isWaitingForResponse) return;
         
-        if (!input || !messagesContainer || !input.value.trim()) return;
+        // Clear the bot response timeout
+        clearTimeout(botResponseTimeout);
         
-        // Remove empty state
-        const emptyState = messagesContainer.querySelector('.chat-empty');
-        if (emptyState) {
-            emptyState.remove();
+        // Remove typing indicator if it exists
+        const typingElement = document.getElementById('typing-indicator');
+        if (typingElement) {
+            typingElement.remove();
         }
         
-        const message = input.value.trim();
-        
-        // User message
-        const userMessageDiv = document.createElement('div');
-        userMessageDiv.className = 'message user-message';
-        userMessageDiv.innerHTML = `
+        // Add interruption message
+        const messagesContainer = document.getElementById('chat-messages');
+        const interruptDiv = document.createElement('div');
+        interruptDiv.className = 'message bot-message';
+        interruptDiv.innerHTML = `
             <div class="message-content">
-                <p>${escapeHtml(message)}</p>
+                <p><i class="bi bi-exclamation-triangle"></i> Respons Bot telah dihentikan oleh pengguna.</p>
                 <span class="message-time">${getCurrentTime()}</span>
             </div>
         `;
-        messagesContainer.appendChild(userMessageDiv);
-        
-        input.value = '';
-        input.style.height = 'auto';
+        messagesContainer.appendChild(interruptDiv);
         messagesContainer.scrollTop = messagesContainer.scrollHeight;
         
-        // Simulate bot response with typing indicator
-        const typingDiv = document.createElement('div');
-        typingDiv.className = 'message bot-message';
-        typingDiv.innerHTML = `
-            <div class="message-content">
-                <p style="margin: 0;">mengetik <i class="bi bi-three-dots"></i></p>
-            </div>
-        `;
-        messagesContainer.appendChild(typingDiv);
+        // Reset state
+        isWaitingForResponse = false;
+        const sendBtn = document.getElementById('send-btn');
+        if (sendBtn) {
+            sendBtn.disabled = false;
+        }
         
-        setTimeout(() => {
-            typingDiv.remove();
-            const botMessageDiv = document.createElement('div');
-            botMessageDiv.className = 'message bot-message';
-            botMessageDiv.innerHTML = `
-                <div class="message-content">
-                    <p>Terima kasih atas pertanyaan Anda! SITI sedang dalam tahap pengembangan dan akan segera siap melayani Anda dengan informasi lengkap tentang produk dan layanan Pertamina. <i class="bi bi-robot"></i></p>
-                    <span class="message-time">${getCurrentTime()}</span>
-                </div>
-            `;
-            messagesContainer.appendChild(botMessageDiv);
-            messagesContainer.scrollTop = messagesContainer.scrollHeight;
-        }, 800);
+        // Hide interrupt button
+        const interruptBtn = document.getElementById('interrupt-btn');
+        if (interruptBtn) {
+            interruptBtn.style.display = 'none';
+        }
     }
     
-    // Override send button
-    document.getElementById('send-btn').addEventListener('click', function() {
-        sendMessageChat('message-input', 'chat-messages');
+        document.getElementById('chat-messages').innerHTML = `
+            <div class="chat-empty">
+                <div class="chat-empty-icon"><i class="bi bi-robot"></i></div>
+                <h3>SITI AI Assistant</h3>
+                <p>Halo! Saya SITI, Solusi Interaktif Teknologi Informasi.<br>Bagaimana saya bisa membantu Anda hari ini?</p>
+            </div>
+        `;
+        currentConversationId = null;
+        document.getElementById('message-input').value = '';
+        document.getElementById('message-input').style.height = 'auto';
+        document.getElementById('message-input').focus();
+    }
+    
+    // Clear current chat
+    function clearChat() {
+        if (confirm('Yakin ingin menghapus chat ini?')) {
+            startNewChatUI();
+        }
+    }
+    
+    function shareChat() {
+        alert('Fitur berbagi chat akan segera hadir!');
+    }
+    
+    function selectChat(element) {
+        // This function is kept for compatibility but not used anymore
+        document.querySelectorAll('.chat-item').forEach(item => {
+            item.classList.remove('active');
+        });
+        element.classList.add('active');
+    }
+    
+    // Update send button click handler
+    document.addEventListener('DOMContentLoaded', function() {
+        const sendBtn = document.getElementById('send-btn');
+        if (sendBtn) {
+            sendBtn.addEventListener('click', function() {
+                sendMessageChat('message-input', 'chat-messages');
+            });
+        }
     });
 </script>
 {% endblock %}
