@@ -49,12 +49,14 @@ MIDDLEWARE = [
     'django.middleware.security.SecurityMiddleware',
     'whitenoise.middleware.WhiteNoiseMiddleware',  # For static files in production
     'django.contrib.sessions.middleware.SessionMiddleware',
-    # 'corsheaders.middleware.CorsMiddleware',  # Disabled for Django 2.1 compatibility
+    'apps.users.middleware.CORSMiddleware',  # Custom CORS middleware
     'django.middleware.common.CommonMiddleware',
     'django.middleware.csrf.CsrfViewMiddleware',
     'django.contrib.auth.middleware.AuthenticationMiddleware',
     'django.contrib.messages.middleware.MessageMiddleware',
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
+    'apps.users.middleware.JWTAuthenticationMiddleware',  # JWT Authentication
+    'apps.users.middleware.ActivityLogMiddleware',  # Activity logging
 ]
 
 ROOT_URLCONF = 'config.urls'
@@ -78,17 +80,21 @@ TEMPLATES = [
 WSGI_APPLICATION = 'config.wsgi.application'
 
 # Database
+# MSSQL Server Configuration - Using Named Pipes
 DATABASES = {
     'default': {
         'ENGINE': 'mssql',
         'NAME': 'chatbot_pertamina',
-        'HOST': 'localhost',
+        'USER': '',  # Leave empty for Windows Authentication
+        'PASSWORD': '',  # Leave empty for Windows Authentication
+        'HOST': '.',  # Use . for local named pipes
+        'PORT': '',  # Empty for named pipes
         'OPTIONS': {
-            'driver': 'ODBC Driver 18 for SQL Server',
-            'trusted_connection': 'yes',
-            'extra_params': 'Encrypt=yes;TrustServerCertificate=yes;',
-            'connection_timeout': 30,
-        },
+            'driver': 'ODBC Driver 17 for SQL Server',
+            'Trusted_Connection': 'yes',
+            'autocommit': True,
+            'TrustServerCertificate': 'yes',
+        }
     }
 }
 
@@ -131,10 +137,19 @@ DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 
 # REST Framework Configuration
 REST_FRAMEWORK = {
-    'DEFAULT_AUTHENTICATION_CLASSES': [],
-    'DEFAULT_PERMISSION_CLASSES': [
-        'rest_framework.permissions.AllowAny',
+    'DEFAULT_AUTHENTICATION_CLASSES': [
+        'rest_framework.authentication.SessionAuthentication',
     ],
+    'DEFAULT_PERMISSION_CLASSES': [
+        'rest_framework.permissions.IsAuthenticatedOrReadOnly',
+    ],
+    'DEFAULT_PAGINATION_CLASS': 'rest_framework.pagination.PageNumberPagination',
+    'PAGE_SIZE': 20,
+    'DEFAULT_FILTER_BACKENDS': [
+        'rest_framework.filters.SearchFilter',
+        'rest_framework.filters.OrderingFilter',
+    ],
+    'EXCEPTION_HANDLER': 'apps.users.exceptions.custom_exception_handler',
 }
 
 # Authentication Settings

@@ -266,40 +266,64 @@
                 <p>Buat akun baru untuk mengakses AI Chatbot Pertamina</p>
             </div>
 
-            <form id="signup-form" method="POST" action="{% url 'users:signup' %}">
+            <!-- Error Messages -->
+            {% if errors %}
+            <div
+                style="background-color: #f8d7da; border: 1px solid #f5c6cb; color: #721c24; padding: 1rem; border-radius: 0.5rem; margin-bottom: 1.5rem;">
+                <strong>⚠️ Terjadi Kesalahan:</strong>
+                <ul style="margin: 0.5rem 0 0 0; padding-left: 1.5rem;">
+                    {% for field, message in errors.items %}
+                    <li>{{ message }}</li>
+                    {% endfor %}
+                </ul>
+            </div>
+            {% endif %}
+
+            <form id="signup-form" method="POST" action="{% url 'users:signup' %}" novalidate>
                 {% csrf_token %}
 
-                <div class="form-row">
-                    <div class="form-group">
-                        <label for="first-name">Nama Depan *</label>
-                        <input type="text" id="first-name" name="first_name" placeholder="John" required>
-                    </div>
-                    <div class="form-group">
-                        <label for="last-name">Nama Belakang *</label>
-                        <input type="text" id="last-name" name="last_name" placeholder="Doe" required>
-                    </div>
+                <div class="form-group">
+                    <label for="username">Username *</label>
+                    <input type="text" id="username" name="username" placeholder="username" value="{{ username }}"
+                        required minlength="3">
+                    <small style="font-size: 0.75rem; color: var(--gray-600);">Minimal 3 karakter</small>
+                </div>
+
+                <div class="form-group">
+                    <label for="first-name">Nama Depan</label>
+                    <input type="text" id="first-name" name="first_name" placeholder="John" value="{{ first_name }}">
+                </div>
+
+                <div class="form-group">
+                    <label for="last-name">Nama Belakang</label>
+                    <input type="text" id="last-name" name="last_name" placeholder="Doe" value="{{ last_name }}">
                 </div>
 
                 <div class="form-group">
                     <label for="email">Email *</label>
-                    <input type="email" id="email" name="email" placeholder="example@gmail.com" required>
+                    <input type="email" id="email" name="email" placeholder="example@pertamina.com" value="{{ email }}"
+                        required>
                 </div>
 
                 <div class="form-group">
-                    <label for="company">Perusahaan / Bekerja Untuk</label>
-                    <input type="text" id="company" name="company" placeholder="Pertamina Regional">
+                    <label for="company">Perusahaan</label>
+                    <input type="text" id="company" name="company" placeholder="Pertamina" value="{{ company }}">
                 </div>
 
-                <div class="form-row">
-                    <div class="form-group">
-                        <label for="password">Password *</label>
-                        <input type="password" id="password" name="password" placeholder="••••••••" required>
-                    </div>
-                    <div class="form-group">
-                        <label for="confirm-password">Konfirmasi Password *</label>
-                        <input type="password" id="confirm-password" name="confirm_password" placeholder="••••••••"
-                            required>
-                    </div>
+                <div class="form-group">
+                    <label for="phone">Nomor Telepon</label>
+                    <input type="tel" id="phone" name="phone" placeholder="08123456789" value="{{ phone }}">
+                </div>
+
+                <div class="form-group">
+                    <label for="password">Password *</label>
+                    <input type="password" id="password" name="password" placeholder="••••••••" required minlength="8">
+                    <small style="font-size: 0.75rem; color: var(--gray-600);">Minimal 8 karakter, 1 huruf besar, 1 angka</small>
+                </div>
+                <div class="form-group">
+                    <label for="confirm-password">Konfirmasi Password *</label>
+                    <input type="password" id="confirm-password" name="password_confirm" placeholder="••••••••"
+                        required minlength="8">
                 </div>
 
                 <div class="form-group checkbox-group">
@@ -307,12 +331,12 @@
                     <label for="accept-terms">Saya menerima Syarat & Ketentuan dan Kebijakan Privasi</label>
                 </div>
 
-                <button type="button" class="submit-btn" onclick="completeSignup()">Daftar Sekarang</button>
+                <button type="submit" class="submit-btn">Daftar Sekarang</button>
             </form>
 
             <div class="divider">atau</div>
 
-            <button class="oauth-btn" onclick="completeSignup()">
+            <button class="oauth-btn" onclick="handleGoogleSignup(event)">
                 <i class="bi bi-google" style="margin-right: 0.5rem;"></i> Daftar dengan Google
             </button>
 
@@ -348,21 +372,64 @@
 
 {% block extra_js %}
 <script>
-    function completeSignup() {
-        // Langsung redirect ke login page tanpa validasi
-        window.location.href = '{% url "users:login" %}';
-    }
-    
+    // Handle form submission
     document.getElementById('signup-form').addEventListener('submit', function (e) {
-        e.preventDefault();
-        completeSignup();
+        // Perform client-side validation
+        const firstName = document.getElementById('first-name').value.trim();
+        const lastName = document.getElementById('last-name').value.trim();
+        const email = document.getElementById('email').value.trim();
+        const password = document.getElementById('password').value;
+        const confirmPassword = document.getElementById('confirm-password').value;
+        const acceptTerms = document.getElementById('accept-terms').checked;
+
+        // Validation
+        if (!firstName) {
+            e.preventDefault();
+            alert('Nama depan tidak boleh kosong');
+            return;
+        }
+
+        if (!lastName) {
+            e.preventDefault();
+            alert('Nama belakang tidak boleh kosong');
+            return;
+        }
+
+        if (!email) {
+            e.preventDefault();
+            alert('Email tidak boleh kosong');
+            return;
+        }
+
+        if (!password) {
+            e.preventDefault();
+            alert('Password tidak boleh kosong');
+            return;
+        }
+
+        if (password.length < 8) {
+            e.preventDefault();
+            alert('Password harus minimal 8 karakter');
+            return;
+        }
+
+        if (password !== confirmPassword) {
+            e.preventDefault();
+            alert('Password tidak cocok');
+            return;
+        }
+
+        if (!acceptTerms) {
+            e.preventDefault();
+            alert('Anda harus menerima Syarat & Ketentuan');
+            return;
+        }
     });
-    
-    // Auto-set some dummy values untuk testing
-    document.getElementById('name').value = 'Demo User';
-    document.getElementById('email').value = 'demo@pertamina.com';
-    document.getElementById('company').value = 'Pertamina';
-    document.getElementById('password').value = '••••••••';
-    document.getElementById('confirm-password').value = '••••••••';
+
+    // Handle Google signup
+    function handleGoogleSignup(event) {
+        event.preventDefault();
+        alert('Fitur Google Sign-up akan segera hadir. Silakan gunakan formulir pendaftaran di atas.');
+    }
 </script>
 {% endblock %}
