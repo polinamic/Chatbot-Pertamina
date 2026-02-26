@@ -1,58 +1,33 @@
 import faiss
 import numpy as np
+from apps.rag.models import DocumentChunk
+from apps.rag.services.embedding import EmbeddingService
 
 
 class VectorStore:
 
-    def __init__(self, connection):
-        self.connection = connection
+    def __init__(self):
         self.index = None
         self.ids = []
+        self.embedding_service = EmbeddingService()
 
     def load_embeddings(self):
 
-        cursor = self.connection.cursor()
-        cursor.execute("""
-            SELECT document_chunk_id, embedding_vector
-            FROM DocumentChunk
-            WHERE embedding_vector IS NOT NULL
-        """)
-
-        rows = cursor.fetchall()
-
-        if not rows:
-            print("⚠ No embeddings found in database.")
-            self.index = None
-            return
+        chunks = DocumentChunk.objects.exclude(embedding_vector=None)
 
         vectors = []
-        self.ids = []  # reset setiap load ulang
 
-        for row in rows:
-            self.ids.append(row.document_chunk_id)
-
-            # convert VARBINARY → numpy float32
-            vec = np.frombuffer(row.embedding_vector, dtype=np.float32)
-
-            if vec.size == 0:
-                continue
-
+        for chunk in chunks:
+            vec = self.embedding_service.from_bytes(chunk.embedding_vector)
             vectors.append(vec)
+            self.ids.append(chunk.id)
 
         if not vectors:
-            print("⚠ Embeddings exist but failed to parse.")
-            self.index = None
             return
 
-        vectors = np.array(vectors, dtype=np.float32)
-
-        # pastikan 2D
-        if len(vectors.shape) == 1:
-            vectors = vectors.reshape(1, -1)
+        vectors = np.array(vectors)
 
         dimension = vectors.shape[1]
-
-        print(f"Loaded {len(vectors)} embeddings | Dimension: {dimension}")
 
         self.index = faiss.IndexFlatL2(dimension)
         self.index.add(vectors)
@@ -60,19 +35,24 @@ class VectorStore:
     def search(self, query_vector, top_k=5):
 
         if self.index is None:
-            raise ValueError("FAISS index not initialized. Call load_embeddings() first.")
+            return []
 
-        query_vector = np.array([query_vector], dtype=np.float32)
-
+        query_vector = np.array([query_vector])
         distances, indices = self.index.search(query_vector, top_k)
 
         results = []
 
-        for idx, dist in zip(indices[0], distances[0]):
-            if idx < len(self.ids):
-                results.append({
-                    "document_chunk_id": self.ids[idx],
-                    "distance": float(dist)
-                })
+        for i, idx in enumerate(indices[0]):
+
+            if idx == -1:
+                continue
+
+            chunk_id = self.ids[idx]
+            score = float(distances[0][i])
+
+            results.append({
+                "document_chunk_id": chunk_id,
+                "score": score
+            })
 
         return results
