@@ -321,6 +321,7 @@ body.dark-mode .card:hover {
 body.dark-mode .text-gray-500 { color: var(--gray-400); }
 body.dark-mode .text-gray-600 { color: var(--gray-500); }
 
+
 /* Responsive Design */
 @media (max-width: 768px) {
   h1 { font-size: 1.875rem; }

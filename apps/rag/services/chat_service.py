@@ -2,8 +2,16 @@ from apps.rag.services.retrieval import retrieve_context
 from apps.rag.models import DocumentChunk
 import ollama
 
-SIMILARITY_THRESHOLD = 0.60  # sudah dikalibrasi untuk MiniLM
+# =====================================================
+# CONFIGURATION
+# =====================================================
 
+SIMILARITY_THRESHOLD = 0.60
+TOP_K = 3
+
+# =====================================================
+# HELPER
+# =====================================================
 
 def get_chunk_text(chunk_id):
     try:
@@ -31,42 +39,145 @@ def is_small_talk(text: str):
     return False
 
 
-def generate_llm_response(content, strict=False):
+# =====================================================
+# LLM CORE
+# =====================================================
 
-    if strict:
-        system_prompt = """
-Anda adalah AI IT Support internal perusahaan.
-
-ATURAN KETAT:
-- Jawab HANYA berdasarkan konteks.
-- Jangan menambahkan informasi dari luar konteks.
-- Jika informasi tidak tersedia, katakan:
-  "Informasi tersebut tidak tersedia dalam sistem IT Support."
-- Selalu gunakan Bahasa Indonesia.
-"""
-    else:
-        system_prompt = """
-Anda adalah AI IT Support profesional.
-Selalu jawab dalam Bahasa Indonesia.
-Gunakan bahasa yang ramah dan jelas.
-"""
+def generate_llm(messages, temperature=0.3):
 
     response = ollama.chat(
         model="llama3:8b",
-        messages=[
-            {"role": "system", "content": system_prompt},
-            {"role": "user", "content": content}
-        ]
+        messages=messages,
+        options={
+            "temperature": temperature,
+            "top_p": 0.9,
+            "num_predict": 512
+        }
     )
 
     return response["message"]["content"]
 
 
+# =====================================================
+# SMALL TALK MODE
+# =====================================================
+
+def small_talk_response(question):
+
+    system_prompt = """
+Anda adalah AI IT Support internal perusahaan.
+
+Tugas:
+- Jawab sapaan dengan ramah.
+- Tetap profesional.
+- Gunakan Bahasa Indonesia.
+- Jangan menjawab pertanyaan di luar domain IT Support.
+"""
+
+    messages = [
+        {"role": "system", "content": system_prompt},
+        {"role": "user", "content": question}
+    ]
+
+    return generate_llm(messages, temperature=0.5)
+
+
+# =====================================================
+# REASONING LAYER
+# =====================================================
+
+def reasoning_layer(question, context_text):
+
+    system_prompt = """
+Anda adalah AI IT Support yang sangat teliti dan logis.
+
+TUGAS:
+1. Tentukan apakah konteks benar-benar relevan dengan pertanyaan.
+2. Jika relevan, ambil hanya fakta penting yang berhubungan langsung.
+3. Jika tidak relevan, tulis: Relevansi: Tidak Relevan
+
+JANGAN menjawab pertanyaan pengguna.
+Hanya berikan hasil analisis dalam format:
+
+Relevansi: ...
+Fakta Penting:
+- ...
+- ...
+Ringkasan:
+...
+Gunakan Bahasa Indonesia.
+"""
+
+    user_prompt = f"""
+KONTEKS:
+{context_text}
+
+PERTANYAAN:
+{question}
+"""
+
+    messages = [
+        {"role": "system", "content": system_prompt},
+        {"role": "user", "content": user_prompt}
+    ]
+
+    return generate_llm(messages, temperature=0.2)
+
+
+# =====================================================
+# FINAL ANSWER GENERATOR
+# =====================================================
+
+def generate_final_answer(reasoning_output, question):
+
+    # Jika reasoning menyatakan tidak relevan → tolak
+    if "Tidak Relevan" in reasoning_output:
+        return "Informasi tersebut tidak tersedia dalam sistem IT Support."
+
+    system_prompt = """
+Anda adalah AI IT Support profesional internal perusahaan.
+
+Gunakan hasil analisis berikut untuk menjawab dengan:
+
+- Bahasa Indonesia
+- Profesional
+- Terstruktur
+- Jelas
+- Tidak bertele-tele
+- Tidak menambahkan informasi di luar analisis
+
+Struktur:
+1. Ringkasan solusi
+2. Langkah-langkah (jika ada)
+3. Catatan tambahan (jika relevan)
+"""
+
+    user_prompt = f"""
+HASIL ANALISIS:
+{reasoning_output}
+
+Sekarang berikan jawaban final untuk pengguna.
+"""
+
+    messages = [
+        {"role": "system", "content": system_prompt},
+        {"role": "user", "content": user_prompt}
+    ]
+
+    return generate_llm(messages, temperature=0.3)
+
+
+# =====================================================
+# MAIN CHAT FUNCTION
+# =====================================================
+
 def chat(question, vector_store, embedding_service):
+
+    question = question.strip()
 
     # ================= SMALL TALK =================
     if is_small_talk(question):
-        return generate_llm_response(question)
+        return small_talk_response(question)
 
     # ================= RETRIEVAL =================
     results = retrieve_context(
@@ -76,33 +187,31 @@ def chat(question, vector_store, embedding_service):
     )
 
     if not results:
-        return "Pertanyaan tersebut tidak tersedia dalam sistem IT Support."
+        return "Informasi tersebut tidak tersedia dalam sistem IT Support."
 
     best_match = results[0]
 
     # ================= SIMILARITY CHECK =================
     if best_match["score"] < SIMILARITY_THRESHOLD:
-        return "Pertanyaan tersebut tidak tersedia dalam sistem IT Support."
+        return "Informasi tersebut tidak tersedia dalam sistem IT Support."
 
-    # ================= STRICT RAG MODE =================
+    # ================= BUILD CONTEXT =================
     context_texts = []
 
-    for result in results[:3]:
+    for result in results[:TOP_K]:
         chunk_text = get_chunk_text(result["document_chunk_id"])
         if chunk_text:
             context_texts.append(chunk_text)
 
     if not context_texts:
-        return "Pertanyaan tersebut tidak tersedia dalam sistem IT Support."
+        return "Informasi tersebut tidak tersedia dalam sistem IT Support."
 
     combined_context = "\n\n".join(context_texts)
 
-    prompt = f"""
-KONTEKS:
-{combined_context}
+    # ================= REASONING LAYER =================
+    reasoning_output = reasoning_layer(question, combined_context)
 
-PERTANYAAN:
-{question}
-"""
+    # ================= FINAL ANSWER =================
+    final_answer = generate_final_answer(reasoning_output, question)
 
-    return generate_llm_response(prompt, strict=True)
+    return final_answer
