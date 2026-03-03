@@ -11,7 +11,14 @@ class VectorStore:
         self.ids = []
         self.embedding_service = EmbeddingService()
 
+    # =========================================
+    # LOAD ALL EMBEDDINGS FROM DATABASE
+    # =========================================
     def load_embeddings(self):
+
+        # Reset index setiap load
+        self.index = None
+        self.ids = []
 
         chunks = DocumentChunk.objects.exclude(embedding_vector=None)
 
@@ -19,26 +26,46 @@ class VectorStore:
 
         for chunk in chunks:
             vec = self.embedding_service.from_bytes(chunk.embedding_vector)
+
+            if vec is None:
+                continue
+
             vectors.append(vec)
             self.ids.append(chunk.id)
 
         if not vectors:
             return
 
-        vectors = np.array(vectors)
+        # Convert ke numpy float32
+        vectors = np.array(vectors).astype("float32")
 
         dimension = vectors.shape[1]
 
-        self.index = faiss.IndexFlatL2(dimension)
+        # =========================================
+        # COSINE SIMILARITY
+        # =========================================
+
+        # Normalize vector untuk cosine
+        faiss.normalize_L2(vectors)
+
+        # Gunakan Inner Product (IP) untuk cosine
+        self.index = faiss.IndexFlatIP(dimension)
+
         self.index.add(vectors)
 
+    # =========================================
+    # SEARCH FUNCTION
+    # =========================================
     def search(self, query_vector, top_k=5):
 
         if self.index is None:
             return []
 
-        query_vector = np.array([query_vector])
-        distances, indices = self.index.search(query_vector, top_k)
+        # Convert dan normalize query
+        query_vector = np.array([query_vector]).astype("float32")
+        faiss.normalize_L2(query_vector)
+
+        scores, indices = self.index.search(query_vector, top_k)
 
         results = []
 
@@ -48,11 +75,11 @@ class VectorStore:
                 continue
 
             chunk_id = self.ids[idx]
-            score = float(distances[0][i])
+            similarity_score = float(scores[0][i])  # cosine similarity
 
             results.append({
                 "document_chunk_id": chunk_id,
-                "score": score
+                "score": similarity_score
             })
 
         return results
