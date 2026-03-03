@@ -17,14 +17,21 @@
     }
     
     .admin-sidebar {
-        background-color: var(--gray-900);
-        color: white;
+        background-color: var(--gray-100);
+        color: var(--text-light);
         padding: 1.5rem 0;
-        border-right: 1px solid var(--border-dark);
+        border-right: 1px solid var(--border-light);
         position: sticky;
         top: 60px;
         height: calc(100vh - 60px);
         overflow-y: auto;
+        transition: background-color 0.3s ease, border-color 0.3s ease, color 0.3s ease;
+    }
+    
+    body.dark-mode .admin-sidebar {
+        background-color: var(--gray-900);
+        color: white;
+        border-right-color: var(--border-dark);
     }
     
     .sidebar-menu {
@@ -42,16 +49,25 @@
         align-items: center;
         gap: 0.75rem;
         padding: 1rem 1.5rem;
-        color: var(--gray-400);
+        color: var(--gray-600);
         text-decoration: none;
         transition: all 0.3s ease;
         font-size: 0.95rem;
     }
     
+    body.dark-mode .sidebar-menu a {
+        color: var(--gray-400);
+    }
+    
     .sidebar-menu a:hover {
+        background-color: rgba(0, 0, 0, 0.1);
+        color: var(--gray-900);
+        padding-left: 2rem;
+    }
+    
+    body.dark-mode .sidebar-menu a:hover {
         background-color: rgba(255, 255, 255, 0.1);
         color: white;
-        padding-left: 2rem;
     }
     
     .sidebar-menu a.active {
@@ -436,7 +452,7 @@
     <!-- Sidebar -->
     <aside class="admin-sidebar" id="adminSidebar">
         <div style="padding: 1rem 1.5rem; border-bottom: 1px solid rgba(255, 255, 255, 0.1); margin-bottom: 1rem;">
-            <div style="font-weight: 700; font-size: 1rem; color: white;">PERTABOT</div>
+            <div style="font-weight: 700; font-size: 1rem; color: white;">SITI</div>
             <div style="font-size: 0.75rem; color: var(--gray-400); margin-top: 0.25rem;">Admin Dashboard</div>
         </div>
         

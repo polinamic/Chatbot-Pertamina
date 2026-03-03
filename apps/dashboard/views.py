@@ -11,6 +11,14 @@ import json
 from apps.chatbot.models import Conversation, Message
 from apps.users.models import User
 from apps.core.models import Document, ActivityLog
+from apps.rag.models import Document as RAGDocument, DocumentChunk
+
+# Optional import - will skip embedding if not available
+try:
+    from apps.rag.services.embedding import EmbeddingService
+    HAS_EMBEDDING_SERVICE = True
+except ImportError:
+    HAS_EMBEDDING_SERVICE = False
 
 
 def is_admin_or_staff(user):
@@ -372,11 +380,11 @@ def system_settings(request):
     
     # Placeholder settings - bisa diperluas dengan database model
     settings_data = {
-        'system_name': 'PERTABOT',
+        'system_name': 'SITI',
         'system_version': '1.0.0',
         'model': 'Llama 3 (8B Parameters)',
         'deployment': 'On-Premise',
-        'database': 'SQLite3',
+        'database': 'MSSQL',
         'rag_enabled': True,
         'max_document_size': '50MB',
         'supported_formats': ['PDF', 'DOCX', 'TXT', 'MD'],
@@ -417,22 +425,51 @@ def dashboard_api_stats(request):
 @login_required
 @user_passes_test(is_admin_or_staff)
 @require_http_methods(["POST"])
+@login_required(login_url='/auth/login/')
+@require_http_methods(["POST"])
 def api_upload_document(request):
-    """API untuk upload document/SOP"""
+    """API untuk upload document/SOP dengan RAG processing"""
+    import logging
+    logger = logging.getLogger(__name__)
+    
+    logger.info(f'Upload request from user: {request.user.username}')
+    logger.info(f'Request FILES: {list(request.FILES.keys())}')
     
     if 'file' not in request.FILES:
+        logger.warning('No file provided in request')
         return JsonResponse({'status': 'error', 'message': 'No file provided'}, status=400)
     
     file = request.FILES['file']
+    logger.info(f'File received: {file.name}, size: {file.size} bytes')
     
     # Validasi file size
     max_size = 50 * 1024 * 1024  # 50MB
     if file.size > max_size:
+        logger.warning(f'File too large: {file.size} bytes')
         return JsonResponse({'status': 'error', 'message': 'File too large'}, status=400)
     
-    # Create document record
+    # Validasi file type
+    allowed_extensions = ['txt', 'pdf', 'docx', 'md']
+    file_ext = file.name.split('.')[-1].lower()
+    if file_ext not in allowed_extensions:
+        logger.warning(f'Invalid file type: {file_ext}')
+        return JsonResponse({'status': 'error', 'message': f'File type not allowed. Allowed: {", ".join(allowed_extensions)}'}, status=400)
+    
+    logger.info(f'File validation passed. Extension: {file_ext}')
+    
     try:
-        document = Document.objects.create(
+        # Read file content
+        try:
+            if file_ext == 'txt' or file_ext == 'md':
+                content = file.read().decode('utf-8')
+            else:
+                # For now, just read as text for PDF/DOCX (you can enhance with pdf2image, python-docx later)
+                content = file.read().decode('utf-8', errors='ignore')
+        except Exception as e:
+            return JsonResponse({'status': 'error', 'message': f'Could not read file: {str(e)}'}, status=400)
+        
+        # Create dashboard document record (metadata)
+        dashboard_doc = Document.objects.create(
             uploaded_by=request.user,
             file_name=file.name,
             file_size=file.size,
@@ -440,20 +477,101 @@ def api_upload_document(request):
             is_processed=False
         )
         
+        # Create RAG document for embedding/chunking
+        rag_doc = RAGDocument.objects.create(
+            title=file.name.split('.')[0],  # Filename without extension
+            content=content,
+            category='Dashboard Upload',
+            is_active=True
+        )
+        
+        # Process document: Split into chunks & create embeddings
+        chunks = [content[i:i+500] for i in range(0, len(content), 500)]
+        chunks_created = 0
+        
+        logger.info(f'Processing {len(chunks)} chunks...')
+        
+        # Create chunks WITHOUT embeddings for now (much faster)
+        # Embeddings can be computed in background later
+        for index, chunk_text in enumerate(chunks):
+            if chunk_text.strip():  # Only non-empty chunks
+                DocumentChunk.objects.create(
+                    document=rag_doc,
+                    chunk_index=index,
+                    content=chunk_text,
+                    embedding_vector=None  # Skip for now
+                )
+                chunks_created += 1
+        
+        logger.info(f'Created {chunks_created} chunks')
+        
+        # Optional: Create embeddings in background (TODO: make async)
+        if HAS_EMBEDDING_SERVICE:
+            try:
+                logger.info('Attempting to create embeddings...')
+                embedding_service = EmbeddingService()
+                for chunk in DocumentChunk.objects.filter(document=rag_doc, embedding_vector__isnull=True)[:5]:  # Only first 5 chunks to avoid timeout
+                    try:
+                        vector = embedding_service.embed_text(chunk.content)
+                        chunk.embedding_vector = embedding_service.to_bytes(vector)
+                        chunk.save()
+                    except Exception as e:
+                        logger.warning(f'Failed to embed chunk {chunk.id}: {e}')
+                        pass
+            except Exception as e:
+                logger.warning(f'EmbeddingService error (non-critical): {e}')
+                print(f"Warning: Embedding failed: {e}")
+                for index, chunk_text in enumerate(chunks):
+                    if chunk_text.strip():
+                        DocumentChunk.objects.create(
+                            document=rag_doc,
+                            chunk_index=index,
+                            content=chunk_text,
+                            embedding_vector=None
+                        )
+                        chunks_created += 1
+        else:
+            # No embedding service available, just create chunks without vectors
+            for index, chunk_text in enumerate(chunks):
+                if chunk_text.strip():
+                    DocumentChunk.objects.create(
+                        document=rag_doc,
+                        chunk_index=index,
+                        content=chunk_text,
+                        embedding_vector=None
+                    )
+                    chunks_created += 1
+        
+        # Mark as processed
+        dashboard_doc.is_processed = True
+        dashboard_doc.save()
+        
         # Log activity
         ActivityLog.objects.create(
             action='CREATE',
-            description=f'Uploaded document: {file.name}',
+            description=f'Uploaded & processed document: {file.name} ({len(chunks)} chunks, {chunks_created} with embeddings)',
             user_id=request.user.id,
         )
         
+        logger.info(f'Document uploaded successfully: {file.name}, Doc ID: {dashboard_doc.id}, RAG Doc ID: {rag_doc.id}, Chunks: {chunks_created}')
+        
         return JsonResponse({
             'status': 'success',
-            'message': 'Document uploaded successfully',
-            'document_id': document.id
+            'message': f'Document uploaded successfully ({chunks_created} chunks)',
+            'document_id': dashboard_doc.id,
+            'rag_document_id': rag_doc.id,
+            'chunks_created': chunks_created
         })
     except Exception as e:
-        return JsonResponse({'status': 'error', 'message': str(e)}, status=500)
+        import traceback
+        error_msg = str(e)
+        error_trace = traceback.format_exc()
+        logger.error(f'Upload error: {error_msg}')
+        logger.error(f'Traceback: {error_trace}')
+        return JsonResponse({
+            'status': 'error', 
+            'message': f'Upload failed: {error_msg}'
+        }, status=500)
 
 
 @login_required

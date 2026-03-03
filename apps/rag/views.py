@@ -5,6 +5,18 @@ from rest_framework.permissions import AllowAny
 
 from django.shortcuts import render
 from django.views.decorators.csrf import csrf_exempt
+from django.db import transaction
+from django.shortcuts import redirect
+from datetime import datetime
+import uuid
+import pyodbc
+
+# Optional imports
+try:
+    from apps.rag.services import vector_store
+    HAS_VECTOR_STORE = True
+except ImportError:
+    HAS_VECTOR_STORE = False
 
 from .models import Document
 from .serializers import DocumentSerializer
@@ -73,6 +85,8 @@ class DocumentViewSet(viewsets.ModelViewSet):
         }, status=status.HTTP_200_OK)
 
 
+from django.views.decorators.csrf import csrf_exempt
+
 # ======================================================
 # UPLOAD KNOWLEDGE PAGE
 # ======================================================
@@ -103,3 +117,11 @@ def upload_knowledge(request):
         })
 
     return render(request, "rag/upload.html")
+    """Redirect to dashboard knowledge base"""
+    if request.method == "GET":
+        # For GET requests, redirect to dashboard
+        return redirect('dashboard:knowledge_base')
+    
+    # For POST requests, just redirect to dashboard too
+    # All uploads should go through the dashboard API
+    return redirect('dashboard:knowledge_base')

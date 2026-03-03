@@ -295,36 +295,149 @@ function deleteDocument(docId) {
         .then(res => res.json())
         .then(data => {
             if (data.status === 'success') {
-                location.reload();
+                showNotification('Document deleted successfully', 'success');
+                setTimeout(() => location.reload(), 1000);
+            } else {
+                showNotification('Failed to delete document', 'error');
             }
-        });
+        })
+        .catch(err => showNotification('Error: ' + err.message, 'error'));
     }
 }
 
 function uploadFile() {
-    const fileInput = document.getElementById('fileInput');
-    if (!fileInput.files.length) {
-        alert('Please select a file');
-        return;
+    try {
+        let fileInput = cachedFileInput;
+        
+        if (!fileInput) {
+            fileInput = document.getElementById('fileInput');
+            if (!fileInput) {
+                fileInput = document.querySelector('input[type="file"]');
+            }
+            if (fileInput) {
+                cachedFileInput = fileInput;
+            }
+        }
+        
+        if (!fileInput) {
+            throw new Error('File input not found!');
+        }
+        
+        const files = fileInput.files;
+        if (!files || files.length === 0) {
+            showNotification('Please select a file', 'warning');
+            return;
+        }
+        
+        const file = files[0];
+        let uploadBtn = cachedUploadBtn || document.getElementById('uploadBtn');
+        let dropZone = cachedDropZone || document.getElementById('dropZone');
+        
+        // Validate file type
+        const allowedExtensions = ['txt', 'pdf', 'docx', 'md'];
+        const fileExtension = file.name.split('.').pop().toLowerCase();
+        
+        if (!allowedExtensions.includes(fileExtension)) {
+            showNotification('Invalid file type! Allowed: txt, pdf, docx, md', 'error');
+            return;
+        }
+        
+        if (uploadBtn) uploadBtn.disabled = true;
+        if (uploadBtn) uploadBtn.innerHTML = '<i class="bi bi-hourglass-split"></i> Processing...';
+        
+        const formData = new FormData();
+        formData.append('file', file);
+        
+        const csrfToken = getCookie('csrftoken');
+        
+        fetch('/dashboard/api/documents/upload/', {
+            method: 'POST',
+            headers: {
+                'X-CSRFToken': csrfToken || ''
+            },
+            body: formData
+        })
+        .then(res => {
+            if (!res.ok) throw new Error('HTTP ' + res.status);
+            return res.json();
+        })
+        .then(data => {
+            if (data.status === 'success') {
+                showNotification('Upload successful!', 'success');
+                
+                if (fileInput) fileInput.value = '';
+                if (dropZone) dropZone.textContent = 'Drag & drop your file here or click to browse';
+                if (uploadBtn) uploadBtn.disabled = false;
+                if (uploadBtn) uploadBtn.innerHTML = '<i class="bi bi-upload"></i> Upload';
+                
+                // Close modal by clicking the close button
+                const closeBtn = document.querySelector('#uploadModal .btn-close');
+                if (closeBtn) {
+                    closeBtn.click();
+                } else {
+                    // Fallback: hide modal manually
+                    const backdrop = document.querySelector('.modal-backdrop');
+                    if (backdrop) backdrop.remove();
+                    const modalElement = document.getElementById('uploadModal');
+                    if (modalElement) {
+                        modalElement.classList.remove('show');
+                        modalElement.style.display = 'none';
+                        document.body.classList.remove('modal-open');
+                    }
+                }
+                
+                setTimeout(() => {
+                    location.reload();
+                }, 2000);
+            } else {
+                throw new Error(data.message || 'Upload failed');
+            }
+        })
+        .catch(err => {
+            showNotification('Error: ' + err.message, 'error');
+            if (uploadBtn) uploadBtn.disabled = false;
+            if (uploadBtn) uploadBtn.innerHTML = '<i class="bi bi-upload"></i> Upload';
+        });
+        
+    } catch (err) {
+        showNotification('Error: ' + err.message, 'error');
+    }
+}
+
+
+function showNotification(message, type = 'info') {
+    // Create notification container if it doesn't exist
+    let container = document.getElementById('notificationContainer');
+    if (!container) {
+        container = document.createElement('div');
+        container.id = 'notificationContainer';
+        container.style.position = 'fixed';
+        container.style.top = '20px';
+        container.style.right = '20px';
+        container.style.zIndex = '9999';
+        container.style.pointerEvents = 'none';
+        document.body.appendChild(container);
     }
     
-    const formData = new FormData();
-    formData.append('file', fileInput.files[0]);
+    // Create notification element
+    const notification = document.createElement('div');
+    const alertClass = `alert-${type === 'success' ? 'success' : type === 'error' ? 'danger' : type === 'warning' ? 'warning' : 'info'}`;
+    notification.className = `alert ${alertClass} alert-dismissible fade show`;
+    notification.style.marginBottom = '10px';
+    notification.style.minWidth = '350px';
+    notification.style.boxShadow = '0 2px 8px rgba(0,0,0,0.15)';
+    notification.style.pointerEvents = 'auto';
+    notification.innerHTML = `
+        ${message}
+        <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+    `;
     
-    fetch('/dashboard/api/documents/upload/', {
-        method: 'POST',
-        headers: {
-            'X-CSRFToken': getCookie('csrftoken')
-        },
-        body: formData
-    })
-    .then(res => res.json())
-    .then(data => {
-        if (data.status === 'success') {
-            alert('Document uploaded successfully!');
-            location.reload();
-        }
-    });
+    container.appendChild(notification);
+    
+    // Auto dismiss after 5 seconds
+    setTimeout(() => {
+        notification.remove();
+    }, 5000);
 }
 
 function getCookie(name) {
@@ -342,13 +455,67 @@ function getCookie(name) {
     return cookieValue;
 }
 
-// Drag & drop
-document.getElementById('dropZone').addEventListener('click', () => {
-    document.getElementById('fileInput').click();
-});
+// Cache global references to avoid lookup issues
+var cachedFileInput = null;
+var cachedUploadBtn = null;
+var cachedDropZone = null;
 
-document.getElementById('fileInput').addEventListener('change', function() {
-    document.getElementById('dropZone').textContent = this.files[0].name;
+// Drag & drop - attach handlers when DOM is ready
+function attachDropzoneHandlers() {
+    const dropZone = document.getElementById('dropZone');
+    const fileInput = document.getElementById('fileInput');
+    
+    if (!dropZone || !fileInput) return;
+    
+    dropZone.addEventListener('click', () => {
+        fileInput.click();
+    });
+
+    dropZone.addEventListener('dragover', (e) => {
+        e.preventDefault();
+        e.stopPropagation();
+        dropZone.style.backgroundColor = 'rgba(196, 30, 58, 0.1)';
+    });
+
+    dropZone.addEventListener('dragleave', (e) => {
+        e.preventDefault();
+        e.stopPropagation();
+        dropZone.style.backgroundColor = 'transparent';
+    });
+
+    dropZone.addEventListener('drop', (e) => {
+        e.preventDefault();
+        e.stopPropagation();
+        dropZone.style.backgroundColor = 'transparent';
+        
+        const files = e.dataTransfer.files;
+        if (files.length > 0) {
+            const dataTransfer = new DataTransfer();
+            dataTransfer.items.add(files[0]);
+            fileInput.files = dataTransfer.files;
+            fileInput.dispatchEvent(new Event('change', { bubbles: true }));
+            dropZone.innerHTML = '<i class="bi bi-cloud-check upload-icon" style="color: var(--success);"></i><p><strong>✓ Selected: ' + files[0].name + '</strong></p>';
+            showNotification('File selected: ' + files[0].name, 'success');
+        }
+    });
+
+    fileInput.addEventListener('change', function() {
+        if (this.files[0]) {
+            dropZone.innerHTML = '<i class="bi bi-cloud-check upload-icon" style="color: var(--success);"></i><p><strong>✓ Selected: ' + this.files[0].name + '</strong></p>';
+            showNotification('File selected: ' + this.files[0].name, 'info');
+        }
+    });
+}
+
+// Initialization
+document.addEventListener('DOMContentLoaded', function() {
+    // Cache element references
+    cachedFileInput = document.getElementById('fileInput');
+    cachedUploadBtn = document.getElementById('uploadBtn');
+    cachedDropZone = document.getElementById('dropZone');
+    
+    // Attach dropzone handlers
+    attachDropzoneHandlers();
 });
 </script>
 {% endblock %}

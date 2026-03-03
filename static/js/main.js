@@ -7,22 +7,31 @@ document.addEventListener('DOMContentLoaded', function() {
   if (theme === 'dark') {
     document.documentElement.classList.add('dark-mode');
     document.body.classList.add('dark-mode');
-    updateThemeToggle(true);
+    if (themeToggle) themeToggle.checked = true;
   }
   
-  // Theme toggle listener
+  // Theme toggle listener - properly attach to checkbox
   if (themeToggle) {
-    themeToggle.addEventListener('change', function() {
-      toggleTheme();
+    themeToggle.addEventListener('change', function(e) {
+      const isDark = e.target.checked;
+      if (isDark) {
+        document.documentElement.classList.add('dark-mode');
+        document.body.classList.add('dark-mode');
+      } else {
+        document.documentElement.classList.remove('dark-mode');
+        document.body.classList.remove('dark-mode');
+      }
+      localStorage.setItem('theme', isDark ? 'dark' : 'light');
     });
   }
 });
 
 function toggleTheme() {
-  const isDark = document.body.classList.toggle('dark-mode');
-  document.documentElement.classList.toggle('dark-mode');
-  localStorage.setItem('theme', isDark ? 'dark' : 'light');
-  updateThemeToggle(isDark);
+  const themeToggle = document.getElementById('theme-toggle');
+  if (themeToggle) {
+    themeToggle.checked = !themeToggle.checked;
+    themeToggle.dispatchEvent(new Event('change'));
+  }
 }
 
 function updateThemeToggle(isDark) {

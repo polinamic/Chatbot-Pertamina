@@ -134,6 +134,51 @@ body.dark-mode select:focus {
   color: white;
 }
 
+.upload-hidden {
+    display: none;
+    margin-top: 20px;
+}
+
+.upload-show {
+    display: block;
+    animation: fadeIn 0.3s ease-in-out;
+}
+
+.drop-zone {
+    border: 2px dashed #d1d5db;
+    border-radius: 10px;
+    padding: 2rem;
+    text-align: center;
+    cursor: pointer;
+    transition: 0.3s;
+}
+
+.drop-zone:hover {
+    border-color: #0d6efd;
+    background-color: #f8f9fa;
+}
+
+.upload-icon {
+    font-size: 2rem;
+    color: #0d6efd;
+    margin-bottom: 0.5rem;
+}
+
+#fileInput {
+    display: none;
+}
+
+@keyframes fadeIn {
+    from {
+        opacity: 0;
+        transform: translateY(-10px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
 .btn-primary:hover {
   background-color: var(--primary-dark);
   transform: translateY(-2px);
