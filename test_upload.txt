@@ -1,0 +1,17 @@
+PERTAMINA IT Support - Test Document
+
+This is a test document for uploading to the knowledge base.
+
+Key Information:
+- This tests the file upload functionality
+- Supported formats: PDF, DOCX, TXT, MD
+- Max file size: 50MB
+
+Testing Details:
+1. File upload with drag-drop interface
+2. Notification system feedback
+3. Modal close after successful upload
+4. Document appears in knowledge base table
+
+Created for: Upload functionality testing
+Status: Ready for upload test

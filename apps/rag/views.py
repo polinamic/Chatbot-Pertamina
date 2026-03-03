@@ -5,11 +5,17 @@ from rest_framework.permissions import IsAdminUser, IsAuthenticated
 from rest_framework.permissions import AllowAny
 
 from django.db import transaction
+from django.shortcuts import redirect
 from datetime import datetime
 import uuid
 import pyodbc
 
-from apps.rag.services import vector_store
+# Optional imports
+try:
+    from apps.rag.services import vector_store
+    HAS_VECTOR_STORE = True
+except ImportError:
+    HAS_VECTOR_STORE = False
 
 from .models import Document, DocumentChunk
 from .serializers import DocumentSerializer, DocumentListSerializer
@@ -114,48 +120,17 @@ class DocumentViewSet(viewsets.ModelViewSet):
             "answer": answer
         }, status=status.HTTP_200_OK)
 
-from django.shortcuts import render
+
 from django.views.decorators.csrf import csrf_exempt
-from .models import Document, DocumentChunk
-from .services.embedding import EmbeddingService
 
 
 @csrf_exempt
 def upload_knowledge(request):
-
-    if request.method == "POST":
-
-        title = request.POST.get("title")
-        file = request.FILES.get("file")
-
-        if not file:
-            return render(request, "rag/upload.html", {"message": "File tidak ditemukan"})
-
-        content = file.read().decode("utf-8")
-
-        # 1️⃣ Simpan Document
-        document = Document.objects.create(
-            title=title,
-            content=content,
-            is_active=True
-        )
-
-        # 2️⃣ Split & Embedding
-        embedding_service = EmbeddingService()
-        chunks = [content[i:i+500] for i in range(0, len(content), 500)]
-
-        for index, chunk_text in enumerate(chunks):
-            vector = embedding_service.embed_text(chunk_text)
-
-            DocumentChunk.objects.create(
-                document=document,
-                chunk_index=index,
-                content=chunk_text,
-                embedding_vector=embedding_service.to_bytes(vector)
-            )
-
-        return render(request, "rag/upload.html", {
-            "message": "Upload dan embedding berhasil!"
-        })
-
-    return render(request, "rag/upload.html")
+    """Redirect to dashboard knowledge base"""
+    if request.method == "GET":
+        # For GET requests, redirect to dashboard
+        return redirect('dashboard:knowledge_base')
+    
+    # For POST requests, just redirect to dashboard too
+    # All uploads should go through the dashboard API
+    return redirect('dashboard:knowledge_base')
