@@ -307,7 +307,6 @@ class LogoutView(views.APIView):
 def signup_page(request):
     """Handle signup page"""
     from django.shortcuts import render, redirect
-    from django.contrib.auth import login as auth_login
     
     if request.method == 'POST':
         username = request.POST.get('username', '').strip()
@@ -333,7 +332,11 @@ def signup_page(request):
         if not password or len(password) < 8:
             errors['password'] = 'Password minimal 8 karakter'
         elif password != password_confirm:
-            errors['password'] = 'Password tidak cocok'
+            errors['password_confirm'] = 'Password tidak cocok'
+        elif not any(char.isupper() for char in password):
+            errors['password'] = 'Password harus mengandung minimal 1 huruf besar'
+        elif not any(char.isdigit() for char in password):
+            errors['password'] = 'Password harus mengandung minimal 1 angka'
         
         if errors:
             return render(request, 'users/signup.html', {
@@ -357,8 +360,17 @@ def signup_page(request):
                 phone=phone
             )
             
-            auth_login(request, user)
-            return redirect('dashboard:index')
+            # Log activity
+            ActivityLog.objects.create(
+                action='CREATE',
+                description=f'New user registered via web form: {email}',
+                user_id=str(user.id)
+            )
+            
+            # Redirect to login page (tidak auto-login)
+            return render(request, 'users/signup.html', {
+                'success': 'Akun berhasil dibuat! Silakan login dengan credential Anda.'
+            })
         except Exception as e:
             errors['general'] = str(e)
             return render(request, 'users/signup.html', {'errors': errors})
@@ -389,7 +401,17 @@ def login_page(request):
             )
             
             auth_login(request, user)
-            return redirect('dashboard:index')
+            
+            # Redirect based on user role
+            try:
+                profile = user.profile
+                if profile.role == 'A':  # Admin
+                    return redirect('dashboard:index')
+                else:  # User, Support, Manager
+                    return redirect('chatbot:chat')
+            except UserProfile.DoesNotExist:
+                # Default to chatbot if profile not found
+                return redirect('chatbot:chat')
         else:
             return render(request, 'users/login.html', {
                 'error': 'Username atau password salah'
