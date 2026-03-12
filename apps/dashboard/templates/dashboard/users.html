@@ -44,6 +44,7 @@
                         <th>Messages</th>
                         <th>Joined</th>
                         <th>Last Login</th>
+                        <th>Actions</th>
                     </tr>
                 </thead>
                 <tbody>
@@ -68,6 +69,15 @@
                                 {{ user.last_login|date:"d M, Y H:i" }}
                             {% else %}
                                 <span class="text-muted">Never</span>
+                            {% endif %}
+                        </td>
+                        <td>
+                            {% if user.username != request.user.username %}
+                            <button class="btn btn-sm btn-danger" id="btn-delete-{{ user.username }}" onclick="deleteUser('{{ user.username }}', '{{ user.email }}')">
+                                <i class="bi bi-trash"></i> Delete
+                            </button>
+                            {% else %}
+                            <span style="color: var(--gray-400); font-size: 0.8rem;">—</span>
                             {% endif %}
                         </td>
                     </tr>
@@ -106,4 +116,100 @@
         {% endif %}
     </div>
 </div>
+
+<style>
+.toast-notif {
+    position: fixed;
+    top: 1.5rem;
+    right: 1.5rem;
+    z-index: 9999;
+    padding: 0.85rem 1.25rem;
+    border-radius: 0.5rem;
+    font-weight: 500;
+    font-size: 0.9rem;
+    box-shadow: 0 4px 16px rgba(0,0,0,0.15);
+    display: flex;
+    align-items: center;
+    gap: 0.6rem;
+    animation: slideIn 0.3s ease;
+    max-width: 360px;
+}
+.toast-notif.success { background: #198754; color: #fff; }
+.toast-notif.error   { background: #dc3545; color: #fff; }
+.toast-notif.info    { background: #0d6efd; color: #fff; }
+@keyframes slideIn {
+    from { transform: translateX(120%); opacity: 0; }
+    to   { transform: translateX(0);    opacity: 1; }
+}
+@keyframes slideOut {
+    from { transform: translateX(0);    opacity: 1; }
+    to   { transform: translateX(120%); opacity: 0; }
+}
+</style>
+
+<script>
+function showToast(message, type = 'info') {
+    const toast = document.createElement('div');
+    toast.className = `toast-notif ${type}`;
+    const icons = { success: '✅', error: '❌', info: 'ℹ️' };
+    toast.innerHTML = `<span>${icons[type] || 'ℹ️'}</span><span>${message}</span>`;
+    document.body.appendChild(toast);
+    setTimeout(() => {
+        toast.style.animation = 'slideOut 0.3s ease forwards';
+        setTimeout(() => toast.remove(), 300);
+    }, 3500);
+}
+
+function getCookie(name) {
+    let cookieValue = null;
+    if (document.cookie && document.cookie !== '') {
+        const cookies = document.cookie.split(';');
+        for (let i = 0; i < cookies.length; i++) {
+            const cookie = cookies[i].trim();
+            if (cookie.substring(0, name.length + 1) === (name + '=')) {
+                cookieValue = decodeURIComponent(cookie.substring(name.length + 1));
+                break;
+            }
+        }
+    }
+    return cookieValue;
+}
+
+function deleteUser(username, email) {
+    if (!confirm(`Apakah Anda yakin ingin menghapus user:\n\n👤 ${username} (${email})\n\nAksi ini tidak dapat dibatalkan!`)) return;
+
+    const btn = document.getElementById(`btn-delete-${username}`);
+    if (btn) { btn.disabled = true; btn.innerHTML = '<i class="bi bi-hourglass-split"></i> Deleting...'; }
+
+    fetch(`/dashboard/api/users/delete/${username}/`, {
+        method: 'DELETE',
+        headers: {
+            'Content-Type': 'application/json',
+            'X-CSRFToken': getCookie('csrftoken')
+        }
+    })
+    .then(res => res.json().then(data => ({ status: res.status, data })))
+    .then(({ status, data }) => {
+        if (status === 200 && data.status === 'success') {
+            showToast(`User ${username} berhasil dihapus`, 'success');
+            const row = btn ? btn.closest('tr') : null;
+            if (row) {
+                row.style.transition = 'opacity 0.5s';
+                row.style.opacity = '0';
+                setTimeout(() => row.remove(), 500);
+            } else {
+                setTimeout(() => location.reload(), 1800);
+            }
+        } else {
+            showToast(data.message || 'Gagal menghapus user', 'error');
+            if (btn) { btn.disabled = false; btn.innerHTML = '<i class="bi bi-trash"></i> Delete'; }
+        }
+    })
+    .catch(err => {
+        showToast('Terjadi kesalahan: ' + err.message, 'error');
+        if (btn) { btn.disabled = false; btn.innerHTML = '<i class="bi bi-trash"></i> Delete'; }
+    });
+}
+</script>
+
 {% endblock %}

@@ -137,6 +137,40 @@ class UserViewSet(viewsets.ModelViewSet):
                 'error': 'User tidak ditemukan'
             }, status=status.HTTP_404_NOT_FOUND)
 
+    def destroy(self, request, *args, **kwargs):
+        """Delete a user (admin only)"""
+        try:
+            # Check if requester is admin
+            if not (request.user.is_staff or request.user.is_superuser):
+                return Response({
+                    'error': 'Anda tidak memiliki permission'
+                }, status=status.HTTP_403_FORBIDDEN)
+            
+            user = self.get_object()
+            user_email = user.email or user.username
+            
+            # Log activity before deletion
+            ActivityLog.objects.create(
+                action='DELETE',
+                description=f'User {user_email} deleted by {request.user.email or request.user.username}',
+                user_id=str(request.user.id),
+                ip_address=self.get_client_ip(request)
+            )
+            
+            # Delete user
+            user.delete()
+            
+            return Response({'message': 'User berhasil dihapus'}, status=status.HTTP_200_OK)
+        except User.DoesNotExist:
+            return Response({
+                'error': 'User tidak ditemukan'
+            }, status=status.HTTP_404_NOT_FOUND)
+        except Exception as e:
+            logger.error(f"Error deleting user: {str(e)}")
+            return Response({
+                'error': f'Gagal menghapus user: {str(e)}'
+            }, status=status.HTTP_400_BAD_REQUEST)
+
     @staticmethod
     def get_client_ip(request):
         """Get client IP address"""

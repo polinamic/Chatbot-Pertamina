@@ -5,6 +5,7 @@ import jwt
 import logging
 from django.http import JsonResponse
 from django.utils.decorators import sync_and_async_middleware
+from django.shortcuts import redirect
 from decouple import config
 
 logger = logging.getLogger(__name__)
@@ -47,6 +48,44 @@ class JWTAuthenticationMiddleware:
                     'error': 'Invalid token',
                     'code': 'INVALID_TOKEN'
                 }, status=401)
+
+        response = self.get_response(request)
+        return response
+
+
+class CheckBlockedUserMiddleware:
+    """
+    Middleware untuk cek apakah user di-blokir
+    Jika di-blokir, logout dan return error
+    """
+    def __init__(self, get_response):
+        self.get_response = get_response
+
+    def __call__(self, request):
+        # Check untuk authenticated user
+        if request.user and request.user.is_authenticated:
+            try:
+                profile = request.user.profile
+                if profile.is_blocked:
+                    # Log activity
+                    logger.warning(f"Blocked user {request.user.email} attempted access at {request.path}")
+                    
+                    # Logout user
+                    from django.contrib.auth import logout
+                    logout(request)
+                    
+                    # Return error atau redirect
+                    if 'api' in request.path:
+                        return JsonResponse({
+                            'error': 'Your account has been blocked',
+                            'reason': profile.blocked_reason or 'No reason provided',
+                            'code': 'USER_BLOCKED'
+                        }, status=403)
+                    else:
+                        # Redirect to login dengan message
+                        return redirect(f'/auth/login/?blocked=true&reason={profile.blocked_reason}')
+            except Exception as e:
+                logger.error(f"Error checking blocked status: {e}")
 
         response = self.get_response(request)
         return response

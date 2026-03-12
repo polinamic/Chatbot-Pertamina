@@ -586,3 +586,46 @@ def api_delete_document(request, doc_id):
         return JsonResponse({'status': 'error', 'message': 'Document not found'}, status=404)
     except Exception as e:
         return JsonResponse({'status': 'error', 'message': str(e)}, status=500)
+
+
+@login_required
+@user_passes_test(is_admin_or_staff)
+@require_http_methods(["DELETE"])
+def api_delete_user(request, username):
+    """API untuk menghapus user dari dashboard (session-based)"""
+    try:
+        target_user = User.objects.get(username=username)
+
+        # Cegah admin menghapus diri sendiri
+        if target_user == request.user:
+            return JsonResponse({
+                'status': 'error',
+                'message': 'Anda tidak dapat menghapus akun Anda sendiri'
+            }, status=400)
+
+        # Cegah penghapusan superuser oleh non-superuser
+        if target_user.is_superuser and not request.user.is_superuser:
+            return JsonResponse({
+                'status': 'error',
+                'message': 'Anda tidak memiliki izin untuk menghapus superuser'
+            }, status=403)
+
+        user_info = f'{target_user.username} ({target_user.email})'
+        target_user.delete()
+
+        # Log activity
+        ActivityLog.objects.create(
+            action='DELETE',
+            description=f'Admin {request.user.username} menghapus user: {user_info}',
+            user_id=request.user.id,
+        )
+
+        return JsonResponse({
+            'status': 'success',
+            'message': f'User {user_info} berhasil dihapus'
+        })
+
+    except User.DoesNotExist:
+        return JsonResponse({'status': 'error', 'message': 'User tidak ditemukan'}, status=404)
+    except Exception as e:
+        return JsonResponse({'status': 'error', 'message': str(e)}, status=500)
