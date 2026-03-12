@@ -29,16 +29,22 @@
 }
 
 * {
-  margin: 0;
   padding: 0;
   box-sizing: border-box;
 }
+html, body {
+    height: 100%;
+    overflow: hidden;
+    margin-bottom: 1vh;
+}
+
 
 html {
   scroll-behavior: smooth;
 }
 
 body {
+  max-height: 100vh;
   font-family: 'Inter', sans-serif;
   font-size: 16px;
   line-height: 1.6;

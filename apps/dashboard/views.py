@@ -10,8 +10,11 @@ import json
 
 from apps.chatbot.models import Conversation, Message
 from apps.users.models import User
-from apps.core.models import Document, ActivityLog
-from apps.rag.models import Document as RAGDocument, DocumentChunk
+from apps.core.models import ActivityLog # Document dihapus dari import core
+
+# --- PERBAIKAN IMPORT MODEL RAG ---
+# Sekarang kita menggunakan Document dari RAG sebagai sumber kebenaran utama
+from apps.rag.models import Document, DocumentChunk
 
 # Optional import - will skip embedding if not available
 try:
@@ -422,13 +425,11 @@ def dashboard_api_stats(request):
     })
 
 
-@login_required
+@login_required(login_url='/auth/login/')
 @user_passes_test(is_admin_or_staff)
 @require_http_methods(["POST"])
-@login_required(login_url='/auth/login/')
-@require_http_methods(["POST"])
 def api_upload_document(request):
-    """API untuk upload document/SOP dengan RAG processing"""
+    """API untuk upload document/SOP dengan RAG processing yang disatukan"""
     import logging
     logger = logging.getLogger(__name__)
     
@@ -440,7 +441,10 @@ def api_upload_document(request):
         return JsonResponse({'status': 'error', 'message': 'No file provided'}, status=400)
     
     file = request.FILES['file']
-    logger.info(f'File received: {file.name}, size: {file.size} bytes')
+    # Ambil doc_type dari form dropdown HTML (default ke TROUBLESHOOT jika tidak ada)
+    doc_type = request.POST.get('doc_type', 'TROUBLESHOOT')
+    
+    logger.info(f'File received: {file.name}, size: {file.size} bytes, type: {doc_type}')
     
     # Validasi file size
     max_size = 50 * 1024 * 1024  # 50MB
@@ -468,49 +472,52 @@ def api_upload_document(request):
         except Exception as e:
             return JsonResponse({'status': 'error', 'message': f'Could not read file: {str(e)}'}, status=400)
         
-        # Create dashboard document record (metadata)
-        dashboard_doc = Document.objects.create(
-            uploaded_by=request.user,
+        # --- PERUBAHAN UTAMA: Hanya membuat SATU document record di tabel RAG ---
+        doc = Document.objects.create(
             file_name=file.name,
             file_size=file.size,
-            file_path=f'documents/{file.name}',
+            file=file,
+            uploaded_by=request.user,
+            content=content,
+            category='Dashboard Upload',
+            doc_type=doc_type,
+            is_active=True,
             is_processed=False
         )
         
-        # Create RAG document for embedding/chunking
-        rag_doc = RAGDocument.objects.create(
-            title=file.name.split('.')[0],  # Filename without extension
-            content=content,
-            category='Dashboard Upload',
-            is_active=True
-        )
-        
-        # Process document: Split into chunks & create embeddings
-        chunks = [content[i:i+500] for i in range(0, len(content), 500)]
+        # Process document: Gunakan logika chunking pintar yang sebelumnya Anda buat
+        # Pisahkan berdasarkan double enter (\n\n) sesuai format TXT yang Anda minta
+        raw_chunks = [p.strip() for p in content.split("\n\n") if p.strip()]
+        chunks = []
+        for p in raw_chunks:
+            if len(p) <= 800:
+                chunks.append(p)
+            else:
+                for i in range(0, len(p), 800):
+                    chunks.append(p[i:i+800])
+                    
         chunks_created = 0
-        
         logger.info(f'Processing {len(chunks)} chunks...')
         
         # Create chunks WITHOUT embeddings for now (much faster)
-        # Embeddings can be computed in background later
         for index, chunk_text in enumerate(chunks):
-            if chunk_text.strip():  # Only non-empty chunks
+            if chunk_text.strip():  
                 DocumentChunk.objects.create(
-                    document=rag_doc,
+                    document=doc,
                     chunk_index=index,
                     content=chunk_text,
-                    embedding_vector=None  # Skip for now
+                    embedding_vector=None  
                 )
                 chunks_created += 1
         
         logger.info(f'Created {chunks_created} chunks')
         
-        # Optional: Create embeddings in background (TODO: make async)
+        # Create embeddings 
         if HAS_EMBEDDING_SERVICE:
             try:
                 logger.info('Attempting to create embeddings...')
                 embedding_service = EmbeddingService()
-                for chunk in DocumentChunk.objects.filter(document=rag_doc, embedding_vector__isnull=True)[:5]:  # Only first 5 chunks to avoid timeout
+                for chunk in DocumentChunk.objects.filter(document=doc, embedding_vector__isnull=True): 
                     try:
                         vector = embedding_service.embed_text(chunk.content)
                         chunk.embedding_vector = embedding_service.to_bytes(vector)
@@ -521,45 +528,24 @@ def api_upload_document(request):
             except Exception as e:
                 logger.warning(f'EmbeddingService error (non-critical): {e}')
                 print(f"Warning: Embedding failed: {e}")
-                for index, chunk_text in enumerate(chunks):
-                    if chunk_text.strip():
-                        DocumentChunk.objects.create(
-                            document=rag_doc,
-                            chunk_index=index,
-                            content=chunk_text,
-                            embedding_vector=None
-                        )
-                        chunks_created += 1
-        else:
-            # No embedding service available, just create chunks without vectors
-            for index, chunk_text in enumerate(chunks):
-                if chunk_text.strip():
-                    DocumentChunk.objects.create(
-                        document=rag_doc,
-                        chunk_index=index,
-                        content=chunk_text,
-                        embedding_vector=None
-                    )
-                    chunks_created += 1
-        
+                
         # Mark as processed
-        dashboard_doc.is_processed = True
-        dashboard_doc.save()
+        doc.is_processed = True
+        doc.save()
         
         # Log activity
         ActivityLog.objects.create(
             action='CREATE',
-            description=f'Uploaded & processed document: {file.name} ({len(chunks)} chunks, {chunks_created} with embeddings)',
+            description=f'Uploaded & processed document: {file.name} (Type: {doc_type})',
             user_id=request.user.id,
         )
         
-        logger.info(f'Document uploaded successfully: {file.name}, Doc ID: {dashboard_doc.id}, RAG Doc ID: {rag_doc.id}, Chunks: {chunks_created}')
+        logger.info(f'Document uploaded successfully: {file.name}, Doc ID: {doc.id}, Chunks: {chunks_created}')
         
         return JsonResponse({
             'status': 'success',
             'message': f'Document uploaded successfully ({chunks_created} chunks)',
-            'document_id': dashboard_doc.id,
-            'rag_document_id': rag_doc.id,
+            'document_id': doc.id,
             'chunks_created': chunks_created
         })
     except Exception as e:
@@ -579,8 +565,8 @@ def api_upload_document(request):
 @require_http_methods(["DELETE"])
 def api_delete_document(request, doc_id):
     """API untuk delete document"""
-    
     try:
+        # Menghapus langsung dari model RAG (DocumentChunk akan terhapus otomatis via CASCADE)
         document = Document.objects.get(id=doc_id)
         file_name = document.file_name
         document.delete()
@@ -600,4 +586,3 @@ def api_delete_document(request, doc_id):
         return JsonResponse({'status': 'error', 'message': 'Document not found'}, status=404)
     except Exception as e:
         return JsonResponse({'status': 'error', 'message': str(e)}, status=500)
-

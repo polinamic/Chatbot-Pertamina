@@ -1,0 +1,26 @@
+KATEGORI: JARINGAN_WIFI_TROUBLESHOOT
+Konteks Masalah: Tidak bisa terhubung ke internet, Wi-Fi silang merah, Limited Access, atau IP Conflict.
+Langkah Perbaikan:
+1. Pastikan mode pesawat (Airplane Mode) dimatikan.
+2. Klik kanan pada ikon Wi-Fi, pilih "Forget Network" (Lupakan Jaringan) pada Wi-Fi kantor.
+3. Sambungkan kembali dan masukkan password terbaru.
+4. Buka Command Prompt, ketik "ipconfig /flushdns" lalu tekan Enter.
+5. Restart laptop Anda.
+
+KATEGORI: PRINTER_TROUBLESHOOT
+Konteks Masalah: Printer berstatus offline, dokumen nyangkut di antrean (stuck in queue), atau print spooler error.
+Langkah Perbaikan:
+1. Pastikan kabel LAN atau USB printer terpasang kencang dan printer dalam keadaan menyala.
+2. Buka menu pencarian Windows, ketik "Services" dan buka aplikasinya.
+3. Cari layanan bernama "Print Spooler".
+4. Klik kanan pada "Print Spooler" dan pilih "Restart".
+5. Hapus semua antrean dokumen di menu "Printers & Scanners", lalu coba cetak ulang.
+
+KATEGORI: SLOW_PC_TROUBLESHOOT
+Konteks Masalah: Komputer atau laptop berjalan sangat lambat, sering hang sementara, disk usage 100%, atau memori penuh.
+Langkah Perbaikan:
+1. Buka Task Manager (Ctrl + Shift + Esc).
+2. Cek tab "Startup", matikan (Disable) aplikasi berat yang tidak diperlukan saat komputer menyala (seperti Spotify, Skype, dll).
+3. Buka File Explorer, klik kanan pada Drive C:, pilih Properties, dan jalankan "Disk Cleanup".
+4. Pastikan Anda menutup tab Google Chrome yang terlalu banyak.
+5. Restart komputer untuk menyegarkan RAM.
