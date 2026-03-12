@@ -16,7 +16,6 @@
     </div>
 </div>
 
-<!-- Statistics -->
 <div class="stats-grid">
     <div class="stat-card">
         <div class="stat-card-header">
@@ -61,7 +60,6 @@
     </div>
 </div>
 
-<!-- Documents List -->
 <div class="content-card" style="margin-top: 2rem;">
     <div class="content-card-header">
         <h2>All Documents</h2>
@@ -74,7 +72,7 @@
                     <tr>
                         <th>File Name</th>
                         <th>Category</th>
-                        <th>Size</th>
+                        <th>Type (RAG)</th> <th>Size</th>
                         <th>Uploaded By</th>
                         <th>Status</th>
                         <th>Created</th>
@@ -99,6 +97,13 @@
                                 <span class="badge" style="background-color: rgba(16, 185, 129, 0.1); color: var(--success);">Email</span>
                             {% else %}
                                 <span class="badge" style="background-color: rgba(107, 114, 128, 0.1); color: var(--gray-600);">General</span>
+                            {% endif %}
+                        </td>
+                        <td>
+                            {% if doc.doc_type == 'ESCALATION' %}
+                                <span class="badge" style="background-color: rgba(245, 158, 11, 0.2); color: #b45309;">UI Copilot</span>
+                            {% else %}
+                                <span class="badge" style="background-color: rgba(16, 185, 129, 0.2); color: #047857;">Troubleshoot</span>
                             {% endif %}
                         </td>
                         <td>
@@ -133,7 +138,6 @@
             </table>
         </div>
         
-        <!-- Pagination -->
         {% if page_obj.has_other_pages %}
         <div class="pagination">
             {% if page_obj.has_previous %}
@@ -165,7 +169,6 @@
     </div>
 </div>
 
-<!-- Upload Modal -->
 <div id="uploadModal" class="custom-modal">
     <div class="custom-modal-content">
         <div class="modal-header">
@@ -174,6 +177,14 @@
         </div>
 
         <div class="modal-body">
+            <div style="margin-bottom: 1.5rem;">
+                <label for="docType" style="font-weight: 600; margin-bottom: 0.5rem; display: block;">Jenis Knowledge Base:</label>
+                <select id="docType" style="width: 100%; padding: 0.75rem; border-radius: 0.5rem; border: 1px solid var(--border-light); background-color: var(--bg-light); color: inherit;">
+                    <option value="TROUBLESHOOT">Langkah Troubleshooting (Solusi Mandiri)</option>
+                    <option value="ESCALATION">Panduan UI Copilot (Cara Navigasi Web Tiket)</option>
+                </select>
+            </div>
+
             <div id="dropZone" class="drop-zone">
                 <i class="bi bi-cloud-arrow-up upload-icon"></i>
                 <p><strong>Drag & drop your file here</strong></p>
@@ -189,37 +200,21 @@
 
         <div class="modal-footer">
             <button type="button" class="btn btn-secondary" onclick="closeUploadModal()">Close</button>
-            <button type="button" class="btn btn-primary" onclick="uploadFile()">Upload</button>
+            <button id="uploadBtn" type="button" class="btn btn-primary" onclick="uploadFile()">Upload</button>
         </div>
     </div>
 </div>
 
 <style>
-    .modal-content {
-        border: 1px solid var(--border-light);
-        border-radius: 0.75rem;
-    }
-    
-    body.dark-mode .modal-content {
-        background-color: var(--gray-800);
-        color: var(--text-dark);
-    }
-    
-    .btn-close {
-        filter: invert(1);
-    }
-    
-    body.dark-mode .btn-close {
-        filter: none;
-    }
+    /* Modal Background & Container */
     .custom-modal {
-    display: none;
-    position: fixed;
-    inset: 0;
-    background: rgba(0,0,0,0.5);
-    justify-content: center;
-    align-items: center;
-    z-index: 9999;
+        display: none;
+        position: fixed;
+        inset: 0;
+        background: rgba(0,0,0,0.6); /* Sedikit lebih gelap agar lebih fokus */
+        justify-content: center;
+        align-items: center;
+        z-index: 9999;
     }
 
     .custom-modal.show {
@@ -227,13 +222,58 @@
     }
 
     .custom-modal-content {
-        background: var(--bg-light);
+        background: var(--bg-light, #ffffff);
+        color: var(--text-dark, #333333);
         width: 500px;
         max-width: 90%;
         border-radius: 0.75rem;
         padding: 1.5rem;
         animation: fadeIn 0.2s ease-in-out;
+        border: 1px solid var(--border-light, #e5e7eb);
     }
+
+    /* --- PERBAIKAN DARK MODE DI SINI --- */
+    body.dark-mode .custom-modal-content {
+        background-color: var(--gray-800, #1f2937) !important;
+        color: var(--text-light, #f9fafb) !important;
+        border-color: var(--gray-700, #374151) !important;
+    }
+
+    body.dark-mode .custom-modal-content h5,
+    body.dark-mode .custom-modal-content label,
+    body.dark-mode .custom-modal-content p,
+    body.dark-mode .custom-modal-content strong {
+        color: #ffffff !important;
+    }
+
+    /* Penyesuaian khusus Dropdown Select di Mode Gelap */
+    body.dark-mode .custom-modal-content select {
+        background-color: var(--gray-700, #374151) !important;
+        color: #ffffff !important;
+        border-color: var(--gray-600, #4b5563) !important;
+    }
+
+    body.dark-mode .custom-modal-content select option {
+        background-color: var(--gray-700, #374151);
+        color: #ffffff;
+    }
+
+    /* Penyesuaian warna teks redup (Subtext) */
+    body.dark-mode .custom-modal-content .sub-text,
+    body.dark-mode .custom-modal-content .info-text {
+        color: var(--gray-400, #9ca3af) !important;
+    }
+
+    /* Penyesuaian garis kotak Dropzone */
+    body.dark-mode .drop-zone {
+        border-color: var(--gray-600, #4b5563) !important;
+    }
+
+    /* Membuat tombol 'X' menjadi putih di Mode Gelap */
+    body.dark-mode .btn-close {
+        filter: invert(1) grayscale(100%) brightness(200%);
+    }
+    /* ---------------------------------- */
 
     @keyframes fadeIn {
         from { transform: scale(0.95); opacity: 0; }
@@ -241,28 +281,33 @@
     }
 
     .drop-zone {
-        border: 2px dashed var(--border-light);
+        border: 2px dashed var(--border-light, #ccc);
         border-radius: 0.5rem;
         padding: 2rem;
         text-align: center;
         cursor: pointer;
+        transition: all 0.3s ease;
+    }
+
+    .drop-zone:hover {
+        background-color: rgba(13, 110, 253, 0.05); /* Sedikit highlight saat di-hover */
     }
 
     .upload-icon {
         font-size: 2rem;
-        color: var(--primary);
+        color: var(--primary, #0d6efd);
         margin-bottom: 0.5rem;
     }
 
     .sub-text {
-        color: var(--gray-500);
+        color: var(--gray-500, #6c757d);
         font-size: 0.875rem;
     }
 
     .info-text {
         margin-top: 1rem;
         font-size: 0.875rem;
-        color: var(--gray-500);
+        color: var(--gray-500, #6c757d);
     }
 </style>
 
@@ -348,6 +393,12 @@ function uploadFile() {
         const formData = new FormData();
         formData.append('file', file);
         
+        // TAMBAHAN: Masukkan data tipe dokumen dari dropdown
+        const docTypeSelect = document.getElementById('docType');
+        if (docTypeSelect) {
+            formData.append('doc_type', docTypeSelect.value);
+        }
+        
         const csrfToken = getCookie('csrftoken');
         
         fetch('/dashboard/api/documents/upload/', {
@@ -366,7 +417,7 @@ function uploadFile() {
                 showNotification('Upload successful!', 'success');
                 
                 if (fileInput) fileInput.value = '';
-                if (dropZone) dropZone.textContent = 'Drag & drop your file here or click to browse';
+                if (dropZone) dropZone.innerHTML = '<i class="bi bi-cloud-arrow-up upload-icon"></i><p><strong>Drag & drop your file here</strong></p><p class="sub-text">or click to browse</p>';
                 if (uploadBtn) uploadBtn.disabled = false;
                 if (uploadBtn) uploadBtn.innerHTML = '<i class="bi bi-upload"></i> Upload';
                 

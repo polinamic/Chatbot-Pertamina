@@ -5,8 +5,8 @@ from rest_framework.permissions import AllowAny
 
 from django.shortcuts import render
 from django.views.decorators.csrf import csrf_exempt
-from django.db import transaction
 from django.shortcuts import redirect
+
 from datetime import datetime
 import uuid
 import pyodbc
@@ -50,7 +50,13 @@ class DocumentViewSet(viewsets.ModelViewSet):
                 status=status.HTTP_400_BAD_REQUEST
             )
 
-        ingest_document(document)
+        try:
+            ingest_document(document)
+        except Exception as e:
+            return Response(
+                {"error": f"Embedding gagal: {str(e)}"},
+                status=status.HTTP_500_INTERNAL_SERVER_ERROR
+            )
 
         return Response(
             {"message": "Document processed successfully"},
@@ -72,20 +78,28 @@ class DocumentViewSet(viewsets.ModelViewSet):
                 status=status.HTTP_400_BAD_REQUEST
             )
 
-        vector_store = VectorStore()
-        vector_store.load_embeddings()
+        try:
+            # Load vector store
+            vector_store = VectorStore()
+            vector_store.load_embeddings()
 
-        embedding_service = EmbeddingService()
+            # Initialize embedding service
+            embedding_service = EmbeddingService()
 
-        answer = chat(query, vector_store, embedding_service)
+            # Run RAG chat pipeline
+            answer = chat(query, vector_store, embedding_service)
+
+        except Exception as e:
+            return Response(
+                {"error": f"RAG processing error: {str(e)}"},
+                status=status.HTTP_500_INTERNAL_SERVER_ERROR
+            )
 
         return Response({
             "query": query,
             "answer": answer
         }, status=status.HTTP_200_OK)
 
-
-from django.views.decorators.csrf import csrf_exempt
 
 # ======================================================
 # UPLOAD KNOWLEDGE PAGE
@@ -100,28 +114,43 @@ def upload_knowledge(request):
         file = request.FILES.get("file")
 
         if not file:
-            return render(request, "rag/upload.html", {"message": "File tidak ditemukan"})
+            return render(
+                request,
+                "rag/upload.html",
+                {"message": "File tidak ditemukan"}
+            )
 
-        content = file.read().decode("utf-8")
+        try:
+            content = file.read().decode("utf-8")
 
-        document = Document.objects.create(
-            title=title,
-            content=content,
-            is_active=True
+            document = Document.objects.create(
+                title=title,
+                content=content,
+                is_active=True
+            )
+
+            ingest_document(document)
+
+        except Exception as e:
+            return render(
+                request,
+                "rag/upload.html",
+                {"message": f"Upload gagal: {str(e)}"}
+            )
+
+        return render(
+            request,
+            "rag/upload.html",
+            {"message": "Upload dan embedding berhasil!"}
         )
 
-        ingest_document(document)
-
-        return render(request, "rag/upload.html", {
-            "message": "Upload dan embedding berhasil!"
-        })
-
     return render(request, "rag/upload.html")
-    """Redirect to dashboard knowledge base"""
+
+    """
+    Redirect to dashboard knowledge base
+    """
+
     if request.method == "GET":
-        # For GET requests, redirect to dashboard
         return redirect('dashboard:knowledge_base')
-    
-    # For POST requests, just redirect to dashboard too
-    # All uploads should go through the dashboard API
+
     return redirect('dashboard:knowledge_base')
