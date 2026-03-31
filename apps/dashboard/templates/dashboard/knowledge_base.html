@@ -72,7 +72,8 @@
                     <tr>
                         <th>File Name</th>
                         <th>Category</th>
-                        <th>Type (RAG)</th> <th>Size</th>
+                        <th>Type (RAG)</th> 
+                        <th>Size</th>
                         <th>Uploaded By</th>
                         <th>Status</th>
                         <th>Created</th>
@@ -84,16 +85,16 @@
                     <tr>
                         <td>
                             <div style="display: flex; align-items: center; gap: 0.5rem;">
-                                <i class="bi bi-file-pdf" style="color: var(--error); font-size: 1.25rem;"></i>
-                                <strong>{{ doc.file_name }}</strong>
+                                <i class="bi bi-file-text" style="color: var(--primary); font-size: 1.25rem;"></i>
+                                <strong>{{ doc.file_name|default:doc.title|default:"Unnamed Document" }}</strong>
                             </div>
                         </td>
                         <td>
-                            {% if "network" in doc.file_name|lower %}
+                            {% if doc.file_name and "network" in doc.file_name|lower %}
                                 <span class="badge" style="background-color: rgba(0, 58, 122, 0.1); color: var(--secondary);">Network</span>
-                            {% elif "hardware" in doc.file_name|lower %}
+                            {% elif doc.file_name and "hardware" in doc.file_name|lower %}
                                 <span class="badge" style="background-color: rgba(196, 30, 58, 0.1); color: var(--primary);">Hardware</span>
-                            {% elif "email" in doc.file_name|lower %}
+                            {% elif doc.file_name and "email" in doc.file_name|lower %}
                                 <span class="badge" style="background-color: rgba(16, 185, 129, 0.1); color: var(--success);">Email</span>
                             {% else %}
                                 <span class="badge" style="background-color: rgba(107, 114, 128, 0.1); color: var(--gray-600);">General</span>
@@ -114,7 +115,7 @@
                                 N/A
                             {% endif %}
                         </td>
-                        <td>{{ doc.uploaded_by.username }}</td>
+                        <td>{{ doc.uploaded_by.username|default:"System" }}</td>
                         <td>
                             {% if doc.is_processed %}
                                 <span class="badge badge-success">
@@ -189,11 +190,11 @@
                 <i class="bi bi-cloud-arrow-up upload-icon"></i>
                 <p><strong>Drag & drop your file here</strong></p>
                 <p class="sub-text">or click to browse</p>
-                <input type="file" id="fileInput" hidden accept=".pdf,.docx,.txt,.md">
             </div>
+            <input type="file" id="fileInput" hidden accept=".txt">
 
             <p class="info-text">
-                <strong>Supported formats:</strong> PDF, DOCX, TXT, MD<br>
+                <strong>Supported formats:</strong> TXT<br>
                 <strong>Max size:</strong> 50MB
             </p>
         </div>
@@ -211,7 +212,7 @@
         display: none;
         position: fixed;
         inset: 0;
-        background: rgba(0,0,0,0.6); /* Sedikit lebih gelap agar lebih fokus */
+        background: rgba(0,0,0,0.6);
         justify-content: center;
         align-items: center;
         z-index: 9999;
@@ -246,7 +247,6 @@
         color: #ffffff !important;
     }
 
-    /* Penyesuaian khusus Dropdown Select di Mode Gelap */
     body.dark-mode .custom-modal-content select {
         background-color: var(--gray-700, #374151) !important;
         color: #ffffff !important;
@@ -258,18 +258,15 @@
         color: #ffffff;
     }
 
-    /* Penyesuaian warna teks redup (Subtext) */
     body.dark-mode .custom-modal-content .sub-text,
     body.dark-mode .custom-modal-content .info-text {
         color: var(--gray-400, #9ca3af) !important;
     }
 
-    /* Penyesuaian garis kotak Dropzone */
     body.dark-mode .drop-zone {
         border-color: var(--gray-600, #4b5563) !important;
     }
 
-    /* Membuat tombol 'X' menjadi putih di Mode Gelap */
     body.dark-mode .btn-close {
         filter: invert(1) grayscale(100%) brightness(200%);
     }
@@ -290,7 +287,7 @@
     }
 
     .drop-zone:hover {
-        background-color: rgba(13, 110, 253, 0.05); /* Sedikit highlight saat di-hover */
+        background-color: rgba(13, 110, 253, 0.05); 
     }
 
     .upload-icon {
@@ -312,7 +309,6 @@
 </style>
 
 <script>
-
 function openUploadModal() {
     document.getElementById('uploadModal').classList.add('show');
 }
@@ -352,31 +348,16 @@ function deleteDocument(docId) {
 
 function uploadFile() {
     try {
-        let fileInput = cachedFileInput;
+        let fileInput = document.getElementById('fileInput');
         
-        if (!fileInput) {
-            fileInput = document.getElementById('fileInput');
-            if (!fileInput) {
-                fileInput = document.querySelector('input[type="file"]');
-            }
-            if (fileInput) {
-                cachedFileInput = fileInput;
-            }
-        }
-        
-        if (!fileInput) {
-            throw new Error('File input not found!');
-        }
-        
-        const files = fileInput.files;
-        if (!files || files.length === 0) {
+        if (!fileInput || !fileInput.files || fileInput.files.length === 0) {
             showNotification('Please select a file', 'warning');
             return;
         }
         
-        const file = files[0];
-        let uploadBtn = cachedUploadBtn || document.getElementById('uploadBtn');
-        let dropZone = cachedDropZone || document.getElementById('dropZone');
+        const file = fileInput.files[0];
+        let uploadBtn = document.getElementById('uploadBtn');
+        let dropZone = document.getElementById('dropZone');
         
         // Validate file type
         const allowedExtensions = ['txt', 'pdf', 'docx', 'md'];
@@ -387,13 +368,14 @@ function uploadFile() {
             return;
         }
         
-        if (uploadBtn) uploadBtn.disabled = true;
-        if (uploadBtn) uploadBtn.innerHTML = '<i class="bi bi-hourglass-split"></i> Processing...';
+        if (uploadBtn) {
+            uploadBtn.disabled = true;
+            uploadBtn.innerHTML = '<i class="bi bi-hourglass-split"></i> Processing...';
+        }
         
         const formData = new FormData();
         formData.append('file', file);
         
-        // TAMBAHAN: Masukkan data tipe dokumen dari dropdown
         const docTypeSelect = document.getElementById('docType');
         if (docTypeSelect) {
             formData.append('doc_type', docTypeSelect.value);
@@ -418,36 +400,27 @@ function uploadFile() {
                 
                 if (fileInput) fileInput.value = '';
                 if (dropZone) dropZone.innerHTML = '<i class="bi bi-cloud-arrow-up upload-icon"></i><p><strong>Drag & drop your file here</strong></p><p class="sub-text">or click to browse</p>';
-                if (uploadBtn) uploadBtn.disabled = false;
-                if (uploadBtn) uploadBtn.innerHTML = '<i class="bi bi-upload"></i> Upload';
                 
-                // Close modal by clicking the close button
-                const closeBtn = document.querySelector('#uploadModal .btn-close');
-                if (closeBtn) {
-                    closeBtn.click();
-                } else {
-                    // Fallback: hide modal manually
-                    const backdrop = document.querySelector('.modal-backdrop');
-                    if (backdrop) backdrop.remove();
-                    const modalElement = document.getElementById('uploadModal');
-                    if (modalElement) {
-                        modalElement.classList.remove('show');
-                        modalElement.style.display = 'none';
-                        document.body.classList.remove('modal-open');
-                    }
+                if (uploadBtn) {
+                    uploadBtn.disabled = false;
+                    uploadBtn.innerHTML = 'Upload';
                 }
+                
+                closeUploadModal();
                 
                 setTimeout(() => {
                     location.reload();
-                }, 2000);
+                }, 1500);
             } else {
                 throw new Error(data.message || 'Upload failed');
             }
         })
         .catch(err => {
             showNotification('Error: ' + err.message, 'error');
-            if (uploadBtn) uploadBtn.disabled = false;
-            if (uploadBtn) uploadBtn.innerHTML = '<i class="bi bi-upload"></i> Upload';
+            if (uploadBtn) {
+                uploadBtn.disabled = false;
+                uploadBtn.innerHTML = 'Upload';
+            }
         });
         
     } catch (err) {
@@ -455,9 +428,7 @@ function uploadFile() {
     }
 }
 
-
 function showNotification(message, type = 'info') {
-    // Create notification container if it doesn't exist
     let container = document.getElementById('notificationContainer');
     if (!container) {
         container = document.createElement('div');
@@ -470,7 +441,6 @@ function showNotification(message, type = 'info') {
         document.body.appendChild(container);
     }
     
-    // Create notification element
     const notification = document.createElement('div');
     const alertClass = `alert-${type === 'success' ? 'success' : type === 'error' ? 'danger' : type === 'warning' ? 'warning' : 'info'}`;
     notification.className = `alert ${alertClass} alert-dismissible fade show`;
@@ -485,7 +455,6 @@ function showNotification(message, type = 'info') {
     
     container.appendChild(notification);
     
-    // Auto dismiss after 5 seconds
     setTimeout(() => {
         notification.remove();
     }, 5000);
@@ -506,12 +475,6 @@ function getCookie(name) {
     return cookieValue;
 }
 
-// Cache global references to avoid lookup issues
-var cachedFileInput = null;
-var cachedUploadBtn = null;
-var cachedDropZone = null;
-
-// Drag & drop - attach handlers when DOM is ready
 function attachDropzoneHandlers() {
     const dropZone = document.getElementById('dropZone');
     const fileInput = document.getElementById('fileInput');
@@ -544,28 +507,23 @@ function attachDropzoneHandlers() {
             const dataTransfer = new DataTransfer();
             dataTransfer.items.add(files[0]);
             fileInput.files = dataTransfer.files;
-            fileInput.dispatchEvent(new Event('change', { bubbles: true }));
+            
+            // Perbaikan yang mencegah Error Unexpected token .
+            fileInput.dispatchEvent(new Event('change')); 
+            
             dropZone.innerHTML = '<i class="bi bi-cloud-check upload-icon" style="color: var(--success);"></i><p><strong>✓ Selected: ' + files[0].name + '</strong></p>';
             showNotification('File selected: ' + files[0].name, 'success');
         }
     });
 
     fileInput.addEventListener('change', function() {
-        if (this.files[0]) {
+        if (this.files && this.files[0]) {
             dropZone.innerHTML = '<i class="bi bi-cloud-check upload-icon" style="color: var(--success);"></i><p><strong>✓ Selected: ' + this.files[0].name + '</strong></p>';
-            showNotification('File selected: ' + this.files[0].name, 'info');
         }
     });
 }
 
-// Initialization
 document.addEventListener('DOMContentLoaded', function() {
-    // Cache element references
-    cachedFileInput = document.getElementById('fileInput');
-    cachedUploadBtn = document.getElementById('uploadBtn');
-    cachedDropZone = document.getElementById('dropZone');
-    
-    // Attach dropzone handlers
     attachDropzoneHandlers();
 });
 </script>

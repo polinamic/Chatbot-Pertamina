@@ -5,11 +5,21 @@ from apps.rag.services.embedding import EmbeddingService
 
 
 class VectorStore:
+    """
+    PERBAIKAN: __init__ sekarang menerima parameter embedding_service opsional.
 
-    def __init__(self):
+    Sebelumnya: VectorStore() selalu membuat EmbeddingService() baru di dalam
+    constructor → model SentenceTransformer di-load lagi → double load.
+
+    Sekarang: Jika embedding_service diberikan (dari singleton apps.py),
+    pakai itu. Jika tidak (backward compatible), buat instance baru.
+    """
+
+    def __init__(self, embedding_service: EmbeddingService = None):
         self.index = None
         self.ids = []
-        self.embedding_service = EmbeddingService()
+        # Gunakan singleton dari luar jika ada, jika tidak buat baru
+        self.embedding_service = embedding_service or EmbeddingService()
 
     # =========================================
     # LOAD ALL EMBEDDINGS FROM DATABASE
