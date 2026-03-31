@@ -109,44 +109,6 @@ function removeError(input) {
   }
 }
 
-// Chat functionality
-function sendMessage(messageInput, chatMessages) {
-  const input = document.getElementById(messageInput);
-  const messagesContainer = document.getElementById(chatMessages);
-  
-  if (!input || !messagesContainer || !input.value.trim()) return;
-  
-  const message = input.value.trim();
-  
-  // User message
-  const userMessageDiv = document.createElement('div');
-  userMessageDiv.className = 'message user-message';
-  userMessageDiv.innerHTML = `
-    <div class="message-content">
-      <p>${escapeHtml(message)}</p>
-      <span class="message-time">${getCurrentTime()}</span>
-    </div>
-  `;
-  messagesContainer.appendChild(userMessageDiv);
-  
-  input.value = '';
-  messagesContainer.scrollTop = messagesContainer.scrollHeight;
-  
-  // Simulate bot response
-  setTimeout(() => {
-    const botMessageDiv = document.createElement('div');
-    botMessageDiv.className = 'message bot-message';
-    botMessageDiv.innerHTML = `
-      <div class="message-content">
-        <p>Terima kasih atas pertanyaan Anda. Bot sedang dalam tahap pembelajaran. 🤖</p>
-        <span class="message-time">${getCurrentTime()}</span>
-      </div>
-    `;
-    messagesContainer.appendChild(botMessageDiv);
-    messagesContainer.scrollTop = messagesContainer.scrollHeight;
-  }, 500);
-}
-
 function getCurrentTime() {
   const now = new Date();
   return now.toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit' });

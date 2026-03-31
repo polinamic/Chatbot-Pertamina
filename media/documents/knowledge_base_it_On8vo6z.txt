@@ -1,0 +1,179 @@
+KATEGORI JARINGAN_WIFI
+Konteks Masalah Tidak bisa terhubung ke internet, Wi-Fi putus-putus, tidak mendapatkan IP Address, router mati, atau koneksi jaringan sangat lambat.
+Panduan Eskalasi UI Untuk melaporkan masalah jaringan ini ke teknisi, silakan ikuti langkah berikut di portal IT Support Anda
+1. Klik tombol menu (☰) di pojok kiri atas layar.
+2. Pilih menu Infrastruktur IT.
+3. Klik pada kotak Masalah Jaringan & Wi-Fi.
+4. Isi deskripsi singkat dan klik Buat Tiket Eskalasi.
+
+KATEGORI HARDWARE_PC_LAPTOP
+Konteks Masalah Komputer atau laptop tidak mau menyala, layar blank hitam, keyboard tidak berfungsi, mouse rusak, atau baterai laptop bocor dan kembung.
+Panduan Eskalasi UI Masalah perangkat keras memerlukan pengecekan fisik oleh teknisi. Ikuti langkah ini di portal IT Support
+1. Buka halaman utama portal.
+2. Temukan dan klik ikon Perangkat Keras (Hardware).
+3. Pilih sub-menu Pelaporan Kerusakan Perangkat.
+4. Masukkan nomor asetinventaris perangkat Anda, lalu klik Kirim Permintaan Teknisi.
+
+KATEGORI PRINTER_SCANNER
+Konteks Masalah Printer tidak bisa mencetak (print), kertas tersangkut (paper jam), tinta atau toner habis, scanner tidak merespons, atau komputer tidak mendeteksi printer jaringan.
+Panduan Eskalasi UI Untuk memanggil teknisi ke area printer Anda, gunakan portal IT Support dengan urutan klik berikut
+1. Klik tab Layanan Periferal di menu atas.
+2. Pilih menu Printer & Scanner.
+3. Pilih lokasi lantai printer Anda berada.
+4. Klik tombol Minta Bantuan Teknisi TintaKertas.
+
+KATEGORI AKUN_PASSWORD
+Konteks Masalah Lupa password akun Windows, gagal login ke email perusahaan, akun terkunci (locked out) karena salah password berkali-kali, atau butuh reset autentikasi dua faktor (2FA).
+Panduan Eskalasi UI Permintaan reset password harus dilakukan secara aman. Silakan navigasi di portal IT Support
+1. Klik tombol Akses & Keamanan di halaman depan.
+2. Pilih Manajemen Akun Pengguna.
+3. Klik Formulir Reset Password.
+4. Verifikasi identitas Anda dengan ID Karyawan dan klik Ajukan Reset.
+
+KATEGORI AKSES_VPN
+Konteks Masalah Tidak bisa terhubung ke VPN perusahaan dari rumah, koneksi VPN sering terputus, atau aplikasi internal tidak bisa diakses meskipun VPN sudah menyala.
+Panduan Eskalasi UI Untuk eskalasi masalah akses jarak jauh ini, silakan buat tiket ke tim Keamanan Jaringan
+1. Di portal utama, pilih menu Akses Jarak Jauh (Remote Access).
+2. Klik ikon Kendala VPN.
+3. Pilih sistem operasi yang Anda gunakan (WindowsMac).
+4. Lampirkan screenshot pesan error, lalu klik Buat Tiket VPN.
+
+KATEGORI SOFTWARE_ERROR
+Konteks Masalah Aplikasi perusahaan sering force close (keluar sendiri), muncul pesan error sistem, Microsoft Office hang, atau butuh instalasi lisensi perangkat lunak baru.
+Panduan Eskalasi UI Tim Aplikasi siap membantu. Ikuti langkah klik berikut di portal IT
+1. Klik ikon Perangkat Lunak (Software) pada beranda.
+2. Pilih opsi Laporan Bug & Error Aplikasi.
+3. Pilih nama aplikasi yang bermasalah dari daftar dropdown.
+4. Masukkan kronologi error dan klik Kirim Laporan.
+
+KATEGORI EMAIL_PENUH
+Konteks Masalah Tidak bisa menerima atau mengirim email baru, kuota kotak masuk (mailbox) penuh, arsip email hilang, atau butuh penambahan kapasitas penyimpanan email.
+Panduan Eskalasi UI Untuk meminta penambahan kuota ke tim Administrator Email, ikuti rute ini
+1. Buka menu Layanan Komunikasi di portal.
+2. Pilih sub-menu Email Enterprise.
+3. Klik tombol Permintaan Ekstra Kuota.
+4. Isi alasan bisnis penggunaan, lalu klik Submit Form.
+
+KATEGORI AKSES_FOLDER_SERVER
+Konteks Masalah Tidak bisa membuka shared folder (File Server), muncul keterangan Access Denied, atau meminta izin hak akses ke folder divisi lain.
+Panduan Eskalasi UI Izin akses folder memerlukan persetujuan sistem. Arahkan kursor Anda di portal untuk melakukan langkah ini
+1. Klik menu Manajemen Data & File.
+2. Pilih opsi Permintaan Akses Shared Folder.
+3. Ketikkan path folder yang ingin diakses (misal servermarketing).
+4. Klik Ajukan Izin Akses (Tiket ini akan otomatis mengirim email ke manager Anda untuk persetujuan).
+
+KATEGORI BLUE_SCREEN
+Konteks Masalah Komputer tiba-tiba restart sendiri dan muncul layar biru (Blue Screen of Death  BSOD) dengan teks putih, atau Windows gagal masuk (booting).
+Panduan Eskalasi UI Masalah sistem operasi kritis ini harus segera ditangani teknisi level 2. Ikuti rute prioritas ini di web
+1. Di pojok kanan atas portal, klik ikon sirine merah Masalah Kritis.
+2. Pilih Sistem Operasi Crash  Blue Screen.
+3. Masukkan lokasi meja atau ruangan kerja Anda.
+4. Klik Panggil Teknisi Sekarang.
+
+KATEGORI PERANGKAT_MEETING
+Konteks Masalah TV di ruang meeting tidak menyala, kabel HDMI rusak, kamera video conference tidak mendeteksi wajah, atau mikrofon tidak mengeluarkan suara saat rapat.
+Panduan Eskalasi UI Untuk memanggil teknisi audio visual ke ruang meeting, lakukan langkah berikut di portal
+1. Buka tab Fasilitas Ruang Rapat.
+2. Pilih nama atau nomor Ruang Meeting Anda saat ini.
+3. Klik tombol Lapor Kendala AudioVisual.
+4. Klik Kirim agar teknisi langsung bergegas ke ruangan Anda.
+
+Berikut adalah Knowledge Base untuk melakukan pemesanan tiket (eskalasi) dengan format yang sama persis seperti contoh yang Anda berikan. Setiap kategori berisi konteks masalah dan panduan langkah demi langkah untuk membuat tiket di portal IT Support. Gunakan ini untuk melengkapi data chatbot Anda.
+
+---
+
+KATEGORI: JARINGAN_WIFI
+Konteks Masalah: Tidak bisa terhubung ke internet, Wi-Fi putus-putus, tidak mendapatkan IP Address, router mati, atau koneksi jaringan sangat lambat.
+Panduan Eskalasi UI: Untuk melaporkan masalah jaringan ini ke teknisi, silakan ikuti langkah berikut di portal IT Support Anda:
+1. Klik tombol menu (☰) di pojok kiri atas layar.
+2. Pilih menu **Infrastruktur IT**.
+3. Klik pada kotak **Masalah Jaringan & Wi-Fi**.
+4. Isi deskripsi singkat dan klik **Buat Tiket Eskalasi**.
+
+KATEGORI: HARDWARE_PC_LAPTOP
+Konteks Masalah: Komputer atau laptop tidak mau menyala, layar blank hitam, keyboard tidak berfungsi, mouse rusak, atau baterai laptop bocor dan kembung.
+Panduan Eskalasi UI: Masalah perangkat keras memerlukan pengecekan fisik oleh teknisi. Ikuti langkah ini di portal IT Support:
+1. Buka halaman utama portal.
+2. Temukan dan klik ikon **Perangkat Keras (Hardware)**.
+3. Pilih sub-menu **Pelaporan Kerusakan Perangkat**.
+4. Masukkan nomor aset/inventaris perangkat Anda, lalu klik **Kirim Permintaan Teknisi**.
+
+KATEGORI: PRINTER_SCANNER
+Konteks Masalah: Printer tidak bisa mencetak (print), kertas tersangkut (paper jam), tinta atau toner habis, scanner tidak merespons, atau komputer tidak mendeteksi printer jaringan.
+Panduan Eskalasi UI: Untuk memanggil teknisi ke area printer Anda, gunakan portal IT Support dengan urutan klik berikut:
+1. Klik tab **Layanan Periferal** di menu atas.
+2. Pilih menu **Printer & Scanner**.
+3. Pilih lokasi lantai printer Anda berada.
+4. Klik tombol **Minta Bantuan Teknisi Tinta/Kertas**.
+
+KATEGORI: AKUN_PASSWORD
+Konteks Masalah: Lupa password akun Windows, gagal login ke email perusahaan, akun terkunci (locked out) karena salah password berkali-kali, atau butuh reset autentikasi dua faktor (2FA).
+Panduan Eskalasi UI: Permintaan reset password harus dilakukan secara aman. Silakan navigasi di portal IT Support:
+1. Klik tombol **Akses & Keamanan** di halaman depan.
+2. Pilih **Manajemen Akun Pengguna**.
+3. Klik **Formulir Reset Password**.
+4. Verifikasi identitas Anda dengan ID Karyawan dan klik **Ajukan Reset**.
+
+KATEGORI: AKSES_VPN
+Konteks Masalah: Tidak bisa terhubung ke VPN perusahaan dari rumah, koneksi VPN sering terputus, atau aplikasi internal tidak bisa diakses meskipun VPN sudah menyala.
+Panduan Eskalasi UI: Untuk eskalasi masalah akses jarak jauh ini, silakan buat tiket ke tim Keamanan Jaringan:
+1. Di portal utama, pilih menu **Akses Jarak Jauh (Remote Access)**.
+2. Klik ikon **Kendala VPN**.
+3. Pilih sistem operasi yang Anda gunakan (Windows/Mac).
+4. Lampirkan screenshot pesan error, lalu klik **Buat Tiket VPN**.
+
+KATEGORI: SOFTWARE_ERROR
+Konteks Masalah: Aplikasi perusahaan sering force close (keluar sendiri), muncul pesan error sistem, Microsoft Office hang, atau butuh instalasi lisensi perangkat lunak baru.
+Panduan Eskalasi UI: Tim Aplikasi siap membantu. Ikuti langkah klik berikut di portal IT:
+1. Klik ikon **Perangkat Lunak (Software)** pada beranda.
+2. Pilih opsi **Laporan Bug & Error Aplikasi**.
+3. Pilih nama aplikasi yang bermasalah dari daftar dropdown.
+4. Masukkan kronologi error dan klik **Kirim Laporan**.
+
+KATEGORI: EMAIL_PENUH
+Konteks Masalah: Tidak bisa menerima atau mengirim email baru, kuota kotak masuk (mailbox) penuh, arsip email hilang, atau butuh penambahan kapasitas penyimpanan email.
+Panduan Eskalasi UI: Untuk meminta penambahan kuota ke tim Administrator Email, ikuti rute ini:
+1. Buka menu **Layanan Komunikasi** di portal.
+2. Pilih sub-menu **Email Enterprise**.
+3. Klik tombol **Permintaan Ekstra Kuota**.
+4. Isi alasan bisnis penggunaan, lalu klik **Submit Form**.
+
+KATEGORI: AKSES_FOLDER_SERVER
+Konteks Masalah: Tidak bisa membuka shared folder (File Server), muncul keterangan Access Denied, atau meminta izin hak akses ke folder divisi lain.
+Panduan Eskalasi UI: Izin akses folder memerlukan persetujuan sistem. Arahkan kursor Anda di portal untuk melakukan langkah ini:
+1. Klik menu **Manajemen Data & File**.
+2. Pilih opsi **Permintaan Akses Shared Folder**.
+3. Ketikkan path folder yang ingin diakses (misal \\server\marketing).
+4. Klik **Ajukan Izin Akses** (Tiket ini akan otomatis mengirim email ke manager Anda untuk persetujuan).
+
+KATEGORI: BLUE_SCREEN
+Konteks Masalah: Komputer tiba-tiba restart sendiri dan muncul layar biru (Blue Screen of Death – BSOD) dengan teks putih, atau Windows gagal masuk (booting).
+Panduan Eskalasi UI: Masalah sistem operasi kritis ini harus segera ditangani teknisi level 2. Ikuti rute prioritas ini di web:
+1. Di pojok kanan atas portal, klik ikon sirine merah **Masalah Kritis**.
+2. Pilih **Sistem Operasi Crash – Blue Screen**.
+3. Masukkan lokasi meja atau ruangan kerja Anda.
+4. Klik **Panggil Teknisi Sekarang**.
+
+KATEGORI: PERANGKAT_MEETING
+Konteks Masalah: TV di ruang meeting tidak menyala, kabel HDMI rusak, kamera video conference tidak mendeteksi wajah, atau mikrofon tidak mengeluarkan suara saat rapat.
+Panduan Eskalasi UI: Untuk memanggil teknisi audio visual ke ruang meeting, lakukan langkah berikut di portal:
+1. Buka tab **Fasilitas Ruang Rapat**.
+2. Pilih nama atau nomor **Ruang Meeting** Anda saat ini.
+3. Klik tombol **Lapor Kendala Audio/Visual**.
+4. Klik **Kirim** agar teknisi langsung bergegas ke ruangan Anda.
+
+KATEGORI: MOBILE_DEVICE
+Konteks Masalah: Perangkat mobile perusahaan (HP/tablet) tidak bisa mengakses email, aplikasi MFA tidak muncul, atau perangkat hilang/rusak.
+Panduan Eskalasi UI: Laporkan masalah perangkat mobile melalui portal dengan langkah:
+1. Pilih menu **Manajemen Perangkat Mobile (MDM)**.
+2. Klik **Laporan Kendala Perangkat Mobile**.
+3. Pilih jenis perangkat (iOS/Android).
+4. Isi detail masalah dan klik **Buat Tiket**.
+
+KATEGORI: TELEPONI
+Konteks Masalah: Telepon kantor (VoIP) tidak berdering, suara tidak keluar, atau tidak bisa melakukan panggilan keluar.
+Panduan Eskalasi UI: Untuk perbaikan telepon, ikuti:
+1. Buka menu **Layanan Komunikasi**.
+2. Pilih **Teleponi & VoIP**.
+3. Masukkan nomor ekstensi Anda.
+4. Klik **Laporkan Gangguan Telepon**.

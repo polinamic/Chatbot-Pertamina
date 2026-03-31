@@ -16,6 +16,9 @@ from apps.core.models import ActivityLog # Document dihapus dari import core
 # Sekarang kita menggunakan Document dari RAG sebagai sumber kebenaran utama
 from apps.rag.models import Document, DocumentChunk
 
+# Import ingestion service untuk chunking yang lebih baik
+from apps.rag.services.ingestion_service import category_aware_chunking, ingest_document
+
 # Optional import - will skip embedding if not available
 try:
     from apps.rag.services.embedding import EmbeddingService
@@ -484,62 +487,19 @@ def api_upload_document(request):
             is_active=True,
             is_processed=False
         )
-        
-        # Process document: Gunakan logika chunking pintar yang sebelumnya Anda buat
-        # Pisahkan berdasarkan double enter (\n\n) sesuai format TXT yang Anda minta
-        raw_chunks = [p.strip() for p in content.split("\n\n") if p.strip()]
-        chunks = []
-        for p in raw_chunks:
-            if len(p) <= 800:
-                chunks.append(p)
-            else:
-                for i in range(0, len(p), 800):
-                    chunks.append(p[i:i+800])
-                    
-        chunks_created = 0
-        logger.info(f'Processing {len(chunks)} chunks...')
-        
-        # Create chunks WITHOUT embeddings for now (much faster)
-        for index, chunk_text in enumerate(chunks):
-            if chunk_text.strip():  
-                DocumentChunk.objects.create(
-                    document=doc,
-                    chunk_index=index,
-                    content=chunk_text,
-                    embedding_vector=None  
-                )
-                chunks_created += 1
-        
-        logger.info(f'Created {chunks_created} chunks')
-        
-        # Create embeddings 
-        if HAS_EMBEDDING_SERVICE:
-            try:
-                logger.info('Attempting to create embeddings...')
-                embedding_service = EmbeddingService()
-                for chunk in DocumentChunk.objects.filter(document=doc, embedding_vector__isnull=True): 
-                    try:
-                        vector = embedding_service.embed_text(chunk.content)
-                        chunk.embedding_vector = embedding_service.to_bytes(vector)
-                        chunk.save()
-                    except Exception as e:
-                        logger.warning(f'Failed to embed chunk {chunk.id}: {e}')
-                        pass
-            except Exception as e:
-                logger.warning(f'EmbeddingService error (non-critical): {e}')
-                print(f"Warning: Embedding failed: {e}")
-                
-        # Mark as processed
-        doc.is_processed = True
-        doc.save()
-        
-        # Log activity
-        ActivityLog.objects.create(
-            action='CREATE',
-            description=f'Uploaded & processed document: {file.name} (Type: {doc_type})',
-            user_id=request.user.id,
-        )
-        
+
+        # Process document menggunakan ingestion_service yang lengkap
+        # Ini akan melakukan chunking, embedding, dan menyimpan chunks
+        try:
+            ingest_document(doc)
+            chunks_created = doc.chunks.count()
+            logger.info(f'Document processed successfully with {chunks_created} chunks')
+        except Exception as e:
+            logger.error(f'Failed to process document: {e}')
+            return JsonResponse({
+                'status': 'error',
+                'message': f'Failed to process document: {str(e)}'
+            }, status=500)
         logger.info(f'Document uploaded successfully: {file.name}, Doc ID: {doc.id}, Chunks: {chunks_created}')
         
         return JsonResponse({
