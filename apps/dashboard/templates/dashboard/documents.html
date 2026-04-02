@@ -63,13 +63,6 @@
                                 N/A
                             {% endif %}
                         </td>
-                        <td>
-                            {% if document.is_processed %}
-                                <span class="badge badge-success">Processed</span>
-                            {% else %}
-                                <span class="badge badge-warning">Pending</span>
-                            {% endif %}
-                        </td>
                         <td>{{ document.created_at|date:"d M, Y H:i" }}</td>
                     </tr>
                     {% endfor %}

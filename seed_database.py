@@ -79,8 +79,7 @@ if admin_user:
             uploaded_by=admin_user,
             file_name=doc_name,
             file_size=random.randint(100000, 5000000),
-            file_path=f'documents/{doc_name}',
-            is_processed=random.choice([True, False])
+            file_path=f'documents/{doc_name}'
         )
         
         ActivityLog.objects.create(

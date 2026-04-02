@@ -130,7 +130,6 @@ def upload_knowledge(request):
             file_size=uploaded_file.size,
             doc_type=doc_type,
             uploaded_by=request.user if request.user.is_authenticated else None,
-            is_processed=False,
         )
 
         # Proses chunking & embedding secara async jika tersedia,
