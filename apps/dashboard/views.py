@@ -123,11 +123,6 @@ def conversations_management(request):
     status_filter = request.GET.get('status')
     search_query = request.GET.get('search', '')
     
-    if status_filter == 'archived':
-        conversations = conversations.filter(is_archived=True)
-    elif status_filter == 'active':
-        conversations = conversations.filter(is_archived=False)
-    
     if search_query:
         conversations = conversations.filter(
             Q(title__icontains=search_query) | 
@@ -318,7 +313,7 @@ def chat_monitoring(request):
     ).order_by('-updated_at')[:50]
     
     stats = {
-        'active_conversations': Conversation.objects.filter(is_archived=False).count(),
+        'active_conversations': Conversation.objects.count(),
         'total_messages_today': Message.objects.filter(
             created_at__date=timezone.now().date()
         ).count(),
@@ -417,7 +412,7 @@ def dashboard_api_stats(request):
             'total_documents': Document.objects.count(),
             'conversations_today': Conversation.objects.filter(created_at__date=today).count(),
             'messages_today': Message.objects.filter(created_at__date=today).count(),
-            'active_conversations': Conversation.objects.filter(is_archived=False).count(),
+            'active_conversations': Conversation.objects.count(),
         }
     })
 
