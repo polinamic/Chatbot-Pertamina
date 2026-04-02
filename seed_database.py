@@ -42,8 +42,7 @@ for i, user in enumerate(users):
     for j in range(2):
         conv = Conversation.objects.create(
             user=user,
-            title=f'{conversation_topics[(i*2 + j) % len(conversation_topics)]} #{i}-{j}',
-            is_archived=random.choice([True, False])
+            title=f'{conversation_topics[(i*2 + j) % len(conversation_topics)]} #{i}-{j}'
         )
         
         # Create messages for each conversation

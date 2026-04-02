@@ -4,8 +4,8 @@ from .models import Conversation, Message
 
 @admin.register(Conversation)
 class ConversationAdmin(admin.ModelAdmin):
-    list_display = ['id', 'user', 'title', 'created_at', 'is_archived']
-    list_filter = ['created_at', 'is_archived']
+    list_display = ['id', 'user', 'title', 'created_at']
+    list_filter = ['created_at']
     search_fields = ['title', 'user__username']
     readonly_fields = ['created_at', 'updated_at']
 

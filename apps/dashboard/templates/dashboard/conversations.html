@@ -54,13 +54,6 @@
                         <td>
                             <span class="badge badge-success">{{ conversation.message_count }} msgs</span>
                         </td>
-                        <td>
-                            {% if conversation.is_archived %}
-                                <span class="badge badge-warning">Archived</span>
-                            {% else %}
-                                <span class="badge badge-success">Active</span>
-                            {% endif %}
-                        </td>
                         <td>{{ conversation.created_at|date:"d M, Y H:i" }}</td>
                         <td>{{ conversation.updated_at|date:"d M, Y H:i" }}</td>
                     </tr>

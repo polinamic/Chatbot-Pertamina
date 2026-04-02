@@ -378,8 +378,9 @@ Silakan buka portal IT Support dan buat tiket baru.
 
         conversation = self.get_object()
 
-        conversation.is_archived = True
-        conversation.save()
+# Archive functionality has been removed
+            # conversation.is_archived = True
+            # conversation.save()
 
         serializer = self.get_serializer(conversation)
 

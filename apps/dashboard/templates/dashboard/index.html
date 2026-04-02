@@ -155,13 +155,6 @@
                         <td><strong>{{ conv.title }}</strong></td>
                         <td>{{ conv.user.username }}</td>
                         <td>{{ conv.message_count }}</td>
-                        <td>
-                            {% if conv.is_archived %}
-                                <span class="badge badge-warning">Archived</span>
-                            {% else %}
-                                <span class="badge badge-success">Active</span>
-                            {% endif %}
-                        </td>
                         <td>{{ conv.created_at|date:"d M, Y" }}</td>
                     </tr>
                     {% endfor %}
