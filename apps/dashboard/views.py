@@ -42,7 +42,6 @@ def dashboard_home(request):
     total_conversations = Conversation.objects.count()
     total_messages = Message.objects.count()
     total_documents = Document.objects.count()
-    total_active_conversations = Conversation.objects.filter(is_archived=False).count()
     
     # Statistik Hari Ini
     today = timezone.now().date()
