@@ -14,12 +14,12 @@ class ConversationSerializer(serializers.ModelSerializer):
     
     class Meta:
         model = Conversation
-        fields = ['id', 'title', 'created_at', 'updated_at', 'is_archived', 'messages']
+        fields = ['id', 'title', 'created_at', 'updated_at', 'messages']
         read_only_fields = ['id', 'created_at', 'updated_at']
 
 
 class ConversationListSerializer(serializers.ModelSerializer):
     class Meta:
         model = Conversation
-        fields = ['id', 'title', 'created_at', 'updated_at', 'is_archived']
+        fields = ['id', 'title', 'created_at', 'updated_at']
         read_only_fields = ['id', 'created_at', 'updated_at']

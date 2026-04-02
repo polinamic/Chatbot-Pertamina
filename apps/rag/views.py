@@ -130,7 +130,6 @@ def upload_knowledge(request):
             file_size=uploaded_file.size,
             doc_type=doc_type,
             uploaded_by=request.user if request.user.is_authenticated else None,
-            is_processed=False,
         )
 
         # Proses chunking & embedding secara async jika tersedia,
@@ -378,8 +377,9 @@ Silakan buka portal IT Support dan buat tiket baru.
 
         conversation = self.get_object()
 
-        conversation.is_archived = True
-        conversation.save()
+# Archive functionality has been removed
+            # conversation.is_archived = True
+            # conversation.save()
 
         serializer = self.get_serializer(conversation)
 

@@ -48,24 +48,6 @@
             <strong>{{ conversation.updated_at|timesince }}</strong> ago
         </div>
     </div>
-    
-    <div class="stat-card">
-        <div class="stat-card-header">
-            <span class="stat-card-title">Status</span>
-            {% if conversation.is_archived %}
-                <i class="bi bi-archive" style="font-size: 1.5rem; color: var(--warning);"></i>
-            {% else %}
-                <i class="bi bi-check-circle" style="font-size: 1.5rem; color: var(--success);"></i>
-            {% endif %}
-        </div>
-        <div>
-            {% if conversation.is_archived %}
-                <span class="badge badge-warning">Archived</span>
-            {% else %}
-                <span class="badge badge-success">Active</span>
-            {% endif %}
-        </div>
-    </div>
 </div>
 
 <!-- Chat Messages -->
