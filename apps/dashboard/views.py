@@ -59,8 +59,8 @@ def dashboard_home(request):
     avg_response_time = 0.45  # dalam detik, ini bisa dari custom metric
     
     # System health
-    documents_processed = Document.objects.filter(is_processed=True).count()
-    documents_pending = Document.objects.filter(is_processed=False).count()
+    documents_processed = Document.objects.count()
+    documents_pending = 0
     
     # Top Conversations (Most Messages)
     top_conversations = Conversation.objects.annotate(
@@ -93,7 +93,6 @@ def dashboard_home(request):
         'total_conversations': total_conversations,
         'total_messages': total_messages,
         'total_documents': total_documents,
-        'total_active_conversations': total_active_conversations,
         'conversations_today': conversations_today,
         'messages_today': messages_today,
         'users_today': users_today,
@@ -209,10 +208,6 @@ def documents_management(request):
     
     # Filter
     status_filter = request.GET.get('status')
-    if status_filter == 'processed':
-        documents = documents.filter(is_processed=True)
-    elif status_filter == 'pending':
-        documents = documents.filter(is_processed=False)
     
     # Pagination
     paginator = Paginator(documents, 20)
@@ -221,8 +216,8 @@ def documents_management(request):
     
     stats = {
         'total': Document.objects.count(),
-        'processed': Document.objects.filter(is_processed=True).count(),
-        'pending': Document.objects.filter(is_processed=False).count(),
+        'processed': Document.objects.count(),
+        'pending': 0,
     }
     
     context = {
@@ -300,8 +295,8 @@ def knowledge_base(request):
     
     stats = {
         'total': Document.objects.count(),
-        'processed': Document.objects.filter(is_processed=True).count(),
-        'pending': Document.objects.filter(is_processed=False).count(),
+        'processed': Document.objects.count(),
+        'pending': 0,
         'today': Document.objects.filter(created_at__date=timezone.now().date()).count(),
     }
     
@@ -483,8 +478,7 @@ def api_upload_document(request):
             content=content,
             category='Dashboard Upload',
             doc_type=doc_type,
-            is_active=True,
-            is_processed=False
+            is_active=True
         )
 
         # Process document menggunakan ingestion_service yang lengkap
