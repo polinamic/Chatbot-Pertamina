@@ -466,6 +466,7 @@ def api_upload_document(request):
         
         # --- PERUBAHAN UTAMA: Hanya membuat SATU document record di tabel RAG ---
         doc = Document.objects.create(
+            title=file.name,  # FIX: Required field - use filename as title
             file_name=file.name,
             file_size=file.size,
             file=file,

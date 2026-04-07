@@ -1,0 +1,650 @@
+==============================================================================
+  KNOWLEDGE BASE: PANDUAN PENGGUNAAN WEBSITE & PEMBUATAN TIKET IT SUPPORT
+  Versi: 1.0 | Format: Chatbot Intent Routing & Escalation Guide
+==============================================================================
+
+INSTRUKSI PENGGUNAAN KNOWLEDGE BASE INI:
+Setiap entri dalam KB ini memiliki:
+  - NAMA FORM      : Nama formulir/kategori tiket di website IT Support
+  - TRIGGER KEYWORD: Kata kunci yang diketik user di chatbot → mengarah ke form ini
+  - KONTEKS MASALAH: Deskripsi jenis masalah yang ditangani oleh form ini
+  - PANDUAN UI     : Langkah klik step-by-step di website untuk membuat tiket
+  - CATATAN KHUSUS : Informasi tambahan atau pengecualian penting
+
+==============================================================================
+
+---
+
+NAMA FORM: Acces Control Device
+TRIGGER KEYWORD: access, control, acs, pintu, kartu akses, door, absen, fingerprint akses, rfid, kontrol pintu, kunci elektronik, badge, id card pintu, sensor pintu
+KONTEKS MASALAH: Permasalahan yang berkaitan dengan perangkat kontrol akses fisik seperti: kartu akses tidak terbaca di pintu, pintu tidak bisa dibuka meskipun kartu aktif, mesin fingerprint untuk akses area tidak merespons, atau permintaan pendaftaran kartu/badge baru untuk area tertentu.
+PANDUAN UI:
+1. Login ke portal IT Support, klik menu utama di pojok kiri atas (☰).
+2. Pilih kategori "Infrastruktur & Keamanan Fisik".
+3. Klik kotak "Acces Control Device".
+4. Pilih jenis permintaan: [Gangguan Perangkat] atau [Pendaftaran Akses Baru].
+5. Isi lokasi perangkat/pintu yang bermasalah dan deskripsi singkat kejadian.
+6. Klik "Buat Tiket".
+CATATAN KHUSUS: Form ini KHUSUS untuk perangkat kontrol akses fisik (pintu, turnstile). Untuk masalah akses ke sistem/aplikasi, gunakan form "Acces Management End User Details" atau "User ID ERP & Non ERP".
+
+---
+
+NAMA FORM: Access Management End User Details
+TRIGGER KEYWORD: access, akses, internet, working group, wifi, p_6c, vpn, mailing, group, file, sharing, global, member, email, e-mail, sharepoint, ftp, grup email, mailing list, distribution list, shared mailbox, hak akses sistem, permission, akses folder, working drive, onedrive, cloud
+KONTEKS MASALAH: Permasalahan atau permintaan terkait hak akses ke layanan digital perusahaan, antara lain: penambahan ke grup email / mailing list, permintaan akses VPN, akses ke SharePoint, FTP, folder sharing, atau pengelolaan keanggotaan working group IT.
+PANDUAN UI:
+1. Buka portal IT Support, klik menu "Manajemen Akses & Layanan".
+2. Pilih sub-menu "Access Management End User".
+3. Pilih jenis akses yang diminta dari dropdown (contoh: VPN, SharePoint, Email Group, File Sharing).
+4. Isi nama lengkap, ID karyawan, dan alasan kebutuhan akses.
+5. Unggah dokumen pendukung jika diperlukan (surat tugas, persetujuan atasan).
+6. Klik "Ajukan Permintaan Akses".
+CATATAN KHUSUS: Permintaan akses ke grup atau folder divisi lain memerlukan persetujuan atasan. Sistem akan otomatis mengirim notifikasi ke manajer user untuk approval.
+
+---
+
+NAMA FORM: Approval Change (PJS, Cuti, etc)
+TRIGGER KEYWORD: approval, pjs, cuti, pengganti jabatan sementara, change approval, persetujuan, pendelegasian, delegasi akses, jabatan sementara, acting, pejabat sementara
+KONTEKS MASALAH: Permintaan perubahan atau approval terkait kondisi kerja sementara seperti: pengajuan PJS (Pejabat Jabatan Sementara), perubahan hak akses selama cuti, atau proses pendelegasian wewenang dalam sistem yang memerlukan approval dari IT.
+PANDUAN UI:
+1. Di portal IT Support, klik menu "Manajemen Perubahan (Change Management)".
+2. Pilih sub-menu "Approval Change".
+3. Pilih jenis perubahan: [PJS] / [Cuti] / [Lainnya].
+4. Masukkan periode berlaku perubahan dan nama karyawan pengganti.
+5. Lampirkan surat keputusan atau disposisi dari HR/atasan.
+6. Klik "Submit Permintaan Approval".
+CATATAN KHUSUS: Permintaan PJS wajib disertai nomor SK dari HR. Perubahan hak akses selama cuti tidak lebih dari 30 hari; lebih dari itu gunakan form "User ID ERP & Non ERP".
+
+---
+
+NAMA FORM: Broadcast Email & Message System SAP-Persero
+TRIGGER KEYWORD: broadcast, email, sap, wallpaper, video display, email blast, wallpaper broadcast, sistem sap, video, videotron, pesan massal, notifikasi massal, pengumuman email, blast email, running text, display board, layar pengumuman
+KONTEKS MASALAH: Permintaan untuk mengirimkan email blast/broadcast ke seluruh karyawan atau grup tertentu, mengganti wallpaper desktop perusahaan secara terpusat (SAP), menampilkan konten pada layar videotron/display board di gedung, atau pesan massal melalui sistem SAP-Persero.
+PANDUAN UI:
+1. Di portal IT Support, buka menu "Layanan Komunikasi & Media".
+2. Pilih "Broadcast Email & Message System".
+3. Pilih jenis layanan: [Email Blast] / [Wallpaper Desktop] / [Videotron/Display].
+4. Unggah materi/konten yang ingin disiarkan (format file sesuai panduan yang tertera).
+5. Tentukan target penerima (seluruh perusahaan / unit tertentu) dan jadwal tayang.
+6. Klik "Ajukan Permintaan Broadcast".
+CATATAN KHUSUS: Permintaan broadcast email WAJIB mendapat persetujuan dari pejabat level Manager ke atas. Materi harus diserahkan minimal 3 hari kerja sebelum tanggal tayang.
+
+---
+
+NAMA FORM: CCTV
+TRIGGER KEYWORD: kamera, cctv, camera, rekaman, footage, pantauan, monitoring, kamera rusak, kamera tidak menyala, rekaman hilang, dvr, nvr, pengawas, surveillance
+KONTEKS MASALAH: Permasalahan terkait sistem pengawasan CCTV di area kantor: kamera tidak menyala, rekaman tidak tersimpan, permintaan footage rekaman untuk keperluan investigasi, kamera bergerak sendiri/tidak responsif, atau permintaan pemasangan kamera CCTV baru.
+PANDUAN UI:
+1. Login ke portal IT Support, klik ikon "Infrastruktur & Keamanan Fisik".
+2. Pilih menu "CCTV & Surveillance".
+3. Pilih jenis permintaan: [Gangguan Kamera] / [Permintaan Footage] / [Pemasangan Baru].
+4. Untuk permintaan footage, wajib mengisi tanggal, waktu, dan lokasi kamera.
+5. Lampirkan surat permintaan resmi dari atasan untuk akses footage.
+6. Klik "Buat Tiket CCTV".
+CATATAN KHUSUS: Akses footage rekaman memerlukan otorisasi dari Security/HSE dan persetujuan manajemen. Rekaman hanya dapat diberikan untuk keperluan investigasi resmi perusahaan.
+
+---
+
+NAMA FORM: Change, Reset, Unlock Password Details
+TRIGGER KEYWORD: user id, erp, non-erp, reset, password, lock, unlock, reset password, change password, email, unlock, user, aplikasi, lupa password, ganti password, akun terkunci, locked, password expired, kadaluwarsa password, login gagal, tidak bisa login, @risk palisade, absensi fingerprint, aspen, sap, komet, ess, employee self service, i-serv, i-tracking, portal, aplikasi perusahaan (dan semua nama aplikasi ERP/Non-ERP yang terdaftar)
+KONTEKS MASALAH: Segala permintaan yang berkaitan dengan pengelolaan kata sandi (password) dan status akun pada sistem perusahaan, meliputi: lupa password, password kedaluwarsa, akun terkunci (locked out), reset password akun Windows/domain, reset password aplikasi ERP maupun Non-ERP (SAP, KOMET, ESS, dan ratusan aplikasi lainnya), serta perubahan password email perusahaan.
+PANDUAN UI:
+1. Di halaman utama portal IT Support, klik tombol "Akses & Keamanan".
+2. Pilih sub-menu "Manajemen Akun Pengguna".
+3. Klik "Change, Reset, Unlock Password".
+4. Pilih jenis permintaan: [Reset Password] / [Unlock Akun] / [Ganti Password].
+5. Pilih sistem/aplikasi yang bermasalah dari dropdown (contoh: Windows Domain, SAP ERP, Email, KOMET).
+6. Verifikasi identitas dengan memasukkan ID Karyawan.
+7. Klik "Ajukan Reset".
+CATATAN KHUSUS: Untuk reset password domain Windows, user harus dapat dihubungi via telepon untuk verifikasi identitas. Unlock akun Active Directory biasanya dapat diproses dalam 30 menit pada jam kerja. Jika masalah dapat diselesaikan sendiri (misal: password expired), ikuti panduan troubleshooting di KB Troubleshoot sebelum membuat tiket.
+
+---
+
+NAMA FORM: Customer Service (On-Site Support)
+TRIGGER KEYWORD: setup, asistensi, onsite, on-site, bantuan, service, kunjungan teknisi, teknisi datang, install langsung, minta bantuan, datang ke meja, dispatch teknisi
+KONTEKS MASALAH: Permintaan asistensi atau kunjungan langsung teknisi IT ke lokasi user untuk melakukan setup perangkat, instalasi, troubleshooting yang memerlukan penanganan fisik, atau pendampingan penggunaan sistem.
+PANDUAN UI:
+1. Buka portal IT Support, klik ikon "Layanan Pelanggan (Customer Service)".
+2. Pilih "Permintaan Kunjungan On-Site".
+3. Isi lokasi (gedung, lantai, nomor ruangan/meja), nama penanggung jawab, dan nomor telepon yang dapat dihubungi.
+4. Deskripsikan pekerjaan yang perlu dilakukan teknisi.
+5. Pilih waktu yang diinginkan untuk kunjungan.
+6. Klik "Jadwalkan Kunjungan".
+CATATAN KHUSUS: Kunjungan on-site dijadwalkan minimal 1 hari kerja sebelumnya. Untuk kedaruratan, hubungi langsung nomor hotline IT Helpdesk.
+
+---
+
+NAMA FORM: Database Storage
+TRIGGER KEYWORD: database, storage, kapasitas penyimpanan, disk penuh, storage habis, db, basis data, server storage, penyimpanan server, tambah kapasitas, quota storage, SAN, NAS
+KONTEKS MASALAH: Permasalahan atau permintaan terkait kapasitas penyimpanan database dan storage server: storage hampir penuh, permintaan penambahan kapasitas disk/storage, masalah performa database akibat storage, atau request backup database.
+PANDUAN UI:
+1. Di portal IT Support, klik menu "Infrastruktur IT".
+2. Pilih sub-menu "Database & Storage".
+3. Pilih jenis permintaan: [Penambahan Kapasitas] / [Gangguan Penyimpanan] / [Backup & Restore].
+4. Masukkan nama server/database, kapasitas saat ini, dan kapasitas yang dibutuhkan.
+5. Sertakan justifikasi bisnis untuk penambahan kapasitas.
+6. Klik "Ajukan Permintaan".
+CATATAN KHUSUS: Permintaan penambahan storage memerlukan persetujuan dari senior IT Manager dan unit bisnis terkait. Proses pengadaan dapat memakan waktu 5-10 hari kerja.
+
+---
+
+NAMA FORM: Desktop (PC, Laptop, Peripheral)
+TRIGGER KEYWORD: pc, desktop, notebook, laptop, scanner, printer, instalasi, software, backup, data, fax, driver, os, windows, komputer tidak menyala, layar blank, keyboard rusak, mouse mati, baterai kembung, hard disk, restart sendiri, lemot, perangkat rusak, periferal
+KONTEKS MASALAH: Gangguan atau permintaan layanan terkait perangkat keras komputer: PC/laptop tidak bisa menyala, layar hitam, keyboard/mouse tidak berfungsi, baterai rusak, permintaan instalasi driver, reinstall sistem operasi Windows, backup data, atau kerusakan fisik perangkat.
+PANDUAN UI:
+1. Buka portal IT Support, klik ikon "Perangkat Keras (Hardware)" di beranda.
+2. Pilih sub-menu "Desktop, Laptop & Periferal".
+3. Pilih jenis masalah: [Perangkat Tidak Menyala] / [Kerusakan Hardware] / [Instalasi OS/Driver] / [Backup Data].
+4. Masukkan nomor aset/inventaris perangkat (tertera di stiker perangkat).
+5. Deskripsikan gejala kerusakan secara detail.
+6. Klik "Kirim Permintaan Teknisi".
+CATATAN KHUSUS: Kerusakan fisik berat akan dilakukan asesmen terlebih dahulu sebelum perbaikan atau penggantian. Siapkan nomor aset perangkat untuk mempercepat proses.
+
+---
+
+NAMA FORM: Developer Key
+TRIGGER KEYWORD: developer, SAP, developer key, development key, kunci developer, sap developer, kunci pengembang, akses development, DEV key
+KONTEKS MASALAH: Permintaan Developer Key untuk keperluan pengembangan di sistem SAP, yang diperlukan oleh tim developer untuk memodifikasi atau mengembangkan program/objek di lingkungan SAP Development.
+PANDUAN UI:
+1. Di portal IT Support, klik menu "SAP & ERP Services".
+2. Pilih sub-menu "Developer & Access Key".
+3. Pilih "Permintaan Developer Key".
+4. Isi NPM/NIP karyawan, nama basis SAP, dan justifikasi kebutuhan pengembangan.
+5. Lampirkan persetujuan dari IT Architecture atau SAP Manager.
+6. Klik "Ajukan Permintaan Key".
+CATATAN KHUSUS: Developer Key hanya diberikan kepada karyawan yang terdaftar sebagai SAP Developer. Validitas key terbatas dan wajib diperbarui secara berkala.
+
+---
+
+NAMA FORM: Email & Collaboration Tools Details
+TRIGGER KEYWORD: email, chat, file sharing, sharing, sharepoint, working drive, skype for business, teams, microsoft teams, kolaborasi, email perusahaan, inbox, mailbox, outlook, kirim email gagal, email tidak masuk, share file, onedrive, kalender, calendar, meeting invite
+KONTEKS MASALAH: Permasalahan atau permintaan yang berhubungan dengan layanan email dan kolaborasi perusahaan: email tidak bisa dikirim/diterima, masalah konfigurasi Outlook, akses SharePoint bermasalah, file di Working Drive tidak bisa dibuka, atau pengaturan kolaborasi Microsoft Teams/Skype for Business.
+PANDUAN UI:
+1. Di portal IT Support, buka menu "Layanan Komunikasi".
+2. Pilih sub-menu "Email & Collaboration Tools".
+3. Pilih layanan yang bermasalah: [Email/Outlook] / [SharePoint] / [Working Drive/OneDrive] / [Teams/Skype].
+4. Pilih jenis masalah: [Gangguan] / [Konfigurasi] / [Permintaan Akses Baru].
+5. Deskripsikan masalah secara detail, termasuk pesan error jika ada.
+6. Klik "Buat Tiket".
+CATATAN KHUSUS: Untuk kuota mailbox penuh, gunakan form khusus "Upgrade Quota Online Mailbox". Untuk akses grup email, gunakan "Access Management End User Details".
+
+---
+
+NAMA FORM: ERP Front Page & LSMW Access
+TRIGGER KEYWORD: sap, lsmw, erp front page, sap front page, halaman depan sap, akses lsmw, legacy system migration workbench, sap login page, portal sap, sap gui, logon sap
+KONTEKS MASALAH: Permasalahan akses ke halaman depan sistem ERP SAP (SAP GUI / Logon Pad) atau permintaan akses khusus LSMW (Legacy System Migration Workbench) untuk keperluan migrasi data di SAP.
+PANDUAN UI:
+1. Di portal IT Support, klik menu "SAP & ERP Services".
+2. Pilih "ERP Front Page & LSMW Access".
+3. Pilih jenis permintaan: [Gangguan Login SAP Front Page] / [Permintaan Akses LSMW].
+4. Untuk LSMW, lampirkan justifikasi dan persetujuan dari SAP Functional Lead.
+5. Isi data sistem SAP yang dituju (DEV/QAS/PRD).
+6. Klik "Ajukan Permintaan".
+CATATAN KHUSUS: Akses LSMW hanya diizinkan di lingkungan Development/QAS. Akses ke Production memerlukan persetujuan Change Advisory Board (CAB).
+
+---
+
+NAMA FORM: Exit Clearance Details
+TRIGGER KEYWORD: exit, pensiun, resign, fasilitas, sarana ti, clearance, pengembalian perangkat, offboarding, keluar karyawan, penonaktifan akun, nonaktif, terminate akun, penutupan akun
+KONTEKS MASALAH: Proses penyelesaian layanan IT untuk karyawan yang akan keluar (resign/pensiun): penonaktifan akun email dan sistem, pengembalian perangkat IT (laptop, HP, aksesoris), penghapusan hak akses dari semua sistem perusahaan, dan clearance dokumen IT.
+PANDUAN UI:
+1. Di portal IT Support, klik menu "Manajemen Karyawan".
+2. Pilih "Exit Clearance IT".
+3. Masukkan nama karyawan, ID karyawan, tanggal efektif keluar, dan unit kerja.
+4. Centang daftar layanan IT yang perlu di-clearance (akun email, SAP, VPN, perangkat, dll).
+5. Lampirkan surat persetujuan dari HR.
+6. Klik "Proses Exit Clearance".
+CATATAN KHUSUS: Proses ini idealnya diajukan minimal 5 hari kerja sebelum tanggal efektif. HR/atasan langsung bertanggung jawab untuk memastikan semua perangkat dikembalikan dalam kondisi baik.
+
+---
+
+NAMA FORM: Fasilitas Data Center
+TRIGGER KEYWORD: fasilitas, data, center, rak, ups, data center, server room, ruang server, colocation, power server, catu daya, pendingin server, genset, PDU, cooling, UPS mati, rak server
+KONTEKS MASALAH: Permasalahan atau permintaan terkait fasilitas fisik Data Center: gangguan UPS, masalah pendinginan ruang server, permintaan pemasangan/perpindahan rak server, akses ke ruang server, atau gangguan infrastruktur fisik Data Center.
+PANDUAN UI:
+1. Di portal IT Support, buka menu "Infrastruktur IT".
+2. Pilih sub-menu "Fasilitas Data Center".
+3. Pilih jenis permintaan: [Gangguan UPS/Power] / [Cooling/AC] / [Rak Server] / [Akses Ruang Server].
+4. Isi lokasi Data Center dan deskripsi masalah atau kebutuhan.
+5. Untuk akses ruang server, sertakan alasan dan nama personel yang akan masuk.
+6. Klik "Buat Tiket Data Center".
+CATATAN KHUSUS: Akses ke ruang Data Center WAJIB didampingi oleh staf IT yang berwenang dan dicatat di log akses. Tidak ada akses tanpa tiket yang disetujui.
+
+---
+
+NAMA FORM: Geomatika
+TRIGGER KEYWORD: geomatika, geodesi, data, geologi, GGRP, peta, GIS, geographic information system, survey, topografi, koordinat, shapefile, data spasial, mapping
+KONTEKS MASALAH: Permasalahan atau permintaan layanan IT khusus untuk unit Geomatika/Geodesi: akses data geospasial, dukungan aplikasi GIS, permintaan data peta/koordinat, atau dukungan perangkat dan software untuk kegiatan survei dan geologi.
+PANDUAN UI:
+1. Di portal IT Support, klik menu "Layanan Khusus Unit Bisnis".
+2. Pilih sub-menu "Geomatika & GGRP".
+3. Pilih jenis layanan: [Akses Data GIS] / [Dukungan Software] / [Permintaan Data Spasial].
+4. Deskripsikan kebutuhan secara detail, termasuk koordinat area atau nama proyek jika relevan.
+5. Klik "Ajukan Permintaan".
+CATATAN KHUSUS: Layanan ini khusus untuk fungsi/unit yang berkaitan dengan Geoscience, Geodesi, dan Geomatika. Permintaan data spasial memerlukan otorisasi dari kepala fungsi terkait.
+
+---
+
+NAMA FORM: Hak Akses Admin - VRA
+TRIGGER KEYWORD: akses, admin, administrator, hak admin, local admin, administrator rights, VRA, privilege, elevated access, admin rights laptop, akses administrator, hak istimewa
+KONTEKS MASALAH: Permintaan hak akses administrator (admin rights) pada perangkat atau sistem tertentu yang tidak dapat dilakukan dengan akun standar, termasuk melalui mekanisme Vendor Remote Access (VRA) untuk kebutuhan spesifik yang terotorisasi.
+PANDUAN UI:
+1. Di portal IT Support, klik menu "Akses & Keamanan".
+2. Pilih sub-menu "Hak Akses Privilege".
+3. Klik "Hak Akses Admin / VRA".
+4. Isi nama perangkat/sistem, alasan kebutuhan admin rights, dan durasi yang diperlukan.
+5. Lampirkan persetujuan dari atasan minimal setingkat Manager.
+6. Klik "Ajukan Permintaan Admin Access".
+CATATAN KHUSUS: Admin rights bersifat sementara dan dibatasi waktunya sesuai kebutuhan. Penyalahgunaan hak akses admin dapat dikenakan sanksi sesuai kebijakan keamanan IT perusahaan.
+
+---
+
+NAMA FORM: Handset (Perangkat Mobile Perusahaan)
+TRIGGER KEYWORD: handphone, tablet, explosion proof, seluler, ponsel, telepon, hp rusak, hp perusahaan, mobile device, perangkat mobile, ganti hp, tablet rusak, smartphone kantor, perangkat explosion proof
+KONTEKS MASALAH: Permasalahan atau permintaan terkait perangkat mobile (handphone/tablet) yang merupakan aset perusahaan: perangkat rusak, tidak bisa terhubung ke email perusahaan, permintaan perangkat baru atau penggantian, serta kebutuhan perangkat khusus explosion proof untuk area tertentu.
+PANDUAN UI:
+1. Di portal IT Support, buka menu "Manajemen Perangkat Mobile (MDM)".
+2. Pilih "Handset & Mobile Device".
+3. Pilih jenis permintaan: [Perangkat Rusak] / [Permintaan Baru] / [Konfigurasi] / [Explosion Proof].
+4. Isi nomor aset perangkat (jika ada), jenis perangkat, dan deskripsi masalah/kebutuhan.
+5. Sertakan justifikasi kebutuhan untuk permintaan perangkat baru.
+6. Klik "Buat Tiket".
+CATATAN KHUSUS: Permintaan perangkat baru memerlukan approval dari atasan. Untuk perangkat explosion proof, wajib disertai surat rekomendasi dari fungsi HSE.
+
+---
+
+NAMA FORM: Incident (Gangguan Aplikasi & Sistem)
+TRIGGER KEYWORD: (semua keyword kategori "Incident" mencakup hampir seluruh nama aplikasi ERP dan Non-ERP perusahaan) — incident, gangguan, error, aplikasi tidak bisa dibuka, sistem down, tidak bisa akses, bug, crash, not responding, error message, sistem mati, layanan terganggu, bi, pi, ep, prisma, sap error, absensi, e-corr, dan semua nama aplikasi yang terdaftar di daftar keyword Incident
+KONTEKS MASALAH: Laporan gangguan/insiden pada aplikasi dan sistem IT perusahaan (ERP maupun Non-ERP): aplikasi tidak dapat diakses, muncul pesan error, sistem lambat atau crash, data tidak tersimpan, atau fungsi tertentu dalam aplikasi tidak berjalan sebagaimana mestinya. Kategori ini mencakup seluruh portofolio aplikasi perusahaan.
+PANDUAN UI:
+1. Di portal IT Support, klik tombol "Laporkan Insiden" (ikon sirine) di beranda.
+2. Pilih kategori: "Gangguan Aplikasi & Sistem".
+3. Pilih nama aplikasi yang bermasalah dari daftar dropdown (ketik nama aplikasi untuk pencarian cepat).
+4. Pilih tingkat dampak: [Rendah] / [Sedang] / [Tinggi] / [Kritis].
+5. Deskripsikan gangguan secara rinci: kapan terjadi, langkah yang sudah dilakukan, pesan error yang muncul.
+6. Unggah screenshot error jika tersedia.
+7. Klik "Laporkan Insiden".
+CATATAN KHUSUS: Jika gangguan berdampak pada banyak user atau operasional bisnis kritis, pilih tingkat dampak "Kritis" agar mendapat penanganan prioritas. Tim IT akan menghubungi pelapor dalam waktu 15 menit untuk insiden kritis.
+
+---
+
+NAMA FORM: IT Helpdesk Query (FAQ & Panduan)
+TRIGGER KEYWORD: faq, help, bantuan, guide, panduan, cara, bagaimana, tutorial, petunjuk, informasi, tanya, saya tidak tahu, apa itu, how to, instruksi, langkah-langkah
+KONTEKS MASALAH: Pertanyaan umum atau permintaan informasi terkait layanan IT, panduan penggunaan sistem, prosedur pengajuan tiket, atau konsultasi awal sebelum membuat tiket formal.
+PANDUAN UI:
+1. Di portal IT Support, klik ikon "Pusat Bantuan / Help Center".
+2. Gunakan kolom pencarian untuk menemukan artikel FAQ yang relevan.
+3. Jika pertanyaan tidak terjawab oleh artikel FAQ, klik "Hubungi Helpdesk".
+4. Pilih metode kontak: [Chat] / [Email] / [Telepon].
+5. Sampaikan pertanyaan Anda.
+CATATAN KHUSUS: Untuk pertanyaan yang berulang, Anda dapat menyimpan artikel FAQ sebagai bookmark di browser. Helpdesk tersedia pada jam kerja (Senin–Jumat, 07.00–17.00 WIB).
+
+---
+
+NAMA FORM: IT Supplies
+TRIGGER KEYWORD: tinta, toner, flashdisk, cd, hard disk, record, baterai, battery, kertas, pointer, dvd, it supply, supplies, alat tulis IT, perlengkapan IT, consumable, tinta printer, cartridge
+KONTEKS MASALAH: Permintaan pengadaan perlengkapan/consumable IT yang habis pakai, seperti: tinta/toner printer, flashdisk, CD/DVD kosong, kertas khusus, baterai perangkat, pointer presentasi, atau aksesori IT lainnya.
+PANDUAN UI:
+1. Di portal IT Support, buka menu "Pengadaan & Supplies".
+2. Klik "IT Supplies & Consumable".
+3. Pilih jenis item dari daftar katalog (ketik nama item untuk pencarian).
+4. Masukkan jumlah yang dibutuhkan dan lokasi pengiriman.
+5. Sertakan kode cost center untuk penagihan.
+6. Klik "Ajukan Permintaan Supplies".
+CATATAN KHUSUS: Permintaan di atas batas wajar (stok berlebih) akan memerlukan justifikasi tambahan. Pengiriman supplies dilakukan dalam 3-5 hari kerja setelah permintaan disetujui.
+
+---
+
+NAMA FORM: Jaringan BIZ (Koneksi Jaringan Lokal)
+TRIGGER KEYWORD: lan, jaringan, kabel, internet, wifi, koneksi, tidak ada internet, koneksi lambat, jaringan putus, kabel lan, switch, hub, port lan, network, ethernet, tidak bisa browsing, ip address, ping
+KONTEKS MASALAH: Gangguan koneksi jaringan lokal (LAN) di area kantor: tidak ada koneksi internet, kabel LAN tidak terbaca, koneksi sangat lambat, tidak mendapatkan IP address, switch/hub bermasalah, atau permintaan penambahan port jaringan di area kerja.
+PANDUAN UI:
+1. Klik tombol menu (☰) di pojok kiri atas portal IT Support.
+2. Pilih menu "Infrastruktur IT".
+3. Klik kotak "Jaringan BIZ / Masalah Jaringan Lokal".
+4. Pilih jenis masalah: [Tidak Ada Koneksi] / [Koneksi Lambat] / [Permintaan Port LAN Baru].
+5. Isi lokasi (gedung, lantai, nomor ruangan) dan deskripsi gejala.
+6. Klik "Buat Tiket Jaringan".
+CATATAN KHUSUS: Sebelum membuat tiket, coba restart perangkat dan cabut-pasang kabel LAN terlebih dahulu. Untuk masalah WiFi, gunakan form "Wifi Access". Untuk masalah VPN, gunakan kategori "Acces Management End User Details".
+
+---
+
+NAMA FORM: Layanan Pekerja Baru, Konsultan, Auditor dan Mitra Kerja
+TRIGGER KEYWORD: pekerja, baru, konsultan, mitra, kerja, auditor, user baru, karyawan baru, new employee, onboarding, hire, bps, bpa, akun email baru, email baru, laptop baru, fasilitas IT baru, setup pekerja baru, extension telepon baru, printer baru, akses awal
+KONTEKS MASALAH: Penyediaan fasilitas dan layanan IT untuk karyawan baru, konsultan, auditor, atau mitra kerja yang baru bergabung: pembuatan akun email perusahaan, setup laptop/PC, pemberian akses sistem awal, konfigurasi telepon ekstensi, pengaturan printer, dan onboarding IT secara keseluruhan.
+PANDUAN UI:
+1. Di portal IT Support, klik menu "Manajemen Karyawan".
+2. Pilih "Layanan Pekerja Baru & Mitra".
+3. Pilih kategori: [Pekerja Tetap/Baru] / [Konsultan] / [Auditor] / [Mitra Kerja].
+4. Isi data lengkap: nama, posisi, unit kerja, atasan langsung, tanggal mulai bekerja, dan daftar fasilitas IT yang dibutuhkan.
+5. Lampirkan surat kontrak/penugasan dari HR atau Procurement.
+6. Klik "Proses Onboarding IT".
+CATATAN KHUSUS: Permintaan onboarding harus diajukan minimal 5 hari kerja sebelum tanggal mulai kerja agar semua fasilitas siap. Mitra kerja/konsultan hanya mendapat akses terbatas sesuai kebutuhan proyek.
+
+---
+
+NAMA FORM: Modifikasi Akses Port (Firewall)
+TRIGGER KEYWORD: firewall, port, open, security, buka port, akses port, blokir port, firewall rule, whitelist IP, blacklist, network security, akses dibatasi, koneksi ditolak, connection refused, port blocked
+KONTEKS MASALAH: Permintaan perubahan konfigurasi firewall: membuka port yang diblokir untuk aplikasi tertentu, whitelist IP address, atau modifikasi rule keamanan jaringan yang diperlukan untuk operasional sistem.
+PANDUAN UI:
+1. Di portal IT Support, klik menu "Keamanan Jaringan".
+2. Pilih sub-menu "Modifikasi Akses Port & Firewall".
+3. Isi detail teknis: nama aplikasi, nomor port yang diminta, IP sumber/tujuan, dan protokol (TCP/UDP).
+4. Jelaskan alasan bisnis dibutuhkannya pembukaan port tersebut.
+5. Lampirkan persetujuan dari Network Security Officer atau IT Manager.
+6. Klik "Ajukan Perubahan Firewall".
+CATATAN KHUSUS: Permintaan ini wajib melalui proses Change Management dan mendapat persetujuan dari tim Network Security. Perubahan akan efektif setelah Change Advisory Board (CAB) menyetujui.
+
+---
+
+NAMA FORM: Multimedia and Sound System
+TRIGGER KEYWORD: multimedia, sound, system, proyektor, projector, screen, layar, tv, televisi, kabel, vga, hdmi, display, splitter, switcher, toa, converter, kamera, presentasi, ruang rapat, audio, speaker, mikrofon, no sound, tidak ada suara, layar tidak muncul, hdmi tidak terdeteksi
+KONTEKS MASALAH: Permasalahan perangkat audio-visual di area kantor dan ruang rapat: proyektor tidak menyala/tidak menampilkan gambar, TV tidak terhubung, kabel VGA/HDMI bermasalah, suara tidak keluar dari speaker, mikrofon tidak berfungsi, atau permintaan setup perangkat multimedia untuk acara.
+PANDUAN UI:
+1. Buka portal IT Support, klik tab "Fasilitas Ruang Rapat".
+2. Pilih "Multimedia & Sound System".
+3. Pilih jenis masalah: [Proyektor/Layar] / [Audio/Speaker] / [Kabel & Koneksi] / [Setup Acara].
+4. Pilih nama/nomor ruang meeting atau area yang bermasalah.
+5. Klik "Lapor Kendala Audio/Visual".
+6. Klik "Kirim" agar teknisi langsung bergegas ke ruangan.
+CATATAN KHUSUS: Untuk acara besar (townhall, seminar), ajukan permintaan setup multimedia minimal 3 hari kerja sebelumnya. Teknisi akan hadir 30 menit sebelum acara dimulai untuk persiapan.
+
+---
+
+NAMA FORM: Object Key Access (SAP)
+TRIGGER KEYWORD: object, key, access, sap, object key, kunci objek sap, sap object, modifikasi program sap, edit objek sap, unlock object sap, pengembangan sap
+KONTEKS MASALAH: Permintaan Object Key SAP yang diperlukan developer untuk memodifikasi atau membuka lock pada objek SAP standar (program, function module, tabel, dll) di sistem SAP, terutama untuk keperluan kustomisasi atau perbaikan.
+PANDUAN UI:
+1. Di portal IT Support, klik menu "SAP & ERP Services".
+2. Pilih "Object Key Access".
+3. Masukkan nama objek SAP, sistem target (DEV/QAS), dan alasan modifikasi.
+4. Sertakan nomor tiket Change Request yang terkait (wajib untuk akses PRD).
+5. Lampirkan approval dari SAP Basis atau IT Architecture Lead.
+6. Klik "Ajukan Object Key".
+CATATAN KHUSUS: Object Key SAP Production (PRD) hanya dapat diberikan dalam kondisi darurat (Emergency Fix) dengan approval minimal 2 level manajemen IT.
+
+---
+
+NAMA FORM: Otorisasi MPS (Printer Kartu ID)
+TRIGGER KEYWORD: mps, printer, user, kartu, id, kartu id, cetak kartu, id card, printer kartu, mps printer, otorisasi mps, cetak badge
+KONTEKS MASALAH: Permintaan otorisasi atau dukungan terkait sistem MPS (Managed Print Services) untuk pencetakan kartu ID karyawan, badge, atau pengaturan hak cetak kartu melalui printer khusus MPS.
+PANDUAN UI:
+1. Di portal IT Support, buka menu "Layanan Periferal".
+2. Pilih "Otorisasi MPS & Kartu ID".
+3. Pilih jenis permintaan: [Cetak Kartu ID Baru] / [Reprint Kartu] / [Otorisasi Akses Printer MPS].
+4. Isi data karyawan yang memerlukan kartu beserta foto terbaru.
+5. Lampirkan persetujuan dari HR untuk cetak kartu baru.
+6. Klik "Ajukan Permintaan".
+CATATAN KHUSUS: Pencetakan kartu ID memerlukan foto digital dengan latar belakang putih, format JPG, minimal resolusi 300 DPI. Proses cetak 2-3 hari kerja.
+
+---
+
+NAMA FORM: Package Service New RIG
+TRIGGER KEYWORD: RIG, rig, pengeboran, package, windows, akun, email, explosion, mobile, VSAT, HT, RTS, printer, scanner, desktop, pc, laptop, notebook, proyektor, projector, PABX, telepon, VHF, fasilitas rig, paket layanan rig, drilling
+KONTEKS MASALAH: Paket layanan IT lengkap untuk operasi pengeboran (RIG) baru: meliputi setup infrastruktur komunikasi (VSAT, HT/VHF, RTS), penyediaan perangkat (PC, laptop, printer, scanner, proyektor), pembuatan akun pengguna, konfigurasi PABX telepon, dan seluruh layanan IT terintegrasi untuk lokasi rig.
+PANDUAN UI:
+1. Di portal IT Support, klik menu "Layanan Khusus Unit Bisnis".
+2. Pilih "Package Service New RIG".
+3. Isi formulir detail RIG: nama RIG, lokasi operasi, tanggal mobilisasi, dan daftar lengkap kebutuhan IT (centang dari checklist yang tersedia).
+4. Lampirkan Well Program atau dokumen resmi pembukaan RIG dari drilling unit.
+5. Tunjuk PIC IT di lokasi RIG yang akan menjadi koordinator.
+6. Klik "Ajukan Paket Layanan RIG".
+CATATAN KHUSUS: Pengajuan harus dilakukan minimal 14 hari kerja sebelum tanggal mobilisasi. Koordinasi melibatkan multiple tim IT (Network, Hardware, Software, Komunikasi). Ditunjuk satu Project Manager dari IT untuk memastikan kesiapan.
+
+---
+
+NAMA FORM: Pengembangan Aplikasi
+TRIGGER KEYWORD: aplikasi, pengembangan, erp, non-erp, development, develop, kembangkan, buat aplikasi, fitur baru, enhancement, request fitur, CR, change request, perubahan sistem, kustomisasi, custom report, laporan baru, modul baru, integrasi sistem
+KONTEKS MASALAH: Permintaan pengembangan atau perubahan pada aplikasi perusahaan (ERP dan Non-ERP): penambahan fitur baru, pembuatan laporan custom, integrasi antar sistem, kustomisasi modul SAP, atau pengembangan aplikasi baru untuk mendukung proses bisnis.
+PANDUAN UI:
+1. Di portal IT Support, klik ikon "Perangkat Lunak (Software)" di beranda.
+2. Pilih "Pengembangan & Enhancement Aplikasi".
+3. Pilih aplikasi yang ingin dikembangkan dari dropdown, atau pilih "Aplikasi Baru" jika belum ada.
+4. Isi Business Requirement Document (BRD) atau deskripsi kebutuhan pengembangan secara detail.
+5. Tentukan prioritas: [Urgent] / [Normal] / [Jangka Panjang].
+6. Lampirkan persetujuan dari kepala fungsi/unit bisnis.
+7. Klik "Ajukan Change Request Pengembangan".
+CATATAN KHUSUS: Setiap permintaan pengembangan akan melalui proses feasibility study dan estimasi effort oleh tim IT sebelum dijadwalkan. Proses ini dapat memakan waktu 3-7 hari kerja sebelum dikonfirmasi jadwal pengerjaan.
+
+---
+
+NAMA FORM: Printer ERP (Printer Terintegrasi SAP)
+TRIGGER KEYWORD: printer, sap, erp, ERP, SAP, cetak dari sap, print sap, printer spool, output sap, spool request, tidak bisa cetak dari sap, printer erp tidak bisa dipakai
+KONTEKS MASALAH: Permasalahan pencetakan dari sistem SAP/ERP: dokumen tidak tercetak setelah dikirim dari SAP, spool request menumpuk, printer SAP tidak terdaftar, atau permintaan pendaftaran printer baru ke sistem SAP.
+PANDUAN UI:
+1. Di portal IT Support, klik tab "Layanan Periferal" di menu atas.
+2. Pilih "Printer ERP & SAP".
+3. Pilih jenis masalah: [Dokumen Tidak Tercetak] / [Spool Menumpuk] / [Pendaftaran Printer Baru ke SAP].
+4. Isi nama printer (logical name di SAP), server print, dan deskripsi masalah.
+5. Sertakan nomor spool SAP jika dokumen gagal cetak.
+6. Klik "Minta Bantuan Teknisi ERP Printer".
+CATATAN KHUSUS: Untuk masalah printer fisik (kertas macet, tinta habis), gunakan form "Desktop" atau "IT Supplies". Form ini khusus untuk isu koneksi/konfigurasi printer dengan sistem SAP.
+
+---
+
+NAMA FORM: Radio Handy Talky (HT & Radio Komunikasi)
+TRIGGER KEYWORD: radio, marine, fix, base, rts, subscriber, trunking, 2 way, plan station, battery, baterai, charger, HT, handy talky, walkie talkie, radio komunikasi, repeater, frekuensi radio, antena
+KONTEKS MASALAH: Permasalahan atau permintaan terkait perangkat komunikasi radio: HT (Handy Talky) tidak bisa berkomunikasi, baterai/charger HT bermasalah, radio marine atau fix base station terganggu, permasalahan infrastruktur RTS/Trunking, atau permintaan penambahan unit radio.
+PANDUAN UI:
+1. Di portal IT Support, buka menu "Infrastruktur Komunikasi".
+2. Pilih "Radio & Handy Talky".
+3. Pilih jenis masalah: [HT Rusak/Tidak Berfungsi] / [Baterai & Charger] / [Radio Marine/Base Station] / [Infrastruktur RTS].
+4. Isi nomor seri/aset perangkat dan lokasi penggunaan.
+5. Deskripsikan gejala masalah atau kebutuhan spesifik.
+6. Klik "Buat Tiket Radio".
+CATATAN KHUSUS: Untuk area terpencil atau offshore, koordinasikan pengiriman teknisi dan perkirakan waktu respons lebih lama dari standar karena keterbatasan akses lokasi.
+
+---
+
+NAMA FORM: SAP Locking Process
+TRIGGER KEYWORD: sap, locking, sap lock, kunci sap, lock process sap, proses terkunci sap, enqueue sap, record locked, data di-lock, object locked sap
+KONTEKS MASALAH: Permasalahan dimana suatu record/objek/proses di sistem SAP terkunci (lock) oleh user lain atau proses yang tidak selesai, sehingga user lain tidak dapat mengakses atau mengubah data tersebut.
+PANDUAN UI:
+1. Di portal IT Support, klik menu "SAP & ERP Services".
+2. Pilih sub-menu "SAP Process Management".
+3. Klik "SAP Locking Process".
+4. Isi nama sistem SAP (DEV/QAS/PRD), nomor transaksi/objek yang terkunci, dan username yang menahan lock.
+5. Jelaskan dampak bisnis dari kondisi lock tersebut.
+6. Klik "Ajukan Permintaan Unlock".
+CATATAN KHUSUS: Unlock proses SAP Production hanya dilakukan setelah dipastikan tidak ada dampak data integrity. Tim SAP Basis akan memverifikasi sebelum melakukan unlock.
+
+---
+
+NAMA FORM: SAP Runtime Dialogue Extension
+TRIGGER KEYWORD: runtime, sap, sap runtime, dialog runtime, perpanjangan runtime, timeout sap, sap session timeout, extended runtime, session expired sap
+KONTEKS MASALAH: Permintaan perpanjangan runtime dialog SAP untuk proses/transaksi yang membutuhkan waktu eksekusi lebih lama dari standar (biasanya untuk laporan besar atau batch process yang perlu dijalankan dalam mode dialog).
+PANDUAN UI:
+1. Di portal IT Support, klik menu "SAP & ERP Services".
+2. Pilih "SAP Runtime & Performance".
+3. Klik "SAP Runtime Dialogue Extension".
+4. Isi nama transaksi SAP, sistem target, dan durasi runtime yang diperlukan.
+5. Jelaskan alasan teknis/bisnis kebutuhan perpanjangan runtime.
+6. Klik "Ajukan Permintaan Runtime Extension".
+CATATAN KHUSUS: Perpanjangan runtime hanya untuk kondisi mendesak. Untuk proses berulang dengan waktu lama, pertimbangkan migrasi ke background job melalui form "SAPBATCH Locking Process".
+
+---
+
+NAMA FORM: SAPBATCH Locking Process
+TRIGGER KEYWORD: sap, batch, SAP, locking, job, sapbatch, background job, batch job, sap job, schedule job sap, penjadwalan job, job terkunci, sap batch error
+KONTEKS MASALAH: Permasalahan terkait background job / batch job di SAP: job terkunci dan tidak selesai, permintaan pembatalan atau restart job yang hang, atau masalah penjadwalan batch job SAP.
+PANDUAN UI:
+1. Di portal IT Support, klik menu "SAP & ERP Services".
+2. Pilih "SAP Batch & Background Job".
+3. Klik "SAPBATCH Locking Process".
+4. Isi nama job SAP, nomor job, server/sistem, dan status terakhir (running/cancelled/error).
+5. Sertakan screenshot SM37 (Job Monitor SAP) yang menunjukkan status job.
+6. Klik "Ajukan Penanganan Batch Job".
+CATATAN KHUSUS: Tim SAP Basis akan menganalisis log job sebelum melakukan tindakan. Pembatalan job yang sedang berjalan harus mempertimbangkan konsistensi data.
+
+---
+
+NAMA FORM: Server atau Virtual Desktop (VDI)
+TRIGGER KEYWORD: server, virtual desktop, VDI, thin client, virtual machine, VM, citrix, remote desktop, RDP, desktop virtual, server down, server tidak bisa diakses, virtual desktop tidak bisa login
+KONTEKS MASALAH: Permasalahan terkait layanan server fisik atau Virtual Desktop Infrastructure (VDI): server tidak dapat diakses, Citrix tidak bisa login, virtual machine down, performa VDI lambat, atau permintaan provisioning VM/server baru.
+PANDUAN UI:
+1. Di portal IT Support, klik menu "Infrastruktur IT".
+2. Pilih "Server & Virtual Desktop (VDI)".
+3. Pilih jenis masalah: [Server Down/Tidak Dapat Diakses] / [VDI/Citrix Bermasalah] / [Performa Lambat] / [Provisioning VM Baru].
+4. Isi nama server/hostname, IP address, dan deskripsi lengkap masalah atau kebutuhan.
+5. Untuk VDI, sertakan username dan pesan error yang muncul.
+6. Klik "Buat Tiket Server/VDI".
+CATATAN KHUSUS: Untuk server kritis yang down, tandai tiket sebagai "Kritis" agar mendapat penanganan prioritas. Sertakan daftar layanan bisnis yang terdampak untuk membantu tim melakukan prioritisasi.
+
+---
+
+NAMA FORM: SIM Card Corporate
+TRIGGER KEYWORD: sim, card, corporate, kartu, handphone, pulsa, migrasi, ganti, sim card perusahaan, kartu corporate, nomor dinas, ganti nomor, migrasi nomor, permintaan sim card
+KONTEKS MASALAH: Permasalahan atau permintaan terkait SIM Card Corporate yang dikelola perusahaan: permintaan SIM card baru, migrasi nomor, ganti nomor, atau perubahan layanan pada SIM card corporate.
+PANDUAN UI:
+1. Di portal IT Support, buka menu "Layanan Komunikasi".
+2. Pilih sub-menu "SIM Card Corporate".
+3. Pilih jenis permintaan: [Permintaan SIM Baru] / [Ganti/Migrasi Nomor] / [Perubahan Paket].
+4. Isi data karyawan penerima, nomor yang diminta diubah/ditambah, dan alasan permintaan.
+5. Lampirkan persetujuan atasan.
+6. Klik "Ajukan Permintaan SIM Card".
+CATATAN KHUSUS: SIM Card Corporate merupakan aset perusahaan. Pengelolaan tagihan menjadi tanggung jawab unit kerja. Penggunaan pribadi di luar ketentuan dapat ditagihkan ke karyawan bersangkutan.
+
+---
+
+NAMA FORM: SIM Card Support
+TRIGGER KEYWORD: sim, card, corporate, kartu, handphone, pulsa, roaming, paket, fisik, tagihan, internasional, mikro, nano, sim rusak, kartu hilang, ganti fisik sim, aktivasi roaming, paket data internasional, nano sim, micro sim
+KONTEKS MASALAH: Dukungan teknis dan administratif untuk SIM Card Corporate yang sudah ada: kartu SIM rusak/hilang dan perlu penggantian fisik, aktivasi roaming internasional, perubahan paket data, tagihan yang tidak sesuai, atau upgrade ukuran fisik SIM (nano/micro).
+PANDUAN UI:
+1. Di portal IT Support, buka menu "Layanan Komunikasi".
+2. Pilih sub-menu "SIM Card Support".
+3. Pilih jenis dukungan: [Penggantian SIM Rusak/Hilang] / [Aktivasi Roaming] / [Perubahan Paket] / [Klaim Tagihan].
+4. Isi nomor SIM yang bermasalah, jenis masalah, dan informasi pendukung.
+5. Untuk SIM hilang, lampirkan surat kehilangan dari kepolisian (jika diperlukan).
+6. Klik "Ajukan Dukungan SIM Card".
+CATATAN KHUSUS: Aktivasi roaming internasional membutuhkan waktu aktivasi minimal 1 hari kerja sebelum keberangkatan. Ajukan jauh-jauh hari agar tidak terlambat.
+
+---
+
+NAMA FORM: Software (Instalasi & Lisensi)
+TRIGGER KEYWORD: aplikasi, 7zip, abby, finereader, acrobat, adobe, autocad, autodesk, corel draw, microsoft office, ms office, visio, project, teamviewer, snagit, sap crystal reports, symantec, endpoint protection, software, lisensi, license, install software, instalasi aplikasi, request software, minta software, perangkat lunak
+KONTEKS MASALAH: Permintaan instalasi atau lisensi perangkat lunak yang disetujui perusahaan: instalasi baru, perpanjangan lisensi, atau upgrade versi untuk aplikasi yang termasuk dalam katalog software perusahaan (Microsoft Office, Adobe, AutoCAD, SAP Crystal Reports, dan lain-lain).
+PANDUAN UI:
+1. Di portal IT Support, klik ikon "Perangkat Lunak (Software)" di beranda.
+2. Pilih "Instalasi & Lisensi Software".
+3. Pilih nama software yang dibutuhkan dari daftar katalog resmi.
+4. Masukkan nama komputer (hostname) yang akan diinstal software, dan nomor aset perangkat.
+5. Sertakan justifikasi kebutuhan (khusus untuk software yang memerlukan approval).
+6. Klik "Ajukan Permintaan Software".
+CATATAN KHUSUS: Software di luar katalog resmi tidak dapat diinstal tanpa melalui proses pengadaan dan persetujuan IT Security terlebih dahulu. Instalasi software bajakan/ilegal adalah pelanggaran berat.
+
+---
+
+NAMA FORM: Souvenir IT
+TRIGGER KEYWORD: souvenir, merchandise, hadiah, gift, plakat, kenang-kenangan, souvenir IT, merchandise IT
+KONTEKS MASALAH: Permintaan souvenir atau merchandise dari divisi IT untuk keperluan acara perusahaan, penghargaan, atau kegiatan lainnya.
+PANDUAN UI:
+1. Di portal IT Support, buka menu "Layanan Umum".
+2. Pilih "Souvenir & Merchandise IT".
+3. Isi jenis souvenir, jumlah, dan keperluan/acara yang membutuhkan souvenir tersebut.
+4. Sertakan kode cost center untuk penganggaran.
+5. Lampirkan persetujuan dari kepala unit terkait.
+6. Klik "Ajukan Permintaan Souvenir".
+CATATAN KHUSUS: Permintaan souvenir dalam jumlah besar memerlukan waktu pengadaan yang lebih lama. Ajukan minimal 14 hari kerja sebelum tanggal dibutuhkan.
+
+---
+
+NAMA FORM: Telephone (Telepon Kantor / PABX)
+TRIGGER KEYWORD: telephone, telepon, extension, extention, ekstensi, telepon mati, nomor ekstensi, pabx, ip phone, voip, telepon kantor, telepon tidak berbunyi, suara tidak keluar telepon, intercom, nomor baru, ganti ekstensi, pindah meja telepon
+KONTEKS MASALAH: Permasalahan atau permintaan terkait telepon kantor (PABX/IP Phone): telepon tidak dapat berdering atau melakukan panggilan, suara tidak keluar, permintaan nomor ekstensi baru, perpindahan meja/lokasi telepon, atau konfigurasi PABX.
+PANDUAN UI:
+1. Di portal IT Support, buka menu "Layanan Komunikasi".
+2. Pilih "Teleponi & PABX".
+3. Pilih jenis masalah: [Telepon Tidak Berfungsi] / [Permintaan Ekstensi Baru] / [Perpindahan Telepon].
+4. Masukkan nomor ekstensi yang bermasalah dan lokasi perangkat (gedung, lantai, nomor ruangan).
+5. Deskripsikan gejala atau kebutuhan secara spesifik.
+6. Klik "Laporkan Gangguan Telepon".
+CATATAN KHUSUS: Untuk perpindahan telepon ke lokasi baru, sertakan informasi lokasi asal dan tujuan agar teknisi dapat mempersiapkan kabel dan konfigurasi yang diperlukan.
+
+---
+
+NAMA FORM: Upgrade Quota Online Mailbox dan/atau Online Archive
+TRIGGER KEYWORD: upgrade, quota, kuota, mailbox, email, e-mail, archive, kotak masuk penuh, mailbox penuh, email tidak bisa masuk, storage email habis, penyimpanan email, inbox full, tambah kuota email, archive email
+KONTEKS MASALAH: Permintaan penambahan kapasitas (quota) kotak surat email (mailbox) perusahaan karena sudah hampir penuh, atau penambahan kapasitas Online Archive untuk menyimpan email lama, sehingga email baru dapat kembali diterima dan dikirim dengan normal.
+PANDUAN UI:
+1. Di portal IT Support, buka menu "Layanan Komunikasi".
+2. Pilih sub-menu "Email Enterprise".
+3. Klik tombol "Upgrade Quota Mailbox / Online Archive".
+4. Pilih jenis upgrade: [Mailbox Utama] / [Online Archive] / [Keduanya].
+5. Isi kapasitas saat ini (dapat dilihat di Outlook: klik kanan nama mailbox > Data File Properties) dan kapasitas yang diinginkan.
+6. Isi alasan bisnis penggunaan kapasitas besar.
+7. Klik "Submit Form".
+CATATAN KHUSUS: Sebelum mengajukan upgrade, disarankan melakukan pembersihan email lama (hapus email tidak penting, kosongkan Trash dan Junk). Upgrade quota memerlukan waktu 1-2 hari kerja.
+
+---
+
+NAMA FORM: User ID ERP & Non ERP
+TRIGGER KEYWORD: user id, erp, user, id, non erp, akses, otorisasi, autorisasi, pengalihan, perpanjangan, akun, email, aplikasi, sap, SAP, tambah akses, cabut akses, extend akses, buat user baru, user baru sap, role sap, authorization, otorisasi sap, pembuatan akun, non-erp user
+KONTEKS MASALAH: Segala permintaan terkait User ID dan otorisasi pada sistem ERP (SAP) maupun Non-ERP: pembuatan user ID baru, penambahan role/otorisasi akses, perpanjangan masa aktif user, pencabutan hak akses, pengalihan akses antar user, atau perubahan jabatan yang berdampak pada hak akses sistem.
+PANDUAN UI:
+1. Di portal IT Support, klik menu "Akses & Keamanan".
+2. Pilih sub-menu "Manajemen User ID".
+3. Klik "User ID ERP & Non ERP".
+4. Pilih jenis permintaan: [Buat User Baru] / [Tambah Role/Otorisasi] / [Cabut Akses] / [Perpanjangan] / [Pengalihan Akses].
+5. Isi detail lengkap: nama user, sistem (SAP/Non-ERP apa), role yang diminta, dan periode akses.
+6. Lampirkan persetujuan atasan langsung dan dokumen pendukung (SK, surat tugas).
+7. Klik "Ajukan Permintaan User ID".
+CATATAN KHUSUS: Setiap permintaan otorisasi SAP Production WAJIB memiliki approval dari atasan minimal setingkat Supervisor dan fungsi SAP Functional Lead terkait. Proses verifikasi keamanan memakan waktu 3-5 hari kerja untuk SAP Production.
+
+---
+
+NAMA FORM: Video Conference atau Audio Conference
+TRIGGER KEYWORD: video, conference, audio, townhall, meeting, zoom, webex, teams meeting, microsoft teams, video call, rapat virtual, conference call, video conference gagal, audio conference, suara putus, gambar macet, link meeting, schedule meeting, undangan meeting
+KONTEKS MASALAH: Permasalahan atau permintaan terkait layanan video/audio conference: tidak bisa bergabung ke meeting, suara/gambar putus-putus, permintaan setup ruang video conference, lisensi meeting yang diperlukan, atau bantuan teknis untuk penyelenggaraan townhall/webinar besar.
+PANDUAN UI:
+1. Di portal IT Support, buka tab "Fasilitas Ruang Rapat".
+2. Pilih "Video Conference & Audio Conference".
+3. Pilih jenis masalah/permintaan: [Gangguan Teknis Meeting] / [Setup Ruang Video Conference] / [Townhall/Webinar Besar].
+4. Isi detail: platform yang digunakan (Teams/Zoom/Webex), jumlah peserta, tanggal dan waktu meeting.
+5. Untuk gangguan: sertakan ID meeting/link yang bermasalah dan gejala yang dialami.
+6. Klik "Ajukan Permintaan Video Conference".
+CATATAN KHUSUS: Untuk townhall dengan peserta lebih dari 300 orang, ajukan permintaan minimal 7 hari kerja sebelumnya agar tim IT dapat mempersiapkan infrastruktur yang memadai dan melakukan uji coba.
+
+---
+
+NAMA FORM: Wifi Access
+TRIGGER KEYWORD: wifi, guest, temporer, tamu, jaringan, wifi guest, wifi tamu, akses wifi, koneksi wifi, password wifi, jaringan wifi, wifi kantor, ssid, tidak bisa konek wifi, wifi lambat, signal wifi lemah, koneksi wireless, wireless
+KONTEKS MASALAH: Permintaan atau permasalahan terkait akses WiFi: permintaan kredensial WiFi untuk tamu/visitor, koneksi WiFi yang tidak stabil atau lambat di area tertentu, permintaan akses WiFi temporer untuk acara/event, atau WiFi di area tertentu yang tidak berfungsi.
+PANDUAN UI:
+1. Di portal IT Support, klik tombol menu (☰) di pojok kiri atas.
+2. Pilih menu "Infrastruktur IT".
+3. Klik kotak "Wifi Access".
+4. Pilih jenis permintaan: [Akses WiFi Tamu/Guest] / [Gangguan WiFi Area Tertentu] / [WiFi Temporer untuk Acara].
+5. Isi lokasi (gedung, lantai, area), nama pemohon, dan kebutuhan spesifik.
+6. Untuk akses tamu, sertakan nama tamu, instansi, dan periode kunjungan.
+7. Klik "Buat Tiket Wifi".
+CATATAN KHUSUS: Akses WiFi untuk tamu bersifat terbatas dan terisolasi dari jaringan internal perusahaan. Masa aktif akses tamu maksimal 7 hari dan dapat diperpanjang jika diperlukan.
+
+---
+
+==============================================================================
+  PANDUAN PENGGUNAAN UNTUK CHATBOT
+==============================================================================
+
+LOGIKA PENCOCOKAN KEYWORD:
+1. Chatbot akan mencocokkan kata kunci dari pesan user dengan daftar TRIGGER KEYWORD di atas.
+2. Jika ditemukan satu atau lebih kecocokan, arahkan user ke PANDUAN UI form yang sesuai.
+3. Jika keyword cocok dengan LEBIH DARI SATU form, tampilkan pilihan kepada user untuk mengklarifikasi.
+4. Jika tidak ada keyword yang cocok, arahkan ke form "IT Helpdesk Query" untuk bantuan lebih lanjut.
+
+PRIORITAS PENCOCOKAN:
+- Keyword yang lebih spesifik (nama aplikasi, nama teknis) > keyword yang lebih umum
+- Contoh: "reset password SAP" → prioritas ke "Change, Reset, Unlock Password Details" bukan "Incident"
+- Contoh: "sap error" → prioritas ke "Incident" karena menunjukkan gangguan, bukan permintaan reset
+
+CONTOH SKENARIO:
+- User: "saya lupa password" → Arahkan ke "Change, Reset, Unlock Password Details"
+- User: "SAP tidak bisa dibuka" → Arahkan ke "Incident"
+- User: "minta akses sharepoint" → Arahkan ke "Access Management End User Details"
+- User: "kartu akses pintu tidak terbaca" → Arahkan ke "Acces Control Device"
+- User: "proyektor di ruang rapat A tidak menyala" → Arahkan ke "Multimedia and Sound System"
+- User: "email penuh" → Arahkan ke "Upgrade Quota Online Mailbox"
+- User: "minta install autocad" → Arahkan ke "Software"
+
+==============================================================================
+  AKHIR KNOWLEDGE BASE
+==============================================================================

@@ -291,7 +291,15 @@
             </div>
             {% endif %}
 
-            {% if not success %}
+            <!-- Success Message -->
+            {% if success %}
+            <div
+                style="background-color: #d4edda; border: 1px solid #c3e6cb; color: #155724; padding: 1rem; border-radius: 0.5rem; margin-bottom: 1.5rem;">
+                <strong>✅ Sukses!</strong>
+                <p style="margin: 0.5rem 0 0 0;">{{ success }}</p>
+            </div>
+            {% endif %}
+
             <form id="signup-form" method="POST" action="{% url 'users:signup' %}" novalidate>
                 {% csrf_token %}
 
@@ -299,17 +307,6 @@
                     <label for="username">Username *</label>
                     <input type="text" id="username" name="username" placeholder="username" value="{{ username }}"
                         required minlength="3">
-                    <small style="font-size: 0.75rem; color: var(--gray-600);">Minimal 3 karakter</small>
-                </div>
-
-                <div class="form-group">
-                    <label for="first-name">Nama Depan</label>
-                    <input type="text" id="first-name" name="first_name" placeholder="John" value="{{ first_name }}">
-                </div>      
-
-                <div class="form-group">
-                    <label for="last-name">Nama Belakang</label>
-                    <input type="text" id="last-name" name="last_name" placeholder="Doe" value="{{ last_name }}">
                 </div>
 
                 <div class="form-group">
@@ -322,16 +319,6 @@
                     <label for="password">Password *</label>
                     <input type="password" id="password" name="password" placeholder="••••••••" required minlength="8">
                     <small style="font-size: 0.75rem; color: var(--gray-600);">Minimal 8 karakter, 1 huruf besar, 1 angka</small>
-                </div>
-                <div class="form-group">
-                    <label for="confirm-password">Konfirmasi Password *</label>
-                    <input type="password" id="confirm-password" name="password_confirm" placeholder="••••••••"
-                        required minlength="8">
-                </div>
-
-                <div class="form-group checkbox-group">
-                    <input type="checkbox" id="accept-terms" name="accept_terms" required>
-                    <label for="accept-terms">Saya menerima Syarat & Ketentuan dan Kebijakan Privasi</label>
                 </div>
 
                 <button type="submit" class="submit-btn">Daftar Sekarang</button>
@@ -377,25 +364,23 @@
 {% block extra_js %}
 <script>
     // Handle form submission
+    // Handle form submission
     document.getElementById('signup-form').addEventListener('submit', function (e) {
         // Perform client-side validation
-        const firstName = document.getElementById('first-name').value.trim();
-        const lastName = document.getElementById('last-name').value.trim();
+        const username = document.getElementById('username').value.trim();
         const email = document.getElementById('email').value.trim();
         const password = document.getElementById('password').value;
-        const confirmPassword = document.getElementById('confirm-password').value;
-        const acceptTerms = document.getElementById('accept-terms').checked;
 
         // Validation
-        if (!firstName) {
+        if (!username) {
             e.preventDefault();
-            alert('Nama depan tidak boleh kosong');
+            alert('Username tidak boleh kosong');
             return;
         }
 
-        if (!lastName) {
+        if (username.length < 3) {
             e.preventDefault();
-            alert('Nama belakang tidak boleh kosong');
+            alert('Username harus minimal 3 karakter');
             return;
         }
 
@@ -417,15 +402,15 @@
             return;
         }
 
-        if (password !== confirmPassword) {
+        if (!/[A-Z]/.test(password)) {
             e.preventDefault();
-            alert('Password tidak cocok');
+            alert('Password harus mengandung minimal 1 huruf besar');
             return;
         }
 
-        if (!acceptTerms) {
+        if (!/[0-9]/.test(password)) {
             e.preventDefault();
-            alert('Anda harus menerima Syarat & Ketentuan');
+            alert('Password harus mengandung minimal 1 angka');
             return;
         }
     });

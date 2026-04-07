@@ -1,0 +1,729 @@
+KATEGORI: AKUN_AD_LOCKED
+Konteks Masalah: Pengguna tidak dapat masuk ke laptop domain setelah beberapa kali gagal memasukkan password. Muncul pesan "The referenced account is currently locked out and may not be logged on to" pada layar login Windows. Pengguna juga tidak dapat mengakses email Outlook karena kredensial tidak dikenali.
+Langkah Perbaikan:
+1. Tunggu 15 menit karena kebijakan perusahaan secara otomatis membuka kunci akun setelah waktu tertentu jika tidak ada percobaan login gagal tambahan.
+2. Jika menggunakan laptop yang sudah terdaftar di domain, cabut kabel LAN atau putuskan Wi-Fi, lalu login menggunakan kredensial yang benar dengan mode cached credentials (password terakhir yang berhasil digunakan).
+3. Setelah berhasil login secara offline, sambungkan kembali ke jaringan kantor, tekan Ctrl+Alt+Del, pilih "Lock", lalu buka kunci dengan password baru jika sudah direset.
+4. Buka aplikasi "Command Prompt" sebagai administrator, jalankan perintah `klist purge` untuk membersihkan token Kerberos yang mungkin kedaluwarsa.
+5. Jika langkah di atas tidak berhasil, buat tiket ke IT Helpdesk dengan menyertakan username, nama host laptop (klik kanan This PC > Properties), dan perkiraan waktu terakhir akun dapat digunakan. IT Helpdesk akan melakukan unlock akun secara manual dari Active Directory.
+
+KATEGORI: AKUN_AD_PASSWORD_EXPIRED
+Konteks Masalah: Saat mencoba login ke Windows atau Outlook, muncul notifikasi "Your password has expired and must be changed". Pengguna tidak mendapatkan prompt perubahan password secara otomatis atau tidak dapat mengubah password melalui Ctrl+Alt+Del.
+Langkah Perbaikan:
+1. Tekan Ctrl+Alt+Del pada layar login atau saat sudah masuk desktop, pilih "Change a password".
+2. Masukkan password lama, lalu buat password baru yang memenuhi kebijakan kompleksitas perusahaan (minimal 8 karakter, kombinasi huruf besar, huruf kecil, angka, dan simbol).
+3. Jika tidak berhasil karena tidak terhubung ke jaringan perusahaan, sambungkan ke VPN terlebih dahulu (jika bekerja dari luar kantor) atau pastikan kabel LAN/Wi-Fi aktif, kemudian ulangi langkah 1.
+4. Setelah password berhasil diubah, restart laptop dan login dengan password baru.
+5. Jika prompt perubahan password tidak muncul atau gagal dengan pesan error, buat tiket ke IT Helpdesk dengan melampirkan screenshot error dan status koneksi jaringan (VPN atau kantor). Helpdesk akan mereset password dari Active Directory dan memberikan password sementara.
+
+KATEGORI: AKUN_MFA_APP_NOT_RECEIVED
+Konteks Masalah: Saat login ke aplikasi perusahaan (Office 365, VPN, atau portal internal), pengguna diminta memasukkan kode MFA dari aplikasi Authenticator tetapi notifikasi tidak muncul di ponsel, atau kode yang ditampilkan tidak valid.
+Langkah Perbaikan:
+1. Pastikan ponsel memiliki koneksi internet (Wi-Fi atau seluler) yang stabil. Matikan dan nyalakan kembali koneksi data pada ponsel.
+2. Buka aplikasi Microsoft Authenticator atau aplikasi MFA yang digunakan, periksa apakah akun perusahaan masih terdaftar dan tidak ada tanda seru merah. Refresh daftar akun dengan menarik layar ke bawah (pull-to-refresh).
+3. Pilih opsi "Sign in another way" pada layar login, lalu pilih metode alternatif seperti "Phone call" atau "Text message" jika tersedia.
+4. Jika menggunakan metode push notification, pastikan aplikasi Authenticator memiliki izin notifikasi di pengaturan ponsel (Settings > Notifications > Authenticator > Allow Notifications).
+5. Jika tetap tidak menerima kode, buat tiket ke IT Helpdesk dengan menyertakan nama lengkap, nomor ponsel yang terdaftar, dan aplikasi MFA yang digunakan. Helpdesk akan melakukan sinkronisasi ulang atau mereset metode MFA pengguna.
+
+KATEGORI: AKUN_OTP_SMS_DELAY
+Konteks Masalah: Pengguna mencoba login ke sistem internal perusahaan dan memilih metode OTP via SMS, tetapi kode tidak kunjung masuk ke ponsel hingga waktu kedaluwarsa. Pesan error: "OTP not received" atau "Code expired".
+Langkah Perbaikan:
+1. Periksa apakah ponsel berada di area dengan sinyal seluler yang baik. Aktifkan mode pesawat selama 10 detik, lalu nonaktifkan untuk memaksa refresh sinyal.
+2. Pastikan tidak ada blokir SMS dari operator atau aplikasi anti-spam yang memfilter pesan dari nomor perusahaan. Cek folder spam/blocked messages di aplikasi pesan.
+3. Tunggu 2 menit, lalu klik "Resend OTP" pada layar login. Jangan meminta ulang lebih dari 3 kali karena dapat memicu throttling.
+4. Jika tersedia metode alternatif (call, app notification), pilih metode tersebut untuk melanjutkan login.
+5. Jika masih gagal, buat tiket ke IT Helpdesk dengan mencantumkan nomor ponsel, waktu permintaan OTP, dan operator seluler yang digunakan. Helpdesk akan memverifikasi status pengiriman OTP dari sistem Identity Management.
+
+KATEGORI: AKUN_MFA_CODE_INVALID
+Konteks Masalah: Setelah memasukkan kode MFA dari aplikasi Authenticator atau SMS, sistem menolak dengan pesan "Invalid code" atau "Verification failed". Pengguna sudah memastikan kode yang dimasukkan benar.
+Langkah Perbaikan:
+1. Pastikan waktu (time sync) pada ponsel dan komputer sinkron. Di ponsel Android/iOS, aktifkan pengaturan "Set time automatically" (Settings > Date & Time > Automatic).
+2. Pada aplikasi Microsoft Authenticator, buka menu Settings, pilih "Troubleshooting" atau "Sync account" untuk menyinkronkan ulang token.
+3. Gunakan kode baru yang dihasilkan setelah refresh, jangan gunakan kode yang sudah muncul lebih dari 30 detik.
+4. Coba metode MFA alternatif (telepon atau SMS) untuk mengesampingkan masalah token.
+5. Jika tetap gagal, buat tiket ke IT Helpdesk dengan menyertakan nama pengguna, jenis perangkat (iOS/Android), dan waktu kejadian. Helpdesk akan melakukan reset registrasi MFA dan memandu pendaftaran ulang.
+
+KATEGORI: AKUN_LUPA_PASSWORD_DOMAIN
+Konteks Masalah: Pengguna lupa password domain untuk login ke laptop perusahaan dan tidak dapat mengakses aplikasi Office 365, VPN, atau sumber daya internal. Tidak memiliki opsi untuk reset mandiri karena belum terdaftar di SSPR (Self-Service Password Reset).
+Langkah Perbaikan:
+1. Kunjungi portal reset password perusahaan (contoh: https://passwordreset.company.com) menggunakan perangkat pribadi atau perangkat lain yang terhubung internet.
+2. Ikuti verifikasi identitas dengan menjawab pertanyaan keamanan yang telah didaftarkan sebelumnya atau menggunakan kode OTP ke email pribadi/telepon.
+3. Jika tidak terdaftar di SSPR, hubungi atasan langsung untuk memverifikasi identitas dan meminta kode referensi internal.
+4. Jika berhasil reset, buat password baru yang memenuhi kebijakan kompleksitas, lalu gunakan password tersebut untuk login ke laptop dengan koneksi VPN atau jaringan kantor.
+5. Jika tidak memiliki akses ke SSPR atau gagal verifikasi, buat tiket ke IT Helpdesk melalui kanal alternatif (telepon ke helpdesk atau email dari akun pribadi) dengan mencantumkan nama lengkap, ID karyawan, dan bukti identitas (KTP/foto selfie dengan ID card). Helpdesk akan melakukan reset password setelah verifikasi.
+
+KATEGORI: AKUN_AD_LOOP_LOGIN
+Konteks Masalah: Setelah memasukkan password domain yang benar, layar login memutar (loading) beberapa detik lalu kembali ke layar login tanpa pesan error. Fenomena ini sering terjadi setelah password diubah atau setelah laptop dalam keadaan sleep lama.
+Langkah Perbaikan:
+1. Pastikan laptop terhubung ke jaringan kantor (LAN atau Wi-Fi) atau VPN sudah aktif sebelum mencoba login (jika menggunakan VPN, login dengan cached credentials terlebih dahulu lalu sambungkan VPN sebelum lock/unlock).
+2. Di layar login, klik opsi "Other user", masukkan username dengan format domain\username (contoh: COMPANY\johndoe), lalu masukkan password.
+3. Jika masih gagal, restart laptop, lalu saat booting, pastikan kabel LAN terpasang atau Wi-Fi terkoneksi ke SSID kantor.
+4. Setelah restart, coba login dengan password yang sama. Jika berhasil, segera ganti password melalui Ctrl+Alt+Del untuk memastikan sinkronisasi.
+5. Jika loop login terus terjadi, buat tiket ke IT Helpdesk dengan melampirkan nama host laptop (lihat di stiker atau boot ke menu diagnostic). Helpdesk akan memeriksa apakah akun memiliki konflik atribut di Active Directory atau perlu dilakukan reset computer account.
+
+KATEGORI: JARINGAN_WIFI_LIMITED_ACCESS
+Konteks Masalah: Ikon Wi-Fi menunjukkan tanda seru kuning dengan keterangan "No Internet, Secured" atau "Limited Access". Pengguna dapat terhubung ke SSID kantor tetapi tidak dapat mengakses internet, aplikasi internal, atau berfungsi sebagian.
+Langkah Perbaikan:
+1. Klik kanan ikon Wi-Fi, pilih "Troubleshoot problems" dan ikuti wizard diagnostik Windows. Catat hasil diagnosis.
+2. Buka Command Prompt sebagai administrator, jalankan perintah berikut berurutan: `ipconfig /release`, `ipconfig /renew`, `ipconfig /flushdns`, lalu `netsh winsock reset`. Restart laptop setelahnya.
+3. Lupakan jaringan Wi-Fi kantor (Forget), lalu sambungkan kembali dengan memastikan menggunakan autentikasi yang benar (biasanya menggunakan kredensial domain atau sertifikat).
+4. Buka Network & Internet Settings, pilih Wi-Fi, klik "Manage known networks", pilih jaringan kantor, lalu "Properties". Pastikan "Use random hardware addresses" dimatikan (Off) jika menggunakan Windows 10/11.
+5. Jika masalah tetap ada, buat tiket ke IT Helpdesk dengan menyertakan hasil screenshot dari perintah `ipconfig /all`, nama SSID, dan lokasi pengguna (gedung/lantai). Helpdesk akan memverifikasi status DHCP dan autentikasi RADIUS.
+
+KATEGORI: JARINGAN_LAN_UNIDENTIFIED_NETWORK
+Konteks Masalah: Laptop terhubung ke docking station atau kabel LAN langsung tetapi status jaringan menunjukkan "Unidentified Network" dan "No Internet Access". IP address yang didapat berada pada rentang 169.254.x.x (APIPA).
+Langkah Perbaikan:
+1. Cabut kabel LAN, tunggu 10 detik, lalu colokkan kembali ke port yang berbeda di dinding atau docking station.
+2. Buka Device Manager, cari "Network adapters", klik kanan pada driver Ethernet (biasanya Realtek atau Intel), pilih "Disable device", tunggu 5 detik, lalu "Enable device".
+3. Buka Command Prompt sebagai administrator, jalankan `ipconfig /release` lalu `ipconfig /renew`. Jika tetap mendapatkan IP APIPA, lanjut ke langkah 4.
+4. Pastikan tidak ada konflik dengan software VPN (seperti Cisco AnyConnect atau Zscaler) yang mungkin mengunci adapter. Nonaktifkan sementara VPN jika berjalan di background.
+5. Jika tidak ada perubahan, buat tiket ke IT Helpdesk dengan melampirkan hasil `ipconfig /all`, nomor port dinding yang digunakan, dan informasi apakah pengguna lain di sekitar mengalami hal sama. Helpdesk akan melakukan pengecekan VLAN dan status DHCP server pada segmen jaringan tersebut.
+
+KATEGORI: JARINGAN_IP_CONFLICT_WINDOWS
+Konteks Masalah: Pengguna mendapatkan notifikasi pop-up "There is an IP address conflict with another system on the network" atau koneksi internet terputus-putus secara acak. Laptop tidak dapat mengakses sumber daya jaringan secara konsisten.
+Langkah Perbaikan:
+1. Buka Command Prompt sebagai administrator, jalankan `ipconfig /release` lalu `ipconfig /renew` untuk meminta alamat IP baru dari DHCP.
+2. Jika masih terjadi konflik, jalankan `ipconfig /flushdns` dan `netsh int ip reset` untuk mengembalikan konfigurasi IP ke default.
+3. Restart laptop dan pastikan tidak ada perangkat yang menggunakan IP statik yang sama. Pengguna tidak diperbolehkan mengatur IP statik tanpa persetujuan IT; jika sebelumnya pernah mengatur, ubah ke "Obtain an IP address automatically".
+4. Periksa apakah laptop terhubung ke jaringan melalui dua antarmuka sekaligus (WiFi dan LAN) yang bisa menyebabkan konflik internal. Matikan salah satu (nonaktifkan Wi-Fi jika menggunakan LAN).
+5. Jika konflik berulang, buat tiket ke IT Helpdesk dengan menyertakan alamat IP yang dikonflikkan (dari pesan error) dan screenshot `ipconfig /all`. Helpdesk akan melakukan scan network untuk mengidentifikasi perangkat dengan IP duplikat dan membersihkan lease DHCP.
+
+KATEGORI: JARINGAN_DNS_ERROR_KLIN
+Konteks Masalah: Pengguna dapat terhubung ke internet dan membuka situs eksternal (seperti google.com) tetapi tidak dapat mengakses situs internal perusahaan (contoh: portal.company.com) atau server file. Pesan error "DNS_PROBE_FINISHED_NXDOMAIN" atau "Server DNS Address could not be found".
+Langkah Perbaikan:
+1. Buka Command Prompt sebagai administrator, jalankan `ipconfig /flushdns` untuk membersihkan cache DNS lokal.
+2. Jalankan perintah `nslookup portal.company.com` (ganti dengan alamat internal). Jika tidak mendapatkan resolusi, lanjut ke langkah 3.
+3. Buka Network & Internet Settings > Change adapter options, klik kanan adapter yang aktif (WiFi atau Ethernet), pilih Properties. Pilih "Internet Protocol Version 4 (TCP/IPv4)", klik Properties, pastikan "Obtain DNS server address automatically" dipilih. Jika sebelumnya diatur manual, ubah ke otomatis.
+4. Jalankan perintah `ipconfig /registerdns` untuk mendaftarkan ulang nama host ke DNS server.
+5. Jika masalah internal tetap ada, buat tiket ke IT Helpdesk dengan menyertakan hasil `nslookup portal.company.com` dan `ipconfig /all`. Helpdesk akan memeriksa konfigurasi DNS forwarder dan zona internal.
+
+KATEGORI: JARINGAN_DNS_CACHE_POISON
+Konteks Masalah: Pengguna mengakses situs tertentu dan diarahkan ke halaman yang tidak dikenal atau menerima peringatan keamanan SSL yang tidak sesuai dengan domain. Hal ini dapat terjadi setelah mengunjungi situs bermasalah atau karena malware yang memodifikasi hosts file.
+Langkah Perbaikan:
+1. Buka Command Prompt sebagai administrator, jalankan `ipconfig /flushdns` dan `ipconfig /registerdns`.
+2. Periksa file hosts lokal dengan membuka Notepad sebagai administrator, lalu buka `C:\Windows\System32\drivers\etc\hosts`. Pastikan tidak ada entri mencurigakan untuk domain perusahaan atau domain umum. Jika ada, hapus atau komentari dengan menambahkan tanda # di awal baris.
+3. Jalankan perintah `netsh winsock reset` dan restart laptop.
+4. Lakukan pemindaian malware menggunakan alat yang disediakan perusahaan (seperti Windows Defender Offline atau Microsoft Defender Antivirus).
+5. Jika setelah dibersihkan masih terjadi redirect, buat tiket ke IT Helpdesk dengan melampirkan salinan file hosts (jika ada modifikasi) dan laporan hasil scan malware. Helpdesk akan melakukan investigasi lebih lanjut terkait potensi compromise.
+
+KATEGORI: JARINGAN_WIFI_AUTHENTICATION_ERROR
+Konteks Masalah: Pengguna memasukkan password SSID kantor dengan benar tetapi gagal terkoneksi dengan pesan "Can't connect to this network" atau "Authentication failed". Sebelumnya koneksi berjalan normal.
+Langkah Perbaikan:
+1. Lupakan jaringan (Forget), lalu coba sambungkan kembali dengan memasukkan kredensial domain (biasanya username@company.com dan password domain) jika jaringan menggunakan 802.1x.
+2. Buka "Manage known networks", pilih jaringan kantor, klik Properties, pastikan "Security type" sesuai (biasanya WPA2-Enterprise) dan "Authentication" menggunakan "Microsoft: Protected EAP (PEAP)".
+3. Pada pengaturan lanjutan (Advanced settings), centang "Specify authentication mode" dan pilih "User authentication". Pastikan tidak ada opsi "Remember my credentials" yang salah.
+4. Restart layanan WLAN AutoConfig dengan membuka Services.msc, cari "WLAN AutoConfig", klik Restart.
+5. Jika gagal, buat tiket ke IT Helpdesk dengan menyertakan nama laptop, MAC address (dari `ipconfig /all` pada adapter Wi-Fi), dan waktu kejadian. Helpdesk akan memeriksa log RADIUS dan status akun pengguna di sistem NAC.
+
+KATEGORI: JARINGAN_WIFI_IP_RENEW_FAILED
+Konteks Masalah: Laptop terhubung ke Wi-Fi kantor tetapi tidak mendapatkan alamat IP (masih 169.254.x.x) meskipun sudah melakukan ipconfig /renew. Ikon Wi-Fi menunjukkan "Connected, No Internet".
+Langkah Perbaikan:
+1. Nonaktifkan Wi-Fi adapter melalui Control Panel > Network and Sharing Center > Change adapter settings, klik kanan Wi-Fi, pilih Disable. Tunggu 10 detik, lalu Enable.
+2. Buka Command Prompt sebagai administrator, jalankan `netsh int ip reset` dan `netsh winsock reset`, lalu restart.
+3. Jika menggunakan driver Wi-Fi tertentu, periksa apakah ada pembaruan driver melalui Device Manager. Klik kanan adapter Wi-Fi, pilih "Update driver" > "Search automatically for drivers".
+4. Pastikan tidak ada software virtual adapter (seperti Hyper-V, VirtualBox) yang mengganggu. Nonaktifkan sementara virtual adapter di Network Connections.
+5. Jika tetap APIPA, buat tiket ke IT Helpdesk dengan menyertakan output `ipconfig /all`, versi driver Wi-Fi, dan apakah pengguna lain di lokasi sama mengalami hal serupa. Helpdesk akan memverifikasi kapasitas DHCP pool dan kemungkinan blacklist MAC.
+
+KATEGORI: JARINGAN_LAN_CABLE_DISCONNECTED
+Konteks Masalah: Status jaringan menunjukkan "Network cable unplugged" meskipun kabel LAN sudah terpasang dengan benar. Laptop tidak mendeteksi koneksi fisik sama sekali.
+Langkah Perbaikan:
+1. Colokkan kabel LAN ke port lain pada docking station atau laptop (jika memiliki port Ethernet tambahan).
+2. Buka Device Manager, klik kanan pada network adapter Ethernet, pilih "Uninstall device" (jangan centang "Delete driver"), lalu restart laptop. Driver akan terinstal ulang otomatis.
+3. Periksa apakah lampu indikator pada port Ethernet laptop/docking station menyala. Jika tidak, coba gunakan kabel LAN yang berbeda dari meja kosong untuk memastikan bukan kabel yang rusak.
+4. Buka Network & Internet Settings, pilih "Ethernet", pastikan tidak ada pengaturan metrik manual atau konflik dengan VPN yang memblokir adapter.
+5. Jika lampu indikator tetap mati dan kabel berfungsi di perangkat lain, buat tiket ke IT Helpdesk dengan menyertakan nama host, lokasi port dinding, dan informasi bahwa lampu indikator tidak menyala. Helpdesk akan mengescalasi ke tim infrastruktur untuk pengecekan fisik switch dan port.
+
+KATEGORI: AKUN_AD_ACCESS_DENIED_SERVER
+Konteks Masalah: Pengguna berhasil login ke laptop tetapi saat mengakses folder shared atau aplikasi berbasis domain, muncul pesan "Access Denied" atau "You do not have permission to access this resource". Sebelumnya akses berjalan normal.
+Langkah Perbaikan:
+1. Log out dari akun Windows, lalu login kembali untuk menyegarkan token akses Kerberos.
+2. Buka Command Prompt sebagai administrator, jalankan `klist purge` untuk membersihkan cache tiket, lalu `klist` untuk memverifikasi tidak ada tiket yang tersisa.
+3. Coba akses resource dengan menggunakan jalur UNC lengkap (contoh: \\fileserver\share) dan pastikan menggunakan kredensial domain yang benar.
+4. Jika menggunakan VPN, disconnect lalu reconnect VPN, atau restart layanan "Netlogon" melalui Services.msc.
+5. Jika akses ditolak tetap terjadi, buat tiket ke IT Helpdesk dengan menyertakan nama resource yang ingin diakses, screenshot pesan error, dan informasi apakah ini terjadi setelah perubahan grup atau perpindahan departemen. Helpdesk akan memeriksa keanggotaan grup keamanan di Active Directory.
+
+KATEGORI: AKUN_OTP_VPN_ERROR
+Konteks Masalah: Saat mencoba terhubung ke VPN perusahaan, pengguna diminta memasukkan kode OTP dari token fisik atau aplikasi, tetapi selalu gagal dengan pesan "Authentication failed" meskipun kode sudah benar.
+Langkah Perbaikan:
+1. Pastikan token OTP yang digunakan belum kedaluwarsa. Jika menggunakan token hardware, periksa sisa waktu token; jika menggunakan aplikasi, pastikan waktu perangkat sinkron (Settings > Date & Time > Automatic).
+2. Coba metode login alternatif jika VPN mendukung (misalnya push notification atau SMS).
+3. Buka aplikasi VPN, hapus profil koneksi yang tersimpan, lalu buat profil baru dengan memasukkan kembali alamat server dan kredensial.
+4. Pastikan tidak ada koneksi VPN lain yang masih aktif. Nonaktifkan semua koneksi VPN, restart laptop, lalu coba lagi.
+5. Jika tetap gagal, buat tiket ke IT Helpdesk dengan menyertakan username, jenis token (hardware/software), dan screenshot error dari klien VPN. Helpdesk akan melakukan sinkronisasi token atau reset PIN MFA pada sistem VPN.
+
+KATEGORI: AKUN_MFA_NOT_REGISTERED
+Konteks Masalah: Pengguna baru atau pengguna yang melakukan reset perangkat ponsel, saat login ke aplikasi perusahaan diminta verifikasi MFA tetapi belum memiliki metode yang terdaftar. Pesan: "Your organization requires additional security information" atau "You have not set up this verification method".
+Langkah Perbaikan:
+1. Buka browser di laptop yang sudah terautentikasi, akses portal My Account perusahaan (contoh: https://myaccount.company.com/security).
+2. Pilih "Security info" > "Add method", pilih "Authenticator app" atau "Phone".
+3. Jika memilih Authenticator app, buka aplikasi Microsoft Authenticator di ponsel, pilih "Add account" > "Work or school account", lalu pindai QR code yang ditampilkan di layar.
+4. Ikuti verifikasi dengan memasukkan kode yang dihasilkan aplikasi atau menerima notifikasi.
+5. Jika tidak dapat mengakses portal karena belum memiliki MFA, buat tiket ke IT Helpdesk melalui telepon dengan menyertakan nama lengkap, ID karyawan, dan alasan (ponsel baru/reset). Helpdesk akan melakukan registrasi awal MFA secara manual dan memberikan panduan setup.
+
+KATEGORI: JARINGAN_DNS_SERVER_UNREACHABLE
+Konteks Masalah: Koneksi internet dan jaringan internal terputus total. Setelah dilakukan pemeriksaan, laptop mendapatkan IP dengan benar dari DHCP, tetapi tidak dapat melakukan ping ke DNS server internal atau eksternal. Pesan error "DNS Server not responding".
+Langkah Perbaikan:
+1. Buka Command Prompt, jalankan `ping 8.8.8.8` untuk memastikan konektivitas IP (bukan DNS). Jika berhasil, masalah pada DNS. Jika gagal, lanjut ke langkah 3.
+2. Jika ping IP berhasil tetapi DNS gagal, set DNS manual sementara menggunakan DNS publik (8.8.8.8) pada adapter jaringan melalui IPv4 Properties. Uji coba akses internet.
+3. Jika ping IP juga gagal, lakukan `ipconfig /release` dan `ipconfig /renew`. Jika renew gagal, restart laptop.
+4. Periksa apakah firewall pihak ketiga (seperti Norton, McAfee) memblokir lalu lintas. Nonaktifkan sementara firewall dan uji koneksi.
+5. Jika masalah tetap ada, buat tiket ke IT Helpdesk dengan melampirkan hasil `ping 8.8.8.8`, `ipconfig /all`, dan informasi apakah pengguna lain di ruangan yang sama juga mengalami. Helpdesk akan memeriksa gateway dan kesehatan DNS server.
+
+KATEGORI: JARINGAN_WIFI_PROFILE_CORRUPT
+Konteks Masalah: Laptop tidak dapat terhubung ke Wi-Fi kantor meskipun SSID terdeteksi. Saat diklik, tidak ada prompt password atau gagal dengan error "Unable to connect". Sering terjadi setelah update Windows atau perubahan pengaturan jaringan.
+Langkah Perbaikan:
+1. Hapus semua profil jaringan kantor yang tersimpan dengan membuka Command Prompt sebagai administrator, jalankan `netsh wlan delete profile name="SSID_KANTOR"` (ganti dengan SSID sebenarnya).
+2. Buka Network & Internet Settings > Wi-Fi > Manage known networks, hapus semua entri yang terkait dengan kantor.
+3. Nonaktifkan dan aktifkan kembali adapter Wi-Fi melalui Control Panel > Network Connections.
+4. Lakukan restart laptop, lalu coba sambungkan kembali ke SSID kantor. Masukkan kredensial domain saat diminta.
+5. Jika masih gagal, buat tiket ke IT Helpdesk dengan menyertakan hasil `netsh wlan show profiles` dan `netsh wlan show interfaces`. Helpdesk akan memeriksa konfigurasi kebijakan Wi-Fi yang mungkin diterapkan melalui Group Policy.
+
+KATEGORI: AKUN_AD_ACCOUNT_DISABLED
+Konteks Masalah: Pengguna mencoba login ke domain tetapi mendapatkan pesan "The referenced account is currently disabled and may not be logged on to". Hal ini sering terjadi setelah karyawan kembali dari cuti panjang atau setelah mutasi.
+Langkah Perbaikan:
+1. Pastikan pengguna tidak salah memasukkan username dengan format yang salah (gunakan domain\username).
+2. Jika menggunakan laptop yang pernah terdaftar, coba login dengan kredensial lama menggunakan cached credentials (putuskan jaringan terlebih dahulu). Setelah login, sambungkan ke VPN atau jaringan kantor untuk memperbarui status akun.
+3. Jika tidak berhasil, hubungi atasan langsung untuk memverifikasi bahwa status kepegawaian aktif dan tidak dalam proses offboarding.
+4. Coba akses portal reset password perusahaan untuk melihat apakah akun dikenali. Jika portal menyatakan akun tidak ditemukan, kemungkinan akun dinonaktifkan.
+5. Buat tiket ke IT Helpdesk melalui kanal resmi (telepon atau email dari atasan) dengan menyertakan nama lengkap, ID karyawan, dan tanggal terakhir akun dapat digunakan. Helpdesk akan mengaktifkan kembali akun di Active Directory jika status kepegawaian sudah dikonfirmasi oleh HR.
+
+KATEGORI: PRINTER_OFFLINE_NETWORK
+Konteks Masalah: Printer jaringan yang biasa digunakan menunjukkan status "Offline" di daftar printer Windows. Pengguna tidak dapat mencetak dokumen, dan tidak ada respon dari printer meskipun printer secara fisik menyala dan pengguna lain dapat mencetak.
+Langkah Perbaikan:
+1. Buka Settings > Bluetooth & devices > Printers & scanners (atau Control Panel > Devices and Printers). Klik kanan pada printer yang bermasalah, pilih "See what's printing", lalu pada menu Printer, hapus centang "Use Printer Offline" jika aktif.
+2. Klik kanan printer yang sama, pilih "Printer properties", buka tab "Ports". Pastikan port yang digunakan adalah port TCP/IP dengan alamat IP yang benar (biasanya format 10.x.x.x atau 192.168.x.x). Jika port salah, tambahkan port baru dengan alamat IP yang diketahui.
+3. Buka Command Prompt sebagai administrator, ketik `ping [alamat_ip_printer]` untuk memastikan konektivitas ke printer. Jika gagal, periksa apakah kabel LAN printer (dari sisi dinding) tersambung dengan baik dan lampu link pada dinding menyala (hanya untuk info, tidak perlu menyentuh).
+4. Restart spooler printer: buka Services.msc, cari "Print Spooler", klik Restart. Setelah itu, coba cetak halaman uji dari Properties printer.
+5. Jika printer tetap offline, buat tiket ke IT Helpdesk dengan menyertakan nama printer, alamat IP (dari port properties), dan hasil ping. Helpdesk akan memeriksa status printer di server cetak atau konfigurasi jaringan.
+
+KATEGORI: PRINTER_STUCK_IN_QUEUE
+Konteks Masalah: Dokumen yang dikirim ke printer tidak keluar, dan antrean cetak (print queue) menunjukkan satu atau beberapa dokumen dengan status "Deleting", "Printing", atau "Error". Dokumen baru tidak dapat ditambahkan karena antrean macet.
+Langkah Perbaikan:
+1. Buka print queue (klik kanan printer > See what's printing). Coba hapus semua dokumen dengan klik kanan pada setiap dokumen > Cancel, atau dari menu Printer > Cancel All Documents.
+2. Jika dokumen tidak dapat dihapus, buka Services.msc, cari "Print Spooler", klik kanan pilih "Stop". Setelah berhenti, buka File Explorer, arahkan ke `C:\Windows\System32\spool\PRINTERS`, hapus semua file di folder tersebut.
+3. Kembali ke Services.msc, klik kanan "Print Spooler" pilih "Start".
+4. Buka kembali print queue dan pastikan sudah kosong. Cetak ulang dokumen dari awal.
+5. Jika antrean kembali macet atau dokumen tidak bisa dihapus meskipun sudah membersihkan spool, buat tiket ke IT Helpdesk dengan menyertakan nama printer, aplikasi yang digunakan saat mencetak, dan screenshot antrean. Helpdesk akan memeriksa driver printer atau konflik aplikasi.
+
+KATEGORI: PRINTER_DRIVER_MISSING
+Konteks Masalah: Printer tidak muncul di daftar printer, atau saat menambah printer muncul error "Driver not available". Pengguna tidak dapat mencetak karena sistem tidak memiliki driver yang sesuai.
+Langkah Perbaikan:
+1. Buka Settings > Printers & scanners, klik "Add device". Biarkan Windows mencari printer. Jika tidak ditemukan, klik "The printer that I want isn't listed".
+2. Pilih opsi "Add a printer using an IP address or hostname", masukkan alamat IP printer jaringan, lalu biarkan Windows mencoba mendeteksi driver.
+3. Jika driver tidak ditemukan secara otomatis, unduh driver printer dari portal IT internal (jika tersedia) atau dari situs resmi vendor menggunakan laptop pribadi, lalu instal driver dengan menjalankan file installer sebagai administrator.
+4. Setelah driver terinstal, tambahkan kembali printer melalui "Add a printer" dengan memilih port TCP/IP yang sesuai.
+5. Jika driver tetap tidak dapat diinstal atau printer tidak muncul, buat tiket ke IT Helpdesk dengan menyertakan model printer, alamat IP, dan versi Windows (klik Win+R, ketik `winver`). Helpdesk akan menyediakan package driver yang sesuai atau melakukan instalasi jarak jauh.
+
+KATEGORI: SCANNER_TIDAK_TERDETEKSI_JARINGAN
+Konteks Masalah: Scanner jaringan (multifungsi) tidak terdeteksi oleh aplikasi scan (seperti Adobe Acrobat, Windows Scan, atau aplikasi vendor). Pesan error "No scanner found" atau "Cannot communicate with scanner".
+Langkah Perbaikan:
+1. Pastikan laptop terhubung ke jaringan kantor yang sama dengan scanner (baik melalui LAN atau Wi-Fi korporat). Coba ping alamat IP scanner dari Command Prompt.
+2. Buka aplikasi scanner resmi dari vendor (contoh: Brother iPrint&Scan, HP Scan) dan periksa apakah scanner muncul. Jika tidak, tambahkan scanner secara manual dengan alamat IP.
+3. Buka Windows Scan (Start > Windows Scan), klik "Add scanner", pilih scanner dari daftar. Jika tidak muncul, klik "Advanced settings" dan masukkan alamat IP scanner.
+4. Periksa apakah firewall Windows atau antivirus memblokir komunikasi scanner. Nonaktifkan sementara firewall pihak ketiga (jika ada) dan uji kembali.
+5. Jika scanner tetap tidak terdeteksi, buat tiket ke IT Helpdesk dengan menyertakan alamat IP scanner, model scanner, dan hasil ping. Helpdesk akan memverifikasi apakah scanner terdaftar di server manajemen perangkat dan memastikan tidak ada isolasi VLAN.
+
+KATEGORI: DEFAULT_PRINTER_BERUBAH
+Konteks Masalah: Setiap kali mencetak, printer yang dipilih berubah secara otomatis ke printer lain (biasanya ke "Microsoft Print to PDF" atau printer lama). Pengguna harus mengganti printer secara manual setiap akan mencetak.
+Langkah Perbaikan:
+1. Buka Settings > Printers & scanners, matikan opsi "Let Windows manage my default printer" (untuk Windows 10/11). Untuk Windows 10, cari di bagian "Printers & scanners" dan nonaktifkan toggle tersebut.
+2. Buka Control Panel > Devices and Printers, klik kanan pada printer yang ingin dijadikan default, pilih "Set as default printer". Pastikan tanda centang hijau muncul.
+3. Hapus semua printer yang tidak digunakan (kecuali yang memang diperlukan) untuk menghindari konflik.
+4. Buka aplikasi Office (Word/Excel), coba cetak, pilih printer yang diinginkan, dan centang opsi "Set as default" jika tersedia di dialog cetak.
+5. Jika default printer masih berubah setelah restart, buat tiket ke IT Helpdesk dengan menyertakan daftar printer yang terpasang dan apakah ada kebijakan Group Policy yang mengelola default printer. Helpdesk akan memeriksa konfigurasi GPO dan registry.
+
+KATEGORI: PRINTER_ERROR_STATUS_PAPER_JAM
+Konteks Masalah: Printer menampilkan status "Error" atau "Paper Jam" pada panel kontrol Windows, meskipun pengguna sudah memeriksa dan tidak ada kertas tersangkut. Cetakan tidak dapat dilanjutkan.
+Langkah Perbaikan:
+1. Pada printer fisik (jika dapat dijangkau), buka semua penutup dan pastikan tidak ada sisa kertas atau benda asing. Periksa area roller dan output tray.
+2. Buka print queue pada Windows, hapus semua dokumen yang tertahan.
+3. Matikan printer secara normal (tekan tombol power), cabut kabel listrik dari dinding (bukan sisi printer), tunggu 30 detik, lalu colokkan kembali dan nyalakan printer.
+4. Setelah printer siap, buka "Printer properties" di Windows, pada tab "Advanced", klik "Print Test Page". Jika berhasil, cetak dokumen normal.
+5. Jika status error tetap muncul atau test page tidak tercetak, buat tiket ke IT Helpdesk dengan menyertakan nama printer, alamat IP, dan kode error yang muncul di panel printer (jika ada). Helpdesk akan berkoordinasi dengan tim infrastruktur untuk reset jarak jauh atau eskalasi ke vendor.
+
+KATEGORI: SCANNER_USB_TIDAK_TERDETEKSI
+Konteks Masalah: Scanner yang terhubung melalui USB tidak terdeteksi oleh sistem. Tidak ada bunyi koneksi saat dicolokkan, dan scanner tidak muncul di Device Manager atau aplikasi scan.
+Langkah Perbaikan:
+1. Cabut kabel USB dari laptop dan colokkan ke port USB yang berbeda (hindari port pada docking station jika memungkinkan). Gunakan kabel USB lain jika tersedia.
+2. Buka Device Manager, cari kategori "Imaging devices" atau "Universal Serial Bus controllers". Jika scanner muncul dengan tanda kuning, klik kanan > Uninstall device, lalu cabut dan colokkan kembali scanner.
+3. Jika scanner tidak muncul sama sekali, coba restart laptop dengan scanner tetap terhubung. Setelah restart, periksa Device Manager kembali.
+4. Pastikan tidak ada mode "Airplane mode" yang mengganggu, dan tidak ada perangkat lunak scanner dari vendor yang menghalangi (misalnya aplikasi scanner lama). Nonaktifkan sementara software scanner pihak ketiga.
+5. Jika scanner tetap tidak terdeteksi, buat tiket ke IT Helpdesk dengan menyertakan model scanner, port USB yang digunakan, dan hasil screenshot Device Manager (terutama bagian USB controllers). Helpdesk akan memeriksa driver atau kemungkinan konflik perangkat.
+
+KATEGORI: PRINTER_JOB_ACCESS_DENIED
+Konteks Masalah: Saat mencetak, muncul pop-up "Access denied" atau "You do not have permission to print". Printer sebelumnya dapat digunakan tanpa kendala. Hal ini sering terjadi setelah perubahan password atau perpindahan grup.
+Langkah Perbaikan:
+1. Log out dari akun Windows, lalu login kembali untuk menyegarkan token akses. Pastikan menggunakan kredensial domain yang aktif.
+2. Buka print queue, klik kanan printer, pilih "Printer properties", buka tab "Security". Pastikan grup "Everyone" atau nama pengguna memiliki izin "Print". Jika tidak, catat konfigurasi.
+3. Jika printer terhubung melalui server cetak (print server), hapus printer dari daftar perangkat, lalu tambahkan kembali dengan mengakses \\printserver\sharename dari File Explorer.
+4. Buka Command Prompt sebagai administrator, jalankan `gpupdate /force` untuk memperbarui kebijakan grup yang mungkin mengatur izin cetak.
+5. Jika akses ditolak tetap terjadi, buat tiket ke IT Helpdesk dengan menyertakan nama printer, server cetak (jika diketahui), dan screenshot tab Security. Helpdesk akan memeriksa keanggotaan grup keamanan dan izin pada print server.
+
+KATEGORI: PRINTER_TIDAK_MENERIMA_PERINTAH_CETAK
+Konteks Masalah: Dokumen dikirim ke printer, tetapi printer tidak merespon. Di print queue, dokumen muncul sebentar lalu menghilang tanpa ada hasil cetak. Tidak ada pesan error.
+Langkah Perbaikan:
+1. Buka Event Viewer (eventvwr.msc), navigasi ke Windows Logs > Application, filter dengan sumber "PrintService". Cari event ID 10, 20, 21 untuk melihat detail error cetak.
+2. Pastikan driver printer yang digunakan sesuai dengan model. Buka Printer properties > Advanced, pilih driver yang benar. Jika ragu, gunakan driver "Universal Print Driver" dari vendor jika tersedia.
+3. Buka Services.msc, pastikan layanan "Print Spooler" berjalan dan status startup "Automatic". Restart layanan tersebut.
+4. Coba cetak dari aplikasi berbeda (Notepad atau WordPad) untuk memastikan bukan masalah aplikasi sumber.
+5. Jika cetakan tetap tidak muncul, buat tiket ke IT Helpdesk dengan menyertakan event log print service, nama printer, dan aplikasi yang digunakan. Helpdesk akan menganalisis spooler log dan konfigurasi driver.
+
+KATEGORI: SCANNER_ERROR_CANNOT_COMMUNICATE
+Konteks Masalah: Saat memulai scan, aplikasi scanner menampilkan pesan "Cannot communicate with scanner", "Scanner is busy", atau "Scanner not ready". Scanner sebelumnya berfungsi normal.
+Langkah Perbaikan:
+1. Matikan scanner (tekan tombol power), tunggu 30 detik, lalu nyalakan kembali. Tunggu hingga inisialisasi selesai (bunyi atau lampu siap).
+2. Jika scanner adalah perangkat multifungsi (printer+scanner), coba cetak halaman uji dari printer tersebut untuk memastikan koneksi jaringan berfungsi.
+3. Pada aplikasi scanner, pilih opsi "Reset" atau "Reconnect". Jika menggunakan aplikasi vendor, hapus scanner dari daftar perangkat lalu tambahkan kembali dengan alamat IP atau melalui USB.
+4. Buka Device Manager, cari scanner di kategori "Imaging devices". Jika ada tanda seru, klik kanan > Update driver. Jika tidak ada, klik "Scan for hardware changes".
+5. Jika error tetap muncul, buat tiket ke IT Helpdesk dengan menyertakan model scanner, metode koneksi (USB/LAN/IP), dan aplikasi yang digunakan. Helpdesk akan memeriksa status koneksi scanner dan kemungkinan ada proses scan lain yang mengunci perangkat.
+
+KATEGORI: DUAL_MONITOR_TIDAK_TERDETEKSI
+Konteks Masalah: Laptop yang terhubung ke monitor eksternal (melalui HDMI, DisplayPort, atau docking station) tidak mendeteksi monitor kedua. Layar hanya menampilkan laptop, dan di pengaturan tampilan tidak ada opsi "Extend" atau "Duplicate".
+Langkah Perbaikan:
+1. Tekan tombol Windows + P, pilih "Extend" atau "Duplicate". Jika tidak ada perubahan, lanjut ke langkah berikut.
+2. Buka Settings > System > Display, klik "Detect" di bagian Multiple displays. Tunggu beberapa detik.
+3. Lepaskan kabel video dari laptop/docking station, tunggu 10 detik, lalu colokkan kembali. Jika menggunakan docking, coba colokkan langsung ke port HDMI laptop untuk mengeliminasi masalah docking.
+4. Buka Device Manager, klik kanan pada "Display adapters", pilih "Scan for hardware changes". Jika monitor eksternal muncul di kategori "Monitors", pastikan driver monitor tidak bermasalah.
+5. Jika monitor tetap tidak terdeteksi, buat tiket ke IT Helpdesk dengan menyertakan model laptop, tipe docking (jika digunakan), jenis kabel/konektor, dan hasil dari Device Manager. Helpdesk akan memeriksa driver grafis dan kemungkinan konflik resolusi.
+
+KATEGORI: MONITOR_EKSTERNAL_FLICKERING
+Konteks Masalah: Monitor eksternal menyala tetapi bergantian gelap dan terang (flickering) atau menampilkan "No Signal" secara acak. Kabel sudah terpasang dengan kencang.
+Langkah Perbaikan:
+1. Buka Settings > System > Display > Advanced display, catat refresh rate yang digunakan. Coba turunkan refresh rate (misal dari 144Hz ke 60Hz) melalui "Display adapter properties" > Monitor tab.
+2. Ganti resolusi tampilan ke resolusi yang lebih rendah (misal 1920x1080 ke 1280x720) untuk menguji apakah flickering berkurang.
+3. Lepaskan kabel video dan bersihkan port laptop/docking dari debu menggunakan udara bertekanan (compressed air) jika tersedia. Pastikan tidak ada pin bengkok.
+4. Gunakan kabel video yang berbeda (HDMI ke DisplayPort) jika memungkinkan, atau coba port lain pada docking/laptop.
+5. Jika flickering masih terjadi, buat tiket ke IT Helpdesk dengan menyertakan model monitor, kabel yang digunakan, dan apakah flickering terjadi di semua aplikasi atau hanya saat rendering tertentu. Helpdesk akan menguji dengan konfigurasi hardware alternatif.
+
+KATEGORI: HEADSET_MIC_TIDAK_BERFUNGSI
+Konteks Masalah: Headset dengan mikrofon (jack 3.5mm atau USB) terdeteksi sebagai output audio, tetapi mikrofon tidak berfungsi di aplikasi rapat (Teams, Zoom, Google Meet). Suara masuk dari headset terdengar, tetapi orang lain tidak mendengar suara pengguna.
+Langkah Perbaikan:
+1. Buka Settings > System > Sound. Pada bagian "Input", pastikan mikrofon headset dipilih sebagai perangkat input. Uji dengan "Test your microphone". Jika tidak ada suara, lanjut ke langkah 2.
+2. Periksa apakah headset memiliki tombol mute fisik pada kabel atau earcup. Pastikan mute tidak aktif.
+3. Buka Device Manager, cari "Audio inputs and outputs", klik kanan pada microphone headset, pilih "Uninstall device", lalu restart laptop. Driver akan terinstal ulang.
+4. Untuk headset jack 3.5mm, pastikan colokan terpasang sepenuhnya. Jika laptop memiliki jack combo (headphone+microphone), gunakan splitter jika diperlukan.
+5. Jika mikrofon tetap tidak berfungsi, buat tiket ke IT Helpdesk dengan menyertakan jenis headset, metode koneksi (USB/jack), dan hasil tes dari Settings > Sound. Helpdesk akan memeriksa driver audio dan kemungkinan konflik aplikasi.
+
+KATEGORI: DOCKING_STATION_ERROR
+Konteks Masalah: Docking station yang terhubung ke laptop tidak mentransfer video ke monitor, port USB tidak berfungsi, atau laptop tidak mengisi daya. Lampu indikator pada docking station menyala atau berkedip.
+Langkah Perbaikan:
+1. Lepaskan semua kabel dari docking station (termasuk kabel power). Cabut kabel USB-C/Thunderbolt dari laptop. Tunggu 30 detik.
+2. Colokkan kembali kabel power docking station ke sumber listrik. Pastikan lampu indikator menyala stabil.
+3. Sambungkan kabel USB-C/Thunderbolt ke laptop. Jika laptop tidak merespon, coba port USB-C lain pada laptop.
+4. Buka Device Manager, klik "View" > "Show hidden devices", cari kategori "Universal Serial Bus controllers" dan "Network adapters". Hapus semua perangkat yang berwarna abu-abu atau terkait docking (contoh: "USB Billboard Device"), lalu restart laptop.
+5. Jika docking masih tidak berfungsi, buat tiket ke IT Helpdesk dengan menyertakan model laptop, model docking, dan apakah lampu indikator menyala. Helpdesk akan memeriksa pembaruan firmware docking dan driver Thunderbolt.
+
+KATEGORI: KEYBOARD_EKSTERNAL_TIDAK_MERESPON
+Konteks Masalah: Keyboard eksternal (USB atau wireless) yang terhubung ke laptop tidak berfungsi sama sekali. Tidak ada tombol yang merespon, meskipun lampu indikator pada keyboard menyala (jika ada).
+Langkah Perbaikan:
+1. Jika keyboard USB, cabut dan colokkan ke port USB lain di laptop (hindari port docking). Coba dengan kabel USB lain.
+2. Untuk keyboard wireless (Bluetooth atau dongle), ganti baterai. Jika menggunakan dongle, cabut dan colokkan kembali. Jika Bluetooth, buka Settings > Bluetooth & devices, hapus perangkat lalu pasangkan ulang.
+3. Buka Device Manager, cari kategori "Keyboards". Jika ada tanda seru, klik kanan > Uninstall device, lalu restart laptop. Driver akan terinstal ulang.
+4. Coba gunakan keyboard eksternal pada laptop lain untuk memastikan keyboard itu sendiri berfungsi.
+5. Jika keyboard tidak terdeteksi atau tetap tidak merespon, buat tiket ke IT Helpdesk dengan menyertakan jenis keyboard, metode koneksi, dan hasil uji coba di perangkat lain. Helpdesk akan memeriksa driver USB dan kemungkinan konflik perangkat.
+
+KATEGORI: MOUSE_EKSTERNAL_LAGGING
+Konteks Masalah: Mouse eksternal (wireless atau USB) bergerak tidak lancar (lagging), terputus-putus, atau responsnya lambat. Mouse internal (touchpad) berfungsi normal.
+Langkah Perbaikan:
+1. Jika mouse wireless, ganti baterai. Pastikan dongle terpasang di port USB yang tidak terhalang benda logam. Gunakan port USB 2.0 jika tersedia.
+2. Buka Settings > Bluetooth & devices > Mouse, atur kecepatan pointer (pointer speed) dan coba nonaktifkan "Enhance pointer precision".
+3. Buka Device Manager, cari "Mice and other pointing devices". Klik kanan pada mouse yang bermasalah, pilih "Uninstall device", lalu restart laptop.
+4. Periksa apakah ada interferensi dari perangkat nirkabel lain (seperti headset Bluetooth). Jauhkan dongle dari port USB 3.0 yang dapat menimbulkan interferensi.
+5. Jika lagging masih terjadi, buat tiket ke IT Helpdesk dengan menyertakan model mouse, metode koneksi, dan apakah lagging terjadi di semua permukaan atau hanya tertentu. Helpdesk akan memeriksa driver dan konfigurasi daya USB.
+
+KATEGORI: BLUETOOTH_DEVICE_TIDAK_KONEK
+Konteks Masalah: Perangkat Bluetooth (headset, mouse, keyboard) tidak dapat terhubung atau sering putus sambungan. Perangkat sudah terdeteksi saat pairing tetapi gagal saat koneksi.
+Langkah Perbaikan:
+1. Buka Settings > Bluetooth & devices, hapus perangkat yang bermasalah (Remove device). Matikan Bluetooth, lalu nyalakan kembali.
+2. Pastikan perangkat Bluetooth dalam mode pairing (biasanya tekan tombol pairing hingga lampu berkedip). Coba pasangkan ulang.
+3. Buka Device Manager, pada kategori "Bluetooth", klik kanan pada adapter Bluetooth (biasanya "Intel Wireless Bluetooth" atau sejenis), pilih "Disable device", tunggu 10 detik, lalu "Enable device".
+4. Jalankan troubleshooter Bluetooth: Settings > System > Troubleshoot > Other troubleshooters > Bluetooth > Run.
+5. Jika masih gagal, buat tiket ke IT Helpdesk dengan menyertakan jenis perangkat Bluetooth, model laptop, dan apakah perangkat pernah terhubung sebelumnya. Helpdesk akan memeriksa driver Bluetooth dan kebijakan manajemen daya.
+
+KATEGORI: USB_FLASH_DRIVE_TIDAK_TERBACA
+Konteks Masalah: Flash drive USB dicolokkan ke laptop, tetapi tidak muncul di File Explorer. Lampu pada flash drive (jika ada) menyala, tetapi tidak ada notifikasi dari sistem.
+Langkah Perbaikan:
+1. Colokkan flash drive ke port USB lain pada laptop. Hindari port pada docking station jika memungkinkan.
+2. Buka Disk Management (diskmgmt.msc). Cari disk yang menunjukkan "Removable" tetapi tanpa huruf drive. Klik kanan pada partisi, pilih "Change Drive Letter and Paths", tambahkan huruf drive.
+3. Jika flash drive tidak muncul di Disk Management, coba gunakan flash drive lain untuk memastikan port USB berfungsi. Jika port berfungsi, kemungkinan flash drive rusak.
+4. Buka Device Manager, di kategori "Universal Serial Bus controllers", klik kanan pada "USB Mass Storage Device", pilih "Uninstall device", lalu cabut dan colokkan kembali flash drive.
+5. Jika flash drive masih tidak terbaca, buat tiket ke IT Helpdesk dengan menyertakan merek flash drive, ukuran kapasitas, dan apakah flash drive terbaca di perangkat lain. Helpdesk akan memeriksa kebijakan USB endpoint protection.
+
+KATEGORI: WEBCAM_TIDAK_TERDETEKSI
+Konteks Masalah: Webcam internal atau eksternal tidak berfungsi di aplikasi video conference. Aplikasi menampilkan layar hitam atau pesan "Camera not found". Kamera sebelumnya dapat digunakan.
+Langkah Perbaikan:
+1. Buka Settings > Privacy & security > Camera. Pastikan "Camera access" diaktifkan dan aplikasi yang digunakan (Teams, Zoom) memiliki izin.
+2. Untuk webcam eksternal USB, cabut dan colokkan kembali ke port lain. Buka Device Manager, di kategori "Cameras", klik kanan pada webcam, pilih "Uninstall device", lalu restart laptop.
+3. Untuk webcam internal, buka Device Manager, di kategori "Cameras" atau "Imaging devices", periksa apakah ada tanda seru. Jika ada, klik kanan > Update driver.
+4. Coba gunakan aplikasi "Camera" bawaan Windows untuk memastikan webcam berfungsi secara sistem.
+5. Jika webcam tetap tidak terdeteksi, buat tiket ke IT Helpdesk dengan menyertakan model laptop (untuk internal) atau model webcam (untuk eksternal), serta aplikasi yang digunakan. Helpdesk akan memeriksa driver dan kebijakan grup terkait privasi kamera.
+
+KATEGORI: LAPTOP_OVERHEATING_FAN_NOISE
+Konteks Masalah: Laptop mengeluarkan suara kipas yang sangat keras, terasa panas di bagian bawah, dan kinerja menurun. Tidak ada aplikasi berat yang berjalan.
+Langkah Perbaikan:
+1. Simpan semua pekerjaan, lalu restart laptop untuk membersihkan proses yang menghabiskan sumber daya.
+2. Buka Task Manager, klik tab "Processes", urutkan berdasarkan CPU dan Memory. Tutup aplikasi yang tidak diperlukan dan menggunakan sumber daya tinggi.
+3. Pastikan laptop diletakkan di permukaan yang keras dan datar, tidak di atas bantal atau kain yang dapat menghalangi ventilasi.
+4. Buka Settings > System > Power & battery, pilih mode power "Best power efficiency" atau "Balanced" untuk mengurangi beban termal.
+5. Jika suara kipas tetap keras dan laptop mati sendiri karena panas, buat tiket ke IT Helpdesk dengan menyertakan model laptop dan apakah debu pada ventilasi terlihat. Helpdesk akan melakukan pembersihan internal secara terpusat atau mengganti unit jika diperlukan.
+
+KATEGORI: OUTLOOK_DISCONNECTED
+Konteks Masalah: Microsoft Outlook menampilkan status "Disconnected" atau "Need Password" di pojok kanan bawah. Pengguna tidak dapat mengirim atau menerima email, dan sering muncul prompt untuk memasukkan kredensial yang tidak berhasil.
+Langkah Perbaikan:
+1. Tutup Outlook sepenuhnya, lalu buka Control Panel > User Accounts > Credential Manager. Pilih "Windows Credentials", hapus semua entri yang mengandung "Outlook", "MicrosoftOffice", atau alamat email perusahaan.
+2. Buka kembali Outlook. Jika diminta kredensial, masukkan alamat email dan password domain. Centang "Remember my credentials".
+3. Buka File > Office Account > Sign Out, lalu Sign In kembali dengan akun perusahaan.
+4. Periksa apakah VPN aktif (jika bekerja dari luar). Jika menggunakan VPN, disconnect dan reconnect VPN, lalu buka ulang Outlook.
+5. Jika masih disconnected, buat tiket ke IT Helpdesk dengan menyertakan screenshot status di pojok kanan bawah Outlook dan hasil dari cek koneksi internet. Helpdesk akan memeriksa status autentikasi Exchange Online atau server on-premise.
+
+KATEGORI: OUTLOOK_OST_FILE_CORRUPT
+Konteks Masalah: Outlook gagal membuka atau sering crash dengan pesan "Cannot start Microsoft Outlook. Cannot open the Outlook window. The set of folders cannot be opened. The file [path] is not an Outlook data file (.ost)." atau muncul error "Your Outlook data file cannot be configured".
+Langkah Perbaikan:
+1. Tutup Outlook. Buka Control Panel > Mail (Microsoft Outlook) > Show Profiles. Pilih profil yang bermasalah, klik Properties > Data Files.
+2. Catat lokasi file OST (biasanya di C:\Users\%username%\AppData\Local\Microsoft\Outlook). Tutup jendela.
+3. Buka File Explorer, navigasi ke folder tersebut, dan rename file .ost menjadi .old (contoh: nama_file.ost menjadi nama_file.ost.old).
+4. Buka kembali Outlook. Outlook akan membuat file OST baru dan melakukan sinkronisasi ulang dari server.
+5. Jika proses sinkronisasi gagal atau OST baru tetap corrupt, buat tiket ke IT Helpdesk dengan menyertakan ukuran file OST lama dan pesan error. Helpdesk akan memverifikasi integritas mailbox di server.
+
+KATEGORI: OUTLOOK_SEARCH_TIDAK_BERFUNGSI
+Konteks Masalah: Saat menggunakan fitur pencarian di Outlook, tidak ada hasil yang muncul atau hasil yang muncul tidak lengkap. Indeks pencarian Windows tidak menunjukkan progres atau menunjukkan "Search results may be incomplete because items are still being indexed".
+Langkah Perbaikan:
+1. Buka Outlook, klik File > Options > Search. Klik "Indexing Options". Pada jendela Indexing Options, klik "Advanced".
+2. Klik "Rebuild" untuk membangun ulang indeks. Proses ini dapat memakan waktu tergantung ukuran mailbox.
+3. Pastikan folder lokasi file OST tidak terkecuali dari indeks. Di Indexing Options, klik "Modify" dan pastikan folder Outlook berada di daftar lokasi yang diindeks.
+4. Tutup Outlook, buka Control Panel > Mail > Show Profiles, pilih profil, klik Properties > Data Files, pastikan file OST tidak berada di lokasi yang tidak diindeks (misal network drive).
+5. Jika setelah rebuild indeks pencarian tetap tidak berfungsi, buat tiket ke IT Helpdesk dengan menyertakan versi Outlook dan ukuran mailbox. Helpdesk akan memeriksa apakah pengguna memiliki akses ke folder bersama yang menyebabkan konflik indeks.
+
+KATEGORI: OUTLOOK_MAILBOX_FULL
+Konteks Masalah: Saat mencoba mengirim email, Outlook menampilkan pesan "Your mailbox is full" atau "Cannot send item. Your mailbox is over its size limit." Pengguna juga tidak dapat menerima email baru.
+Langkah Perbaikan:
+1. Buka Folder "Deleted Items", klik kanan dan pilih "Empty Folder". Lakukan hal yang sama pada folder "Junk Email".
+2. Cari item terbesar dengan klik folder "Inbox", lalu di kolom pencarian ketik "size:>5000" untuk menampilkan email berukuran lebih dari 5 MB. Hapus atau pindahkan email besar yang tidak diperlukan.
+3. Buat folder arsip lokal (PST) dengan cara File > Info > Tools > Clean Up Old Items. Pilih opsi untuk memindahkan item yang lebih lama dari tanggal tertentu ke file PST baru.
+4. Kosongkan folder "Sync Issues" jika ada (folder ini sering menyimpan konflik sinkronisasi yang memakan ruang).
+5. Jika setelah pembersihan mailbox masih penuh, buat tiket ke IT Helpdesk dengan menyertakan ukuran mailbox saat ini (lihat di File > Info > Mailbox Cleanup) dan kebutuhan untuk peningkatan kuota. Helpdesk akan mengajukan permintaan penambahan kapasitas atau memandu arsip ke cloud archive.
+
+KATEGORI: OUTLOOK_SEND_RECEIVE_ERROR
+Konteks Masalah: Outlook menampilkan pesan error "Task 'username@company.com - Sending' reported error (0x80042109) : 'Outlook cannot connect to your outgoing (SMTP) email server'" atau error serupa. Pengguna tidak dapat mengirim email, tetapi menerima email masih berjalan.
+Langkah Perbaikan:
+1. Buka File > Info > Account Settings > Account Settings. Pilih akun perusahaan, klik "Change". Pastikan server keluar (Outgoing server) menggunakan port dan enkripsi yang benar (biasanya SMTP 587 dengan TLS atau 465 dengan SSL).
+2. Klik "More Settings" > tab "Outgoing Server", centang "My outgoing server (SMTP) requires authentication" dan pilih "Use same settings as my incoming mail server".
+3. Klik tab "Advanced", pastikan port incoming (IMAP 993 dengan SSL atau Exchange) dan outgoing sesuai kebijakan IT.
+4. Nonaktifkan sementara antivirus yang memindai email keluar (jika ada), kemudian uji kirim email.
+5. Jika error tetap muncul, buat tiket ke IT Helpdesk dengan menyertakan screenshot error lengkap dan konfigurasi server (tanpa password). Helpdesk akan memeriksa apakah akun diblokir karena aktivitas mencurigakan atau konflik firewall.
+
+KATEGORI: OUTLOOK_PROFILE_CORRUPT
+Konteks Masalah: Outlook sering crash saat startup, muncul wizard konfigurasi ulang, atau pengaturan akun hilang. Pesan error "Your profile cannot be configured" atau "Cannot start Microsoft Outlook".
+Langkah Perbaikan:
+1. Tutup Outlook. Buka Control Panel > Mail (Microsoft Outlook) > Show Profiles.
+2. Pilih profil yang bermasalah, klik "Remove" (data tetap aman di server). Klik "Add" untuk membuat profil baru dengan nama yang berbeda.
+3. Pada wizard penambahan akun, masukkan alamat email dan password. Biarkan Outlook mengonfigurasi secara otomatis.
+4. Setelah profil baru berhasil dibuat, pada jendela "Mail", ubah "Always use this profile" menjadi profil baru.
+5. Jika Outlook gagal membuka profil baru, buat tiket ke IT Helpdesk dengan menyertakan pesan error dan nama profil lama. Helpdesk akan memverifikasi integritas akun di Exchange dan membersihkan entri registry yang tersisa.
+
+KATEGORI: TEAMS_CACHE_ERROR
+Konteks Masalah: Microsoft Teams tidak dapat login, menampilkan layar putih, atau fitur seperti chat dan file tidak dapat dimuat. Pesan error umum: "We're having trouble signing you in" atau aplikasi Teams terus berputar.
+Langkah Perbaikan:
+1. Klik kanan ikon Teams di system tray, pilih "Quit". Pastikan proses Teams tidak berjalan di Task Manager (tab Processes, cari Microsoft Teams).
+2. Buka File Explorer, navigasi ke `%appdata%\Microsoft\Teams`. Hapus isi folder tersebut (seluruh file dan subfolder). Jangan khawatir, ini hanya cache lokal.
+3. Buka `%appdata%\Microsoft\Teams\Cache`, `%appdata%\Microsoft\Teams\blob_storage`, `%appdata%\Microsoft\Teams\databases`, `%appdata%\Microsoft\Teams\GPUcache`, `%appdata%\Microsoft\Teams\IndexedDB`, `%appdata%\Microsoft\Teams\Local Storage`, `%appdata%\Microsoft\Teams\tmp` dan hapus seluruh isinya.
+4. Buka kembali Microsoft Teams. Aplikasi akan melakukan inisialisasi ulang dan meminta login.
+5. Jika Teams masih error setelah clear cache, buat tiket ke IT Helpdesk dengan menyertakan versi Teams (klik foto profil > About > Version) dan apakah error terjadi pada versi desktop atau web. Helpdesk akan memeriksa status akun di Teams Admin Center.
+
+KATEGORI: TEAMS_KAMERA_TIDAK_TERBACA_APLIKASI
+Konteks Masalah: Di dalam rapat Microsoft Teams atau Zoom, kamera tidak menampilkan video (layar hitam) atau opsi kamera berwarna abu-abu, meskipun kamera berfungsi di aplikasi Camera bawaan Windows.
+Langkah Perbaikan:
+1. Pastikan tidak ada aplikasi lain yang sedang menggunakan kamera (misalnya aplikasi Camera atau aplikasi conferencing lain). Tutup semua aplikasi yang mungkin mengakses kamera.
+2. Buka Teams, klik foto profil > Settings > Devices. Pada bagian "Camera", pilih kamera yang benar (jika ada lebih dari satu). Jika tidak ada pilihan, klik "Reset camera settings" jika tersedia.
+3. Buka Settings > Privacy & security > Camera. Pastikan "Camera access" diaktifkan dan Microsoft Teams (atau Zoom) diizinkan mengakses kamera.
+4. Buka Device Manager, di kategori "Cameras", klik kanan pada kamera, pilih "Disable device", lalu "Enable device". Restart aplikasi rapat.
+5. Jika kamera tetap tidak terbaca di Teams/Zoom, buat tiket ke IT Helpdesk dengan menyertakan model laptop/webcam, versi aplikasi, dan apakah kamera berfungsi di browser (misal web-based test). Helpdesk akan memeriksa driver dan kebijakan grup.
+
+KATEGORI: TEAMS_SHARE_SCREEN_BLANK
+Konteks Masalah: Saat berbagi layar (share screen) di Microsoft Teams atau Zoom, peserta lain melihat layar hitam atau tampilan berhenti (freeze), meskipun presenter melihat tampilan normal.
+Langkah Perbaikan:
+1. Hentikan berbagi layar, lalu mulai ulang berbagi. Pilih "Share screen" dan pastikan memilih layar yang benar (bukan "Window" jika ingin full screen).
+2. Nonaktifkan akselerasi grafis (hardware acceleration). Di Teams: klik foto profil > Settings > General, di bagian Application, matikan "Disable hardware acceleration". Restart Teams.
+3. Untuk Zoom: buka Settings > Video > Advanced, matikan "Use hardware acceleration for video processing" dan "Use hardware acceleration for sending video".
+4. Pastikan driver grafis diperbarui. Buka Device Manager > Display adapters, klik kanan > Update driver > Search automatically.
+5. Jika masalah berbagi layar tetap ada, buat tiket ke IT Helpdesk dengan menyertakan apakah hanya aplikasi tertentu yang blank, serta spesifikasi laptop (RAM, GPU). Helpdesk akan memeriksa driver grafis dan konfigurasi virtual desktop.
+
+KATEGORI: ZOOM_AUDIO_NO_MICROPHONE
+Konteks Masalah: Di Zoom, mikrofon tidak menangkap suara. Pesan "No microphone detected" atau peserta lain tidak mendengar suara, meskipun mikrofon terdeteksi di pengaturan suara Windows.
+Langkah Perbaikan:
+1. Di Zoom, klik ikon mikrofon di pojok kiri bawah, pastikan tidak mute. Klik panah di samping ikon mikrofon, pilih perangkat mikrofon yang benar.
+2. Buka Settings > System > Sound > Input, pastikan perangkat input yang sama dipilih. Uji dengan "Test your microphone".
+3. Buka Settings > Privacy & security > Microphone, pastikan akses mikrofon diaktifkan dan Zoom diizinkan.
+4. Jika mikrofon USB, cabut dan colokkan ke port lain. Coba gunakan headset dengan jack 3.5mm untuk memverifikasi apakah masalah pada perangkat.
+5. Jika mikrofon tetap tidak berfungsi di Zoom, buat tiket ke IT Helpdesk dengan menyertakan model mikrofon, versi Zoom, dan hasil test microphone di Windows. Helpdesk akan memeriksa driver audio dan kemungkinan konflik aplikasi.
+
+KATEGORI: ONEDRIVE_SYNC_STUCK
+Konteks Masalah: OneDrive menunjukkan status "Processing changes" atau "Sync pending" dalam waktu lama, tidak ada progres sinkronisasi. File baru tidak muncul di cloud atau sebaliknya.
+Langkah Perbaikan:
+1. Klik kanan ikon OneDrive di system tray, pilih "Pause syncing" selama 2 jam, lalu "Resume syncing" untuk menyegarkan sesi.
+2. Buka OneDrive Settings (klik kanan ikon OneDrive > Settings). Di tab "Account", klik "Unlink this PC". Jangan khawatir, file tetap aman di cloud. Setelah unlink, ikuti wizard untuk mengatur ulang sinkronisasi.
+3. Buka Task Manager, hentikan proses "OneDrive.exe". Buka Start, ketik "OneDrive" dan jalankan kembali.
+4. Periksa apakah ada file dengan nama terlalu panjang atau karakter tidak didukung. Cari di folder OneDrive lokal untuk file dengan nama mengandung karakter seperti `* : ? " < > |`. Rename file tersebut.
+5. Jika sinkronisasi tetap stuck, buat tiket ke IT Helpdesk dengan menyertakan pesan error di tab "Activity Center" (klik ikon cloud, lalu klik lingkaran i) dan perkiraan jumlah file yang disinkronkan. Helpdesk akan menganalisis log sinkronisasi.
+
+KATEGORI: ONEDRIVE_FILE_ICON_RED_CROSS
+Konteks Masalah: Ikon file atau folder OneDrive menampilkan tanda silang merah (X), file tidak dapat diakses, dan sinkronisasi tidak berjalan. Pesan error "This file is not synced" atau "OneDrive is not running".
+Langkah Perbaikan:
+1. Pastikan OneDrive berjalan. Jika ikon cloud tidak ada di system tray, cari "OneDrive" di Start dan jalankan.
+2. Klik kanan ikon OneDrive, pilih "View online" untuk memverifikasi apakah file ada di cloud. Jika file ada, coba salin ulang file ke folder lokal.
+3. Buka Settings > Account, pastikan akun yang digunakan adalah akun perusahaan. Jika tidak, klik "Add account" dan masuk dengan akun perusahaan.
+4. Periksa kuota penyimpanan OneDrive. Klik ikon OneDrive, lalu klik "Manage storage". Jika kuota penuh, kosongkan Recycle Bin online melalui browser.
+5. Jika tanda silang merah masih muncul, buat tiket ke IT Helpdesk dengan menyertakan nama file/folder yang bermasalah dan apakah hanya file tertentu yang error. Helpdesk akan memeriksa izin file dan status sinkronisasi di backend.
+
+KATEGORI: ONEDRIVE_CONFLICT_FILE
+Konteks Masalah: File OneDrive memiliki nama seperti "Document (username's conflicted copy 2024-01-01).docx" atau muncul dua versi file dengan nama serupa. Pengguna tidak yakin versi mana yang terbaru.
+Langkah Perbaikan:
+1. Buka kedua file dan bandingkan konten untuk menentukan versi yang benar. Simpan versi yang benar dengan nama file asli.
+2. Hapus file yang tidak diperlukan (conflicted copy). Kosongkan Recycle Bin OneDrive (online) untuk memastikan tidak memakan kuota.
+3. Untuk mencegah konflik di masa mendatang, pastikan tidak ada dua perangkat yang mengedit file yang sama secara offline. Buka OneDrive Settings > Office, centang "Use Office applications to sync Office files that I open" (mengaktifkan kolaborasi real-time).
+4. Periksa riwayat versi file dengan klik kanan file di OneDrive online > Version history, untuk memulihkan versi yang diinginkan.
+5. Jika konflik sering terjadi, buat tiket ke IT Helpdesk dengan menyertakan nama file dan apakah konflik terjadi saat kolaborasi bersama. Helpdesk akan memeriksa pengaturan co-authoring dan kebijakan OneDrive.
+
+KATEGORI: ONEDRIVE_SIGN_IN_ERROR
+Konteks Masalah: OneDrive tidak dapat login dengan pesan "We couldn't sign you in" atau "An error occurred while signing you in". Aplikasi menampilkan layar login berulang tanpa berhasil.
+Langkah Perbaikan:
+1. Buka Control Panel > Credential Manager > Windows Credentials, hapus semua entri yang mengandung "OneDrive", "MicrosoftOffice", atau "adal".
+2. Buka Settings > Accounts > Access work or school, pilih akun perusahaan, klik "Disconnect". Jangan khawatir, ini hanya akun yang terhubung, bukan menghapus data.
+3. Buka aplikasi OneDrive, ikuti wizard login ulang dengan memasukkan email perusahaan.
+4. Buka browser, masuk ke portal office.com dengan akun perusahaan untuk memastikan tidak ada kebijakan akses bersyarat yang mengharuskan MFA.
+5. Jika gagal login, buat tiket ke IT Helpdesk dengan menyertakan pesan error lengkap (screenshot) dan apakah browser dapat mengakses portal perusahaan. Helpdesk akan memeriksa status akun di Azure AD dan kebijakan Conditional Access.
+
+KATEGORI: EXCEL_NOT_RESPONDING_SAAT_BUKA_FILE_BESAR
+Konteks Masalah: Microsoft Excel berhenti merespon (Not Responding) saat membuka file berukuran besar (lebih dari 10 MB) atau file yang memiliki banyak formula, pivot, dan koneksi eksternal. Laptop menjadi lambat atau perlu dihentikan paksa.
+Langkah Perbaikan:
+1. Buka Excel dalam mode aman (safe mode) untuk menghindari add-in. Tekan Win + R, ketik `excel /safe`, lalu buka file yang bermasalah.
+2. Jika file terbuka di safe mode, buka File > Options > Add-ins, kelola add-in COM, nonaktifkan semua add-in pihak ketiga. Restart Excel normal.
+3. Buka File > Options > Advanced, di bagian "General", nonaktifkan "Enable multi-threaded processing" sementara untuk mengurangi beban komputasi.
+4. Buka File > Options > Trust Center > Trust Center Settings > Protected View, nonaktifkan sementara ketiga opsi Protected View untuk menguji (jangan lupa aktifkan kembali setelah selesai).
+5. Jika Excel tetap not responding, buat tiket ke IT Helpdesk dengan menyertakan ukuran file, jenis konten (formula, pivot, koneksi), dan versi Office. Helpdesk akan menganalisis kemungkinan kerusakan file atau merekomendasikan migrasi ke format data yang lebih efisien.
+
+KATEGORI: WORD_MACRO_DIBLOKIR
+Konteks Masalah: Saat membuka dokumen Word yang berisi makro (biasanya file .docm), muncul pesan keamanan "Macros have been disabled" dan pengguna tidak dapat menjalankan makro yang diperlukan untuk pekerjaan.
+Langkah Perbaikan:
+1. Pastikan file berasal dari sumber yang terpercaya. Jika file berasal dari internal perusahaan, simpan file di lokasi yang dipercaya (misalnya folder OneDrive yang disinkronkan, bukan folder Downloads).
+2. Buka Word, klik File > Options > Trust Center > Trust Center Settings > Macro Settings. Pilih "Enable all macros" (hanya untuk sesi ini) atau "Disable all macros with notification".
+3. Di Trust Center, pilih "Trusted Locations", klik "Add new location", tambahkan folder tempat file disimpan (contoh: `C:\Users\%username%\OneDrive - Perusahaan\`).
+4. Klik kanan file di File Explorer, pilih Properties. Di bagian General, centang "Unblock" jika ada peringatan keamanan dari internet.
+5. Jika makro tetap diblokir, buat tiket ke IT Helpdesk dengan menyertakan file yang bermasalah (jika rahasia, cukup nama file) dan apakah makro merupakan kebutuhan bisnis. Helpdesk akan memeriksa kebijakan grup Office yang menonaktifkan makro secara global.
+
+KATEGORI: POWERPOINT_CRASH_SAAT_OPEN
+Konteks Masalah: PowerPoint tiba-tiba crash atau menutup sendiri saat membuka presentasi, terutama file dengan embedded video, transisi kompleks, atau ukuran besar.
+Langkah Perbaikan:
+1. Buka PowerPoint dalam safe mode (tekan Ctrl sambil klik ikon PowerPoint, atau jalankan `powerpnt /safe`). Buka file yang bermasalah. Jika berhasil, kemungkinan penyebab add-in.
+2. Buka File > Options > Add-ins, kelola add-in COM, nonaktifkan semua add-in pihak ketiga (seperti add-in presentasi atau konferensi). Restart PowerPoint.
+3. Buka File > Options > Advanced, di bagian "Display", nonaktifkan "Disable hardware graphics acceleration". Restart PowerPoint.
+4. Coba buka file di PowerPoint Online (melalui browser) untuk memverifikasi apakah file rusak. Jika file terbuka di online, simpan salinan baru (.pptx) dan buka di desktop.
+5. Jika PowerPoint masih crash, buat tiket ke IT Helpdesk dengan menyertakan ukuran file, ada tidaknya media (video, audio), dan versi Office. Helpdesk akan memeriksa pembaruan Office dan kemungkinan konflik driver grafis.
+
+KATEGORI: OFFICE_ACTIVATION_ERROR
+Konteks Masalah: Saat membuka aplikasi Office (Word, Excel, Outlook), muncul banner merah "Product Activation Failed" atau "Unlicensed Product". Pengguna kehilangan fitur edit dan hanya dapat membaca dokumen.
+Langkah Perbaikan:
+1. Buka aplikasi Office, klik File > Account. Jika muncul "Need Activation", klik "Activate" dan masukkan kredensial perusahaan.
+2. Buka Command Prompt sebagai administrator, navigasi ke folder Office (biasanya `C:\Program Files\Microsoft Office\Office16`). Jalankan `cscript ospp.vbs /dstatus`. Catat 5 digit terakhir kunci produk.
+3. Jalankan `cscript ospp.vbs /unpkey:[5 digit terakhir]` untuk menghapus kunci, lalu `cscript ospp.vbs /act` untuk aktivasi ulang menggunakan lisensi volume.
+4. Buka Settings > Accounts > Access work or school, pastikan akun perusahaan terhubung. Jika tidak, klik "Connect" dan masuk dengan akun.
+5. Jika aktivasi gagal, buat tiket ke IT Helpdesk dengan menyertakan versi Office (klik File > Account > About Excel), hasil perintah `cscript ospp.vbs /dstatus`, dan apakah pengguna baru saja berganti perangkat. Helpdesk akan memeriksa jumlah lisensi yang tersedia dan melakukan reset aktivasi.
+
+KATEGORI: OFFICE_FILE_RECOVERY
+Konteks Masalah: Setelah Office crash atau mati listrik, dokumen yang belum disimpan tidak muncul secara otomatis saat membuka ulang aplikasi. Pengguna khawatir kehilangan pekerjaan.
+Langkah Perbaikan:
+1. Buka aplikasi Office (Word/Excel), klik File > Info > Manage Document (atau Manage Workbook) > Recover Unsaved Documents.
+2. Arahkan ke folder `C:\Users\%username%\AppData\Local\Microsoft\Office\UnsavedFiles` untuk melihat file sementara. Buka file dan simpan dengan nama baru.
+3. Buka File > Options > Save, catat lokasi "AutoRecover file location". Buka folder tersebut dan cari file dengan ekstensi .asd (untuk Word) atau .xar (Excel). Buka file tersebut.
+4. Jika tidak ditemukan, coba cari file dengan nama ~$ atau .tmp di folder Temporary Files (`%temp%`). Salin dan ubah ekstensi menjadi .docx atau .xlsx.
+5. Jika tidak ada file yang dapat dipulihkan, buat tiket ke IT Helpdesk dengan menyertakan nama file dan waktu kejadian. Helpdesk dapat memeriksa apakah OneDrive atau SharePoint memiliki riwayat versi yang tersimpan.
+
+KATEGORI: SHAREPOINT_SYNC_ERROR
+Konteks Masalah: Sinkronisasi pustaka dokumen SharePoint ke OneDrive mengalami error dengan pesan "We can't sync this library" atau "Sync button grayed out". Pengguna tidak dapat menyinkronkan folder tim.
+Langkah Perbaikan:
+1. Buka browser, akses pustaka SharePoint yang ingin disinkronkan. Klik tombol "Sync" di toolbar. Jika tombol abu-abu, pastikan pustaka tidak melebihi batas sinkronisasi (300.000 item).
+2. Buka OneDrive Settings > Account, klik "Stop sync" pada pustaka yang bermasalah. Tunggu beberapa saat, lalu sync ulang dengan mengakses pustaka di browser dan klik Sync.
+3. Buka File Explorer, navigasi ke folder OneDrive. Pastikan tidak ada file dengan karakter ilegal. Cari folder dengan nama yang mengandung `#`, `%`, `&`, `*`, atau spasi di akhir. Rename jika perlu.
+4. Jalankan perintah `%localappdata%\Microsoft\OneDrive\onedrive.exe /reset` melalui Run (Win+R). OneDrive akan restart dan melakukan inisialisasi ulang.
+5. Jika sinkronisasi tetap error, buat tiket ke IT Helpdesk dengan menyertakan nama pustaka SharePoint, URL lengkap, dan pesan error dari OneDrive (klik ikon cloud > lingkaran i). Helpdesk akan memeriksa izin dan konfigurasi SharePoint.
+
+KATEGORI: VPN_CISCO_ANYCONNECT_TIMEOUT
+Konteks Masalah: Saat mencoba terhubung ke VPN perusahaan menggunakan Cisco AnyConnect, proses koneksi berhenti dengan pesan "Connection attempt timed out" atau "Unable to establish connection". Koneksi internet pengguna normal dan dapat mengakses situs web eksternal.
+Langkah Perbaikan:
+1. Buka Task Manager, hentikan semua proses Cisco AnyConnect (cari "vpnui.exe", "vpnagent.exe") dengan klik kanan > End Task.
+2. Buka Services.msc, cari layanan "Cisco AnyConnect Secure Mobility Agent". Jika status tidak "Running", klik Start. Jika sudah Running, klik Restart.
+3. Buka Control Panel > Network and Sharing Center > Change adapter settings. Klik kanan pada adapter "Cisco AnyConnect Secure Mobility Client", pilih Disable, lalu Enable.
+4. Periksa apakah ada software firewall pihak ketiga yang memblokir. Nonaktifkan sementara firewall antivirus dan uji koneksi VPN.
+5. Jika timeout masih terjadi, buat tiket ke IT Helpdesk dengan menyertakan versi AnyConnect (buka aplikasi > About), dan hasil dari perintah `ping vpn.company.com` (alamat VPN server). Helpdesk akan memeriksa status gateway VPN dan kemungkinan konflik port.
+
+KATEGORI: VPN_FORTICLIENT_AUTHENTICATION_FAILED
+Konteks Masalah: FortiClient VPN menampilkan pesan "Authentication failed" setelah memasukkan username dan password yang benar. MFA token yang dimasukkan juga ditolak, meskipun kode dari aplikasi Authenticator valid.
+Langkah Perbaikan:
+1. Tutup FortiClient, lalu buka kembali. Pastikan memasukkan username dengan format domain\username atau username@domain.com sesuai kebijakan perusahaan.
+2. Buka Control Panel > Credential Manager > Windows Credentials, hapus semua entri yang mengandung "FortiClient" atau "Fortinet".
+3. Pastikan waktu pada laptop sinkron dengan server waktu perusahaan. Buka Settings > Time & Language > Date & time, pastikan "Set time automatically" aktif.
+4. Jika menggunakan MFA, coba metode alternatif (push notification atau telepon) jika tersedia.
+5. Jika autentikasi masih gagal, buat tiket ke IT Helpdesk dengan menyertakan username, waktu percobaan, dan apakah pengguna berhasil login ke portal lain (misal Office 365). Helpdesk akan memeriksa status akun di sistem VPN RADIUS.
+
+KATEGORI: VPN_NETWORK_ADAPTER_ERROR
+Konteks Masalah: Setelah terhubung ke VPN, tidak ada konektivitas jaringan. Ikon VPN menunjukkan terhubung, tetapi tidak dapat mengakses sumber daya internal (intranet, file server). Di Network Connections, adapter VPN menunjukkan status "No Internet Access" atau "Unidentified Network".
+Langkah Perbaikan:
+1. Buka Command Prompt sebagai administrator, jalankan `ipconfig /all` dan cari adapter VPN. Pastikan adapter mendapatkan alamat IP (bukan 169.254.x.x). Jika tidak, lanjut ke langkah 2.
+2. Klik kanan adapter VPN di Network Connections, pilih Properties. Pilih "Internet Protocol Version 4 (TCP/IPv4)", klik Properties, pastikan "Obtain an IP address automatically" dipilih.
+3. Hapus adapter VPN dengan cara buka Device Manager, klik View > Show hidden devices, cari di kategori "Network adapters", klik kanan pada adapter virtual VPN (contoh "Cisco AnyConnect Virtual Miniport Adapter" atau "Fortinet Virtual Ethernet Adapter"), pilih Uninstall. Restart laptop, lalu sambungkan VPN kembali.
+4. Buka Services.msc, pastikan layanan "DHCP Client" berjalan dengan status "Running" dan startup "Automatic".
+5. Jika adapter tetap error, buat tiket ke IT Helpdesk dengan menyertakan hasil `ipconfig /all` dan nama adapter VPN. Helpdesk akan melakukan reset konfigurasi virtual adapter melalui script jarak jauh.
+
+KATEGORI: VPN_SSL_ERROR_CERTIFICATE
+Konteks Masalah: Saat mencoba koneksi VPN, muncul pesan "SSL error" atau "Certificate verification failed". Pengguna sebelumnya dapat terhubung tanpa kendala. Pesan error menunjukkan sertifikat tidak valid atau tidak dipercaya.
+Langkah Perbaikan:
+1. Pastikan tanggal dan waktu laptop benar (sinkron dengan server waktu). Klik kanan jam di taskbar > Adjust date/time > Set time automatically.
+2. Buka browser, akses portal VPN (https://vpn.company.com). Jika ada peringatan sertifikat, catat detailnya tetapi jangan lanjutkan jika tidak dikenal.
+3. Hapus cache sertifikat: buka Internet Options (inetcpl.cpl) > Content > Clear SSL state.
+4. Buka Certificate Manager (certlm.msc) sebagai administrator, navigasi ke Trusted Root Certification Authorities > Certificates, cari sertifikat perusahaan. Jika tidak ada, instal ulang dengan mengakses portal VPN melalui browser dan export sertifikat.
+5. Jika error masih muncul, buat tiket ke IT Helpdesk dengan menyertakan detail pesan error dan apakah pengguna baru saja mengganti laptop atau update sistem. Helpdesk akan memeriksa masa berlaku sertifikat server VPN.
+
+KATEGORI: VPN_SPLIT_TUNNELING_ISSUE
+Konteks Masalah: Setelah terhubung VPN, internet umum (seperti browsing ke google.com) menjadi sangat lambat atau tidak berfungsi, sementara akses ke sumber daya internal tetap normal. Pengguna mengalami keterbatasan dalam melakukan pencarian online saat terhubung VPN.
+Langkah Perbaikan:
+1. Periksa apakah VPN menggunakan mode full tunnel (semua lalu lintas melewati VPN). Hubungi Helpdesk jika ingin mengonfirmasi, namun sebagai langkah mandiri, putuskan VPN dan uji internet langsung untuk memastikan internet lokal normal.
+2. Buka Command Prompt sebagai administrator, jalankan `route print` dan lihat apakah ada rute default (0.0.0.0) dengan metric lebih rendah pada interface VPN dibanding interface lokal. Catat informasi ini.
+3. Nonaktifkan fitur "IPv6" pada adapter VPN: buka Network Connections, klik kanan adapter VPN > Properties, hapus centang pada "Internet Protocol Version 6 (TCP/IPv6)".
+4. Jika menggunakan FortiClient, buka Settings > Advanced > Split tunneling, pastikan diatur sesuai kebijakan (biasanya "All traffic" atau "Only traffic to specified destinations"). Catat settingnya.
+5. Jika kecepatan internet lokal sangat terganggu, buat tiket ke IT Helpdesk dengan menyertakan informasi apakah pengguna memerlukan split tunneling untuk efisiensi. Helpdesk akan mengonfigurasi ulang profil VPN.
+
+KATEGORI: VPN_DISCONNECT_INTERMITTENT
+Konteks Masalah: Koneksi VPN terputus secara tiba-tiba beberapa kali dalam satu jam, terutama saat rapat atau transfer file besar. Tidak ada pesan error spesifik, hanya notifikasi "VPN connection lost, reconnecting".
+Langkah Perbaikan:
+1. Pastikan koneksi internet stabil. Lakukan tes ping ke gateway lokal (misal 192.168.1.1) selama 5 menit: `ping -t 192.168.1.1`. Jika ada paket loss, kemungkinan masalah ISP lokal.
+2. Nonaktifkan penghemat daya pada adapter jaringan: Buka Device Manager > Network adapters, klik kanan adapter Wi-Fi/Ethernet > Properties > Power Management, hapus centang "Allow the computer to turn off this device to save power".
+3. Periksa apakah ada konflik dengan software antivirus yang melakukan deep packet inspection. Nonaktifkan sementara fitur firewall atau web protection dari antivirus.
+4. Jika menggunakan Wi-Fi, coba gunakan kabel LAN (colok langsung ke modem/router) untuk menghindari interferensi nirkabel.
+5. Jika disconnects berulang, buat tiket ke IT Helpdesk dengan menyertakan waktu kejadian, aktivitas yang dilakukan, dan hasil ping ke gateway lokal. Helpdesk akan menganalisis log VPN gateway.
+
+KATEGORI: RDP_INTERNAL_ERROR
+Konteks Masalah: Saat menggunakan Remote Desktop Connection (RDP) untuk mengakses PC kantor atau server, muncul pesan "An internal error has occurred". Koneksi gagal setelah memasukkan kredensial.
+Langkah Perbaikan:
+1. Tutup semua sesi RDP, buka Command Prompt sebagai administrator, jalankan `netsh int ip reset` dan `netsh winsock reset`. Restart laptop.
+2. Buka Registry Editor (regedit), navigasi ke `HKEY_LOCAL_MACHINE\SOFTWARE\Microsoft\MSLicensing`. Hapus folder "MSLicensing" (backup dulu). Registri ini akan dibuat ulang saat koneksi berikutnya.
+3. Pastikan kredensial yang digunakan benar, dengan format domain\username atau username@domain. Jika menggunakan MFA untuk RDP, pastikan token dimasukkan setelah password.
+4. Buka Remote Desktop Connection, klik "Show Options", tab "Advanced", pastikan "Connect from anywhere" menggunakan pengaturan default.
+5. Jika error tetap muncul, buat tiket ke IT Helpdesk dengan menyertakan alamat yang dituju (PC/server target), dan apakah pengguna lain dapat mengakses target tersebut. Helpdesk akan memeriksa lisensi RDP dan event log di server target.
+
+KATEGORI: RDP_CREDSSP_ERROR
+Konteks Masalah: Saat mencoba RDP ke komputer kantor, muncul pesan "An authentication error has occurred. The function requested is not supported" atau "CredSSP encryption oracle remediation". Ini sering terjadi setelah update Windows.
+Langkah Perbaikan:
+1. Pastikan laptop pengguna (client) dan komputer tujuan (server/PC) sama-sama mendapatkan update terbaru. Buka Windows Update dan instal semua update penting.
+2. Jika komputer tujuan belum diupdate, pengguna dapat mengubah kebijakan grup sementara: buka gpedit.msc (hanya Windows Pro) > Computer Configuration > Administrative Templates > System > Credentials Delegation > "Encryption Oracle Remediation", set ke "Enabled" dan pilih "Vulnerable". Setelah koneksi berhasil, kembalikan ke "Mitigated" atau "Force Updated Clients".
+3. Atau, buka Registry Editor, navigasi ke `HKLM\Software\Microsoft\Windows\CurrentVersion\Policies\System\CredSSP\Parameters`. Buat DWORD 32-bit "AllowEncryptionOracle" dengan nilai 2 (jika belum ada).
+4. Restart laptop setelah perubahan.
+5. Jika langkah di atas tidak berhasil, buat tiket ke IT Helpdesk dengan menyertakan versi Windows kedua perangkat (client dan target). Helpdesk akan mengoordinasikan update atau memberikan solusi alternatif seperti menggunakan VPN+RD Gateway.
+
+KATEGORI: RDP_BLACK_SCREEN
+Konteks Masalah: Setelah berhasil login via RDP, layar remote hanya menampilkan warna hitam (black screen) tanpa desktop. Kursor mouse masih terlihat, tetapi tidak ada respon atau tampilan tidak muncul.
+Langkah Perbaikan:
+1. Putuskan sesi RDP, lalu sambungkan kembali dengan opsi "Connect to console": pada Remote Desktop Connection, ketik `mstsc /admin` di Run, lalu masukkan alamat target.
+2. Restart layanan Desktop Window Manager di komputer target melalui remote (jika masih ada interaksi minimal): tekan Ctrl+Alt+End, pilih Task Manager, jalankan `taskkill /f /im dwm.exe`. DWM akan restart otomatis.
+3. Buka Remote Desktop Connection, klik "Show Options", tab "Display", kurangi resolusi layar (misal 1366x768) dan turunkan kedalaman warna menjadi 16-bit.
+4. Nonaktifkan akselerasi grafis di RDP: di tab "Experience", pilih koneksi dengan kecepatan "Modem (56 kbps)" untuk menonaktifkan fitur seperti wallpaper dan visual effects.
+5. Jika layar hitam masih terjadi, buat tiket ke IT Helpdesk dengan menyertakan informasi apakah target adalah server atau PC, dan apakah masalah terjadi pada semua pengguna atau hanya satu. Helpdesk akan memeriksa driver grafis di target dan konfigurasi RDP session.
+
+KATEGORI: RDP_DISCONNECTED_SESSION_LIMIT
+Konteks Masalah: Saat mencoba menyambungkan ulang ke sesi RDP yang sebelumnya sudah terhubung, muncul pesan "The remote computer has reached its maximum number of connections" atau sesi sebelumnya tidak ditemukan dan harus login baru.
+Langkah Perbaikan:
+1. Pastikan tidak ada sesi idle yang tertinggal. Pengguna dapat menghubungi Helpdesk untuk membersihkan sesi, namun sebagai langkah mandiri, gunakan perintah `mstsc /admin` untuk memaksa masuk ke sesi console.
+2. Jika target adalah server, dan pengguna memiliki hak akses, gunakan Remote Desktop Services Manager (dari server lain) untuk melihat dan memutus sesi idle.
+3. Buka Command Prompt sebagai administrator di komputer target (jika ada akses fisik atau remote alternatif), jalankan `qwinsta` untuk melihat sesi aktif, lalu `rwinsta [session_id]` untuk memutus sesi.
+4. Periksa apakah ada pengguna lain yang lupa logout dari komputer kantor yang sama. Koordinasikan dengan rekan kerja jika perlu.
+5. Jika masalah sering terjadi, buat tiket ke IT Helpdesk dengan menyertakan alamat komputer target dan perkiraan waktu sesi terputus. Helpdesk akan mengatur kebijakan batas waktu sesi idle atau meningkatkan jumlah koneksi yang diizinkan.
+
+KATEGORI: RDP_CLIPBOARD_NOT_WORKING
+Konteks Masalah: Setelah terhubung melalui RDP, fitur copy-paste antara komputer lokal dan remote tidak berfungsi. Clipboard tidak dapat mentransfer teks atau file.
+Langkah Perbaikan:
+1. Putuskan sesi RDP, lalu sambungkan kembali. Di Remote Desktop Connection, klik "Show Options", tab "Local Resources", pastikan "Clipboard" dicentang.
+2. Di sesi RDP yang sedang berjalan, tekan Ctrl+Alt+End, pilih Task Manager, cari proses "rdpclip.exe". Jika tidak ada, jalankan `rdpclip` dari Run. Jika sudah ada, hentikan dan jalankan ulang.
+3. Buka Task Manager di komputer lokal, hentikan proses "rdpclip.exe" jika ada (tidak selalu berjalan), lalu jalankan kembali dari Run `rdpclip`.
+4. Periksa apakah ada software pihak ketiga (seperti clipboard manager) yang mengganggu. Nonaktifkan sementara aplikasi tersebut.
+5. Jika clipboard masih tidak berfungsi, buat tiket ke IT Helpdesk dengan menyertakan apakah masalah terjadi pada semua aplikasi atau hanya tertentu. Helpdesk akan memeriksa kebijakan grup yang mungkin membatasi redirection clipboard.
+
+KATEGORI: CITRIX_WORKSPACE_ERROR
+Konteks Masalah: Aplikasi Citrix Workspace tidak dapat membuka aplikasi atau desktop virtual. Pesan error "Cannot connect to Citrix Workspace" atau "SSL Error 61: You have not chosen to trust ...". Pengguna tidak dapat memulai sesi virtual.
+Langkah Perbaikan:
+1. Buka Citrix Workspace, klik kanan ikon di system tray, pilih "Advanced Preferences", lalu "Reset Citrix Workspace". Konfirmasi reset dan restart aplikasi.
+2. Pastikan waktu laptop sinkron (Set time automatically). Perbedaan waktu menyebabkan SSL error.
+3. Buka Control Panel > Credential Manager > Windows Credentials, hapus semua entri yang mengandung "Citrix", "XenApp", atau "StoreFront".
+4. Hapus cache Citrix: tutup Citrix Workspace, buka File Explorer, navigasi ke `%appdata%\Citrix\` dan hapus folder "SelfService" dan "Receiver" (jangan hapus folder "ICAClient"). Restart aplikasi.
+5. Jika error tetap muncul, buat tiket ke IT Helpdesk dengan menyertakan URL Citrix StoreFront yang digunakan dan versi Citrix Workspace (buka aplikasi > About). Helpdesk akan memverifikasi konfigurasi store dan sertifikat.
+
+KATEGORI: VDI_LAMBAT_SAAT_WFH
+Konteks Masalah: Desktop virtual (VDI) atau aplikasi Citrix berjalan sangat lambat, respon mouse dan keyboard terasa tertunda, dan kualitas video menurun. Kecepatan internet pengguna dari rumah cukup tinggi (test speed di atas 20 Mbps).
+Langkah Perbaikan:
+1. Di Citrix Workspace, klik kanan ikon di system tray, pilih "Connection Center". Periksa latency (delay) dan packet loss. Jika latency > 100 ms atau ada packet loss, lanjut ke langkah 2.
+2. Buka aplikasi Citrix Workspace, pada menu hamburger, pilih "Advanced Preferences", lalu "High DPI" dan nonaktifkan "Use high DPI" jika diaktifkan. Hal ini dapat mengurangi beban bandwidth.
+3. Di Connection Center, pilih sesi yang aktif, klik "Preferences", kurangi "Visual quality" menjadi "Low" atau "Medium".
+4. Pastikan tidak ada aplikasi lain yang menggunakan bandwidth besar (streaming video, download besar) saat menggunakan VDI. Tutup aplikasi tersebut.
+5. Jika kelambatan masih parah, buat tiket ke IT Helpdesk dengan menyertakan hasil test kecepatan internet (speedtest), serta informasi apakah pengguna menggunakan Wi-Fi atau kabel. Helpdesk akan memeriksa status gateway VDI dan memberikan rekomendasi optimasi.
+
+KATEGORI: VDI_SESSION_TERPUTUS
+Konteks Masalah: Sesi desktop virtual atau aplikasi Citrix tiba-tiba terputus (disconnect) dengan pesan "Connection interrupted" atau "The connection to the remote computer was lost". Setelah reconnect, sesi sebelumnya terkadang hilang (tidak disimpan).
+Langkah Perbaikan:
+1. Pastikan koneksi internet stabil. Gunakan kabel LAN daripada Wi-Fi jika memungkinkan. Lakukan ping ke gateway selama beberapa menit untuk mendeteksi packet loss.
+2. Buka Connection Center di Citrix Workspace, pilih sesi yang terputus, klik "Reconnect". Jika tidak muncul, buka store URL dan coba luncurkan kembali aplikasi.
+3. Nonaktifkan penghemat daya pada adapter jaringan: Device Manager > Network adapters, klik kanan > Properties > Power Management, hapus centang "Allow the computer to turn off this device".
+4. Periksa apakah software VPN (jika digunakan bersamaan dengan VDI) menyebabkan konflik. Putuskan VPN sebelum mengakses VDI jika kebijakan mengizinkan.
+5. Jika sesi sering terputus, buat tiket ke IT Helpdesk dengan menyertakan waktu kejadian, jenis koneksi (VPN atau langsung), dan hasil trace route ke gateway VDI. Helpdesk akan menganalisis log gateway.
+
+KATEGORI: CITRIX_USB_REDIRECTION_GAGAL
+Konteks Masalah: Pengguna perlu menggunakan perangkat USB (seperti smart card, flash drive, atau printer lokal) di dalam sesi Citrix, tetapi perangkat tidak terdeteksi atau opsi redirection tidak muncul.
+Langkah Perbaikan:
+1. Di Citrix Workspace, klik kanan ikon system tray, pilih "Connection Center". Pilih sesi aktif, klik "Preferences", buka tab "Devices". Pastikan opsi "USB devices" diaktifkan.
+2. Saat perangkat USB terhubung ke laptop, notifikasi kecil akan muncul di system tray Citrix. Klik dan pilih "Redirect [nama device]". Jika tidak muncul, lanjut ke langkah 3.
+3. Buka Control Panel > Devices and Printers, cari perangkat USB, klik kanan > Properties > Hardware, pastikan driver terinstal dengan benar.
+4. Nonaktifkan dan aktifkan ulang fitur USB redirection: di Citrix Workspace, buka Advanced Preferences > USB Devices, pastikan "Enable USB redirection" dicentang. Restart sesi.
+5. Jika perangkat tetap tidak terdeteksi, buat tiket ke IT Helpdesk dengan menyertakan nama perangkat USB, model, dan apakah perangkat jenis mass storage atau smart card. Helpdesk akan memeriksa kebijakan Citrix terkait USB redirection.
+
+KATEGORI: VDI_AUDIO_TIDAK_KELUAR
+Konteks Masalah: Di dalam sesi desktop virtual atau Citrix, suara (audio) tidak keluar dari speaker/headset laptop lokal. Video di VDI berjalan tanpa suara, atau panggilan VoIP melalui VDI tidak terdengar.
+Langkah Perbaikan:
+1. Di Citrix Workspace, buka Connection Center, pilih sesi, klik Preferences, tab "Audio". Pastikan "Play audio" diatur ke "On this device" dan "Record audio" sesuai kebutuhan.
+2. Buka Settings > System > Sound > Advanced > More sound settings, buka tab "Playback", pastikan perangkat audio yang digunakan diatur sebagai default. Coba ganti ke perangkat lain lalu kembali.
+3. Di sesi VDI (remote), buka sound settings dan pastikan output audio bukan "Remote Audio" yang muted. Atur volume ke level yang sesuai.
+4. Nonaktifkan fitur "HDX Audio" sementara: di Citrix Workspace, Advanced Preferences > Audio, matikan "Enable HDX Audio".
+5. Jika audio masih tidak keluar, buat tiket ke IT Helpdesk dengan menyertakan jenis perangkat audio yang digunakan (internal speaker, headset USB) dan versi Citrix Workspace. Helpdesk akan memeriksa kebijakan audio redirection.
+
+KATEGORI: VPN_STARTUP_AUTOMATIC_CONNECT_GAGAL
+Konteks Masalah: Setiap kali laptop dinyalakan, klien VPN (AnyConnect/FortiClient) mencoba terhubung otomatis tetapi gagal dengan pesan "Failed to connect automatically". Pengguna harus menghubungkan secara manual setiap kali.
+Langkah Perbaikan:
+1. Buka aplikasi VPN, cari pengaturan "Startup" atau "Automatic connection". Nonaktifkan sementara, restart laptop, lalu aktifkan kembali.
+2. Pastikan kredensial tidak expired. Di klien VPN, hapus saved credentials (jika ada) dan masukkan ulang secara manual.
+3. Periksa apakah ada kebijakan yang mengharuskan koneksi internet tersedia sebelum VPN otomatis. Di Task Manager > Startup, pastikan klien VPN diizinkan berjalan saat startup.
+4. Untuk AnyConnect, buka aplikasi, pilih "Preferences", pastikan "Start AnyConnect when Windows starts" dan "Connect automatically" dicentang.
+5. Jika otomatis masih gagal, buat tiket ke IT Helpdesk dengan menyertakan log koneksi VPN (biasanya di folder `%ProgramData%\Cisco\AnyConnect\Logs`). Helpdesk akan menganalisis error pada fase awal koneksi.
+
+KATEGORI: RDP_FILE_TRANSFER_GAGAL
+Konteks Masalah: Saat menggunakan RDP dan mencoba menyalin file dari komputer lokal ke remote atau sebaliknya melalui drag-and-drop atau copy-paste, file tidak berpindah atau muncul error "File copy failed".
+Langkah Perbaikan:
+1. Pastikan clipboard dan drive redirection diaktifkan di pengaturan RDP: sebelum koneksi, buka Remote Desktop Connection > Show Options > Local Resources, centang "Clipboard", dan di "More", pastikan drive yang diinginkan dipilih.
+2. Coba salin file menggunakan metode alternatif: di sesi RDP, buka File Explorer, pilih "This PC", cari drive lokal yang diredirect (biasanya muncul sebagai "C on [nama komputer]"). Akses file dari sana.
+3. Jika menggunakan metode drag-and-drop, pastikan file yang disalin tidak terlalu besar (lebih dari 2 GB). Untuk file besar, gunakan salinan melalui folder bersama atau OneDrive.
+4. Periksa apakah ada kebijakan yang membatasi ukuran file yang dapat disalin melalui RDP. Ini jarang terjadi, namun dapat dicek dengan mencoba file kecil.
+5. Jika transfer file terus gagal, buat tiket ke IT Helpdesk dengan menyertakan ukuran file dan apakah hanya file tertentu yang gagal. Helpdesk akan memeriksa konfigurasi RDP redirection di komputer target.
+
+KATEGORI: VPN_SPLIT_DNS_ISSUE
+Konteks Masalah: Setelah terhubung VPN, pengguna tidak dapat mengakses situs internal perusahaan dengan nama host (misal `intranet`), tetapi dapat diakses dengan alamat IP. Nama domain eksternal (google.com) tetap berfungsi.
+Langkah Perbaikan:
+1. Buka Command Prompt sebagai administrator, jalankan `ipconfig /flushdns` dan `ipconfig /registerdns`.
+2. Buka Network Connections, klik kanan adapter VPN > Properties, pilih "Internet Protocol Version 4 (TCP/IPv4)", klik Properties > Advanced > DNS. Pastikan "Use this connection's DNS suffix in DNS registration" dicentang.
+3. Periksa apakah adapter VPN mendapatkan DNS server yang benar dengan perintah `ipconfig /all`. DNS server internal seharusnya terdaftar. Jika tidak, putuskan dan sambungkan ulang VPN.
+4. Buka Control Panel > Network and Sharing Center > Change adapter settings, tekan Alt, pilih Advanced > Advanced Settings, pastikan adapter VPN memiliki prioritas lebih tinggi dari adapter Wi-Fi/LAN (pindahkan ke atas).
+5. Jika resolusi DNS internal masih gagal, buat tiket ke IT Helpdesk dengan menyertakan hasil `ipconfig /all` dan nama domain yang gagal diakses. Helpdesk akan memeriksa konfigurasi split DNS pada gateway VPN.
+
+KATEGORI: CITRIX_STORE_NOT_FOUND
+Konteks Masalah: Saat membuka Citrix Workspace, aplikasi menampilkan pesan "No stores have been configured" atau "Cannot find any Citrix Virtual Apps and Desktops". Pengguna tidak melihat daftar aplikasi atau desktop.
+Langkah Perbaikan:
+1. Buka Citrix Workspace, klik "Add Account", masukkan URL store yang diberikan IT (contoh: https://citrix.company.com). Jika tidak ingat, buka browser dan coba akses portal yang sama untuk memverifikasi URL.
+2. Jika portal web berfungsi, tetapi aplikasi desktop tidak, reset Citrix Workspace melalui Advanced Preferences > Reset Citrix Workspace.
+3. Buka Control Panel > Credential Manager > Windows Credentials, hapus semua entri yang mengandung "Citrix" atau URL store.
+4. Hapus folder `%appdata%\Citrix\SelfService` dan `%localappdata%\Citrix\Receiver` (tutup Citrix Workspace terlebih dahulu). Buka kembali aplikasi dan tambahkan store.
+5. Jika store tetap tidak ditemukan, buat tiket ke IT Helpdesk dengan menyertakan URL store yang digunakan, versi Citrix Workspace, dan apakah pengguna dapat mengakses store melalui browser. Helpdesk akan memverifikasi izin dan konfigurasi StoreFront.
+
