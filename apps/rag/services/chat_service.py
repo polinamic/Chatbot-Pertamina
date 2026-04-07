@@ -90,12 +90,17 @@ MIN_SIMILARITY_SCORE = float(os.getenv("MIN_SIMILARITY", "0.35"))
 SEMANTIC_THRESHOLD = float(os.getenv("SEMANTIC_THRESHOLD", "0.65"))
 
 SYSTEM_RULE_CONTENT = (
-    "Anda adalah AI IT Support perusahaan yang sangat kompeten.\n"
-    "ATURAN MUTLAK:\n"
-    "1. SELALU gunakan Bahasa Indonesia. DILARANG KERAS menggunakan Bahasa Inggris.\n"
-    "2. Tunjukkan empati kepada pengguna.\n"
-    "3. Jika ada panduan SOP di dalam konteks, IKUTI PERSIS panduan tersebut.\n"
-    "4. JANGAN mengarang langkah-langkah di luar SOP tanpa disclaimer."
+    "Anda adalah AI IT Support perusahaan yang sangat kompeten.\n\n"
+    "⚠️ INSTRUKSI BAHASA PALING KRITIS ⚠️\n"
+    "WAJIB 100%: JAWAB HANYA DALAM BAHASA INDONESIA. DILARANG SEKALI INGGRIS.\n"
+    "Pengecualian: istilah teknis saja (Cache, Login, Restart, VPN, DNS, BIOS).\n"
+    "Jika user bertanya Inggris, TETAP jawab Bahasa Indonesia.\n\n"
+    "ATURAN LAINNYA:\n"
+    "1. Tunjukkan empati kepada pengguna.\n"
+    "2. Jika ada panduan SOP di dalam konteks, IKUTI PERSIS panduan tersebut.\n"
+    "3. JANGAN mengarang langkah-langkah di luar SOP tanpa disclaimer.\n"
+    "4. Setiap langkah harus jelas dan mudah diikuti.\n"
+    "5. Jangan langsung menyuruh eskalasi ke tim lain — coba dulu semua langkah lokal."
 )
 
 # Optimized LLM settings per use case.
@@ -114,7 +119,7 @@ LLM_SETTINGS: Dict[str, Dict] = {
     # Fallback (tidak ada SOP): agak kreatif, tetap profesional
     "fallback_general": {
         "temperature": 0.40, "top_p": 0.93, "top_k": 50,
-        "repeat_penalty": 1.1, "num_predict": 600, "mirostat": 0,
+        "repeat_penalty": 1.1, "num_predict": 1500, "mirostat": 0,
     },
     # Sapaan / small talk: natural conversation
     "small_talk": {
@@ -226,6 +231,10 @@ class OutOfScopeSemanticsDetector:
                 "jokes lucu tentang wifi dan laptop kumpulan meme dan humor "
                 "cerita lucu dan komedi film movie recommendations lagu musik artis"
             ),
+            "advice_opinion": (
+                "mending beli iphone atau android rekomendasi smartphone terbaik "
+                "perbandingan produk laptop hp lenovo mana yang lebih baik saran beli gadget"
+            ),
             "history_general": (
                 "siapa pencipta wifi dan internet sejarah teknologi kapan ditemukan "
                 "komputer pertama biografi tokoh penemu asal usul"
@@ -329,7 +338,13 @@ def generate_llm(
     config_name: str = "sop_strict",
 ) -> str:
     """Panggil LLM, kembalikan teks lengkap (non-streaming)."""
-    system_rule = {"role": "system", "content": SYSTEM_RULE_CONTENT}
+    # PENTING: Jangan duplikasi system message. 
+    # Jika messages[0] sudah system, gunakan itu saja (sudah include SYSTEM_RULE_CONTENT).
+    # Jika messages[0] bukan system, tambahkan SYSTEM_RULE_CONTENT.
+    final_messages = messages
+    if not messages or messages[0].get("role") != "system":
+        final_messages = [{"role": "system", "content": SYSTEM_RULE_CONTENT}] + messages
+    
     llm_config = get_llm_config(config_name)
     if temperature is not None:
         llm_config["temperature"] = temperature
@@ -337,7 +352,7 @@ def generate_llm(
     try:
         response = ollama.chat(
             model=MODEL_NAME,
-            messages=[system_rule] + messages,
+            messages=final_messages,
             options=llm_config,
         )
         text = response.get("message", {}).get("content", "").strip()
@@ -358,7 +373,11 @@ def generate_llm_stream(
     config_name: str = "sop_strict",
 ) -> Generator[str, None, None]:
     """Generator streaming — yield token per token ke client."""
-    system_rule = {"role": "system", "content": SYSTEM_RULE_CONTENT}
+    # PENTING: Jangan duplikasi system message.
+    final_messages = messages
+    if not messages or messages[0].get("role") != "system":
+        final_messages = [{"role": "system", "content": SYSTEM_RULE_CONTENT}] + messages
+    
     llm_config = get_llm_config(config_name)
     if temperature is not None:
         llm_config["temperature"] = temperature
@@ -366,7 +385,7 @@ def generate_llm_stream(
     try:
         response = ollama.chat(
             model=MODEL_NAME,
-            messages=[system_rule] + messages,
+            messages=final_messages,
             stream=True,
             options=llm_config,
         )
@@ -402,12 +421,26 @@ def rewrite_query_for_rag(
     """
     Tulis ulang pertanyaan user menjadi standalone query untuk RAG.
     Return original question jika tidak perlu rewrite.
+    
+    INSTRUKSI WAJIB:
+    - Ekstrak HANYA pesan dengan role="user" dari history (bukan jawaban bot/SOP)
+    - Gunakan original_problem sebagai anchor agar topik tidak berubah
+    - Bertujuan mencegah LLM rewriter terpengaruh isi jawaban bot sebelumnya
+    
+    Contoh kasus penting:
+      Turn 1: "wifi bermasalah"
+      Bot jawab: "Coba cek apakah router berkedip..."
+      Turn 2: User: "masih tidak bisa"
+      
+      SALAH: Kirim chatbot jawab → LLM rewriter bisa confused dengan instruksi teknis
+      BENAR: Kirim hanya user messages + original_problem → "wifi tidak bisa" → RAG fokus
     """
     # Tidak perlu rewrite jika belum ada history atau pertanyaan sudah panjang
     if not history or len(question.split()) > 8:
         return question
 
-    # Ambil HANYA pesan user (bukan jawaban bot) untuk mencegah topic drift
+    # INSTRUKSI KRITIS: Ambil HANYA pesan user (role="user"), skip assistant messages
+    # Ini mencegah LLM rewriter terpengaruh oleh jawaban/instruksi bot di turn sebelumnya
     user_messages = [
         msg["content"][:80] + "..." if len(msg["content"]) > 80 else msg["content"]
         for msg in history[-6:]
@@ -418,17 +451,17 @@ def rewrite_query_for_rag(
         return question
 
     history_text = "\n".join(f"- {m}" for m in user_messages)
-    anchor = f"Topik masalah: {original_problem}\n" if original_problem else ""
+    anchor = f"Topik masalah utama: {original_problem}\n" if original_problem else ""
 
     rewrite_prompt = (
         f"{anchor}"
         f"Pesan-pesan user sebelumnya:\n{history_text}\n"
         f"Pesan terbaru: {question}\n\n"
         "Tugas: Tulis ulang pesan terbaru menjadi satu kalimat pencarian mandiri "
-        "dalam Bahasa Indonesia.\n"
-        "WAJIB: Pertahankan topik masalah yang sama, sertakan apa yang sudah dicoba.\n"
-        "DILARANG: Mengubah topik atau menambahkan masalah baru.\n"
-        "Jawab HANYA dengan kalimat pencariannya saja."
+        "dalam Bahasa Indonesia untuk database pencarian.\n"
+        "WAJIB: Pertahankan topik masalah yang SAMA, sertakan apa yang sudah dicoba.\n"
+        "DILARANG: Mengubah topik, menambah masalah baru, atau menginterpretasi jawaban bot.\n"
+        "Jawab HANYA dengan kalimat pencariannya saja, tanpa penjelasan."
     )
 
     try:
@@ -446,6 +479,7 @@ def rewrite_query_for_rag(
             "original": question[:60],
             "rewritten": rewritten[:60],
             "anchor": original_problem[:40],
+            "user_messages_count": len(user_messages),
         })
         return rewritten
 
@@ -468,6 +502,10 @@ _REJECT_PATTERNS = re.compile(
     r'\b(tidak mau|jangan|batal|tidak perlu|ga usah|gak usah|cancel)\b',
     re.IGNORECASE,
 )
+_OUT_OF_SCOPE_OPINION_PATTERNS = re.compile(
+    r'\b(mending beli|mana yang lebih baik|rekomendasi|saran beli|tips beli|review|review produk|perbandingan|yang terbaik|barang terbaik|pilih yang mana)\b',
+    re.IGNORECASE,
+)
 # Sapaan singkat — diambil dari versi lama (lebih lengkap)
 _GREETING_PATTERNS = re.compile(
     r'^(halo|hai|hi|hey|selamat\s+(pagi|siang|sore|malam)|good\s+(morning|afternoon)|'
@@ -475,39 +513,42 @@ _GREETING_PATTERNS = re.compile(
     r'permisi|saya ada pertanyaan.*|mau tanya.*|bisa bantu.*)[!.,\s]*$',
     re.IGNORECASE,
 )
-# Kalimat yang JELAS bukan IT Support — meski ada kata IT di dalamnya
-# "siapa pencipta wifi", "jokes laptop", "tutorial origami", "laptop lecet fisik"
-_NON_IT_INTENT_PATTERNS = re.compile(
-    r'\b(siapa\s+(pencipta|penemu|pembuat|pendiri|yang\s+menciptakan)|'
-    r'sejarah|asal[.\s-]?usul|kapan\s+ditemukan|kapan\s+diciptakan|'
-    r'jokes?|humor|lucu|cerita\s+lucu|meme|'
-    r'resep|masak|makanan|minuman|kuliner|restoran|'
-    r'presiden|gubernur|bupati|politik|pemilu|'
-    r'bola|olahraga|liga|pertandingan|skor|'
-    r'artis|film|lagu|musik|konser|'
-    r'cuaca|ramalan|zodiak|horoskop|'
-    r'matematika|fisika|kimia|biologi|geografi|'
-    r'harga\s+saham|crypto|bitcoin|investasi|'
-    r'origami|kerajinan|craft|diy|mainan|permainan|'
-    r'tutorial\s+(membuat|membentuk|menghias)|'
-    r'cara\s+membuat\s+(boneka|mainan|hiasan)|'
-    r'panduan\s+(seni|melukis|menyanyi|menari)|'
-    r'pelajaran\s+(matematika|bahasa|seni|musik)|'
-    r'berikanlah.*(tutorial|panduan|cara\s+membuat)|'
-    r'coret|baret|lecet|goresan|cacat\s+fisik|rusak\s+fisik|pecah|penyok|kotor|'
-    r'membersihkan|merawat|memoles|poles|lap|gosok|cuci|'
-    r'cara\s+(membersihkan|merawat|memoles)\s+'
-    r'(laptop|komputer|perangkat|monitor|keyboard|printer|mouse|debu))\b',
-    re.IGNORECASE,
-)
+# PEMBERSIHAN: _NON_IT_INTENT_PATTERNS telah dihapus sepenuhnya.
+# Alasan: Layer 2 (OutOfScopeSemanticsDetector) dengan cosine similarity embedding
+# sudah lebih akurat mendeteksi non-IT/out-of-scope queries dibanding regex manual.
+# Regex manual terlalu rigid dan banyak false positives/negatives.
+# Contoh:
+#   - "siapa pencipta wifi" bisa terdeteksi salah jika user bilang "wifi creator"
+#   - "jokes laptop" VS "laptop error" sama-sama ada "laptop", regex bingung
+#   - "laptop lecet" (physical) VS "laptop tidak menyala" (IT) sulit dibedakan regex
+# Layer 2 semantic routing menangani ini dengan makna (embedding), tidak keyword matching.
 # Kalimat yang JELAS butuh bantuan IT teknis
 _IT_PROBLEM_PATTERNS = re.compile(
-    r'\b(tidak\s+bisa|gabisa|nggak\s+bisa|tidak\s+berfungsi|tidak\s+konek|'
+    r'\b((?:file|data|folder|aplikasi|program|sistem)\s+hilang|'
+    r'tidak\s+bisa|gabisa|nggak\s+bisa|tidak\s+berfungsi|tidak\s+konek|'
     r'error|eror|hang|freeze|lambat|lemot|mati|rusak|bermasalah|'
     r'gagal|fail|crash|bluescreen|blue\s+screen|not\s+responding|'
-    r'lupa\s+password|reset\s+password|tidak\s+bisa\s+login|akun\s+terkunci|'
-    r'tidak\s+terdeteksi|tidak\s+muncul|hilang|tidak\s+nyambung|putus|'
-    r'install|uninstall|update|upgrade|setting|konfigurasi|setup)\b',
+    r'lupa\s+password|reset\s+password|tidak\s+bisa\s+login|'
+    r'terkunci|'
+    r'tidak\s+terdeteksi|tidak\s+muncul|tidak\s+nyambung|putus|'
+    r'install|uninstall|update|upgrade|setting|konfigurasi|setup|'
+    # Ketidakstabilan koneksi/jaringan/perangkat
+    r'tidak\s+stabil|nggak\s+stabil|ga\s+stabil|kurang\s+stabil|'
+    r'sering\s+putus|putus[\s-]putus|'
+    r'gangguan|terganggu|'
+    # Sinyal lemah — match 0-2 kata di antara 'sinyal' dan 'lemah'/'buruk'
+    r'sinyal\s+(?:\w+\s+){0,2}lemah|sinyal\s+(?:\w+\s+){0,2}buruk|'
+    r'signal\s+(?:\w+\s+){0,2}lemah|'
+    # Koneksi drop/terputus
+    r'koneksi\s+drop|koneksi\s+terputus|'
+    # Intent perbaikan — "cara memperbaiki/mengatasi X"
+    r'cara\s+memperbaiki|cara\s+mengatasi|'
+    r'bagaimana\s+cara\s+(?:memperbaiki|mengatasi|fix|repair)|'
+    # Tidak terhubung
+    r'tidak\s+(?:bisa\s+)?terhubung|'
+    # Istilah teknis jaringan (dibatasi konteks IT agar tidak false positive)
+    r'disconnect|offline|'
+    r'(?:sistem|server|layanan|aplikasi|jaringan)\s+down)\b',
     re.IGNORECASE,
 )
 
@@ -523,45 +564,64 @@ _INTENT_SYSTEM_PROMPT = (
     "- REJECT_IT_SUPPORT  : User menolak eskalasi\n"
     "- GENERAL_CHAT       : Sapaan singkat saja (halo, terima kasih, ok)\n"
     "- OUT_OF_SCOPE       : Pertanyaan yang BUKAN tentang masalah IT\n\n"
-    "ATURAN PENTING:\n"
-    "Pertanyaan tentang TEKNOLOGI tapi bukan masalah/bantuan IT = OUT_OF_SCOPE\n"
-    "Pertanyaan tentang PEMBERSIHAN/PERAWATAN FISIK perangkat = OUT_OF_SCOPE\n"
-    "Tutorial/Panduan/Cara membuat sesuatu (selain IT) = OUT_OF_SCOPE\n\n"
-    "Contoh OUT_OF_SCOPE:\n"
-    "  'siapa pencipta wifi'                    → OUT_OF_SCOPE\n"
-    "  'berikan jokes tentang wifi'             → OUT_OF_SCOPE\n"
-    "  'tutorial membuat mainan kertas origami' → OUT_OF_SCOPE\n"
-    "  'bagaimana cara kerja VPN'               → OUT_OF_SCOPE (edukasi, bukan masalah)\n"
-    "  'cara membuat hiasan gantungan kunci'    → OUT_OF_SCOPE\n"
-    "  'laptop saya lecet dan rusak fisik'      → OUT_OF_SCOPE (physical damage)\n"
-    "  'cara membersihkan keyboard laptop'      → OUT_OF_SCOPE (physical cleaning)\n"
-    "  'siapa presiden indonesia'               → OUT_OF_SCOPE\n\n"
-    "Contoh IT_PROBLEM:\n"
-    "  'wifi saya tidak bisa konek'             → IT_PROBLEM\n"
-    "  'VPN saya error'                         → IT_PROBLEM\n"
-    "  'laptop saya lambat'                     → IT_PROBLEM\n"
-    "  'bagaimana cara reset password'          → IT_PROBLEM\n"
-    "  'tidak bisa login email perusahaan'      → IT_PROBLEM\n"
-    "  'keyboard saya tidak berfungsi'          → IT_PROBLEM (malfunction, bukan fisik)\n"
+    "=== CRITICAL RULES ===\n"
+    "1. Masalah TEKNIS/MALFUNCTION perangkat IT = IT_PROBLEM (keyboard tidak berfungsi)\n"
+    "2. Pertanyaan EDUKASI tentang teknologi (tanpa masalah) = OUT_OF_SCOPE\n"
+    "3. KERUSAKAN FISIK atau PEMBERSIHAN perangkat = OUT_OF_SCOPE\n"
+    "   (Contoh: laptop lecet, keyboard kotor, rusak fisik, goresan, penyok)\n"
+    "4. Pertanyaan tentang Rekomendasi/opini produk atau saran beli = OUT_OF_SCOPE\n"
+    "5. Pertanyaan tentang SEJARAH/PEMBUAT teknologi = OUT_OF_SCOPE\n"
+    "6. Tutorial/Panduan/Cara MEMBUAT sesuatu (non-IT) = OUT_OF_SCOPE\n\n"
+    "=== FEW-SHOT EXAMPLES ===\n\n"
+    "CONTOH OUT_OF_SCOPE (BUKAN masalah IT)::\n"
+    "  1. 'siapa pencipta wifi'                      → OUT_OF_SCOPE (sejarah/edukasi)\n"
+    "  2. 'berikan jokes tentang wifi'               → OUT_OF_SCOPE (hiburan)\n"
+    "  3. 'mending beli iPhone atau Android'          → OUT_OF_SCOPE (opini/rekomendasi produk)\n"
+    "  4. 'bagaimana cara kerja VPN'                 → OUT_OF_SCOPE (edukasi, bukanmasalah)\n"
+    "  5. 'cara membuat origami pesawat dari kertas' → OUT_OF_SCOPE (kerajinan)\n"
+    "  5. 'bagaimana resep soto ayam'                → OUT_OF_SCOPE (kuliner)\n"
+    "  6. 'laptop jatuh dan lecet fisik'             → OUT_OF_SCOPE (kerusakan fisik)\n"
+    "  7. 'cara membersihkan keyboard dari debu'     → OUT_OF_SCOPE (pembersihan fisik)\n"
+    "  8. 'cara membuat hiasan gantungan kunci'      → OUT_OF_SCOPE (kerajinan DIY)\n"
+    "  9. 'siapa presiden indonesia'                 → OUT_OF_SCOPE (pengetahuan umum)\n"
+    "  10. 'apakah tuhan ada'                        → OUT_OF_SCOPE (agama/filsafat))\n\n"
+    "CONTOH IT_PROBLEM (MASALAH TEKNIS)::\n"
+    "  1. 'wifi saya tidak bisa konek'               → IT_PROBLEM (malfunction)\n"
+    "  2. 'vpn saya error dan lambat'                → IT_PROBLEM (performance issue)\n"
+    "  3. 'lupa password domain'                     → IT_PROBLEM (account/access)\n"
+    "  4. 'keyboard tidak berfungsi'                 → IT_PROBLEM (hardware malfunction)\n"
+    "  5. 'laptop saya sangat lambat'                → IT_PROBLEM (performance)\n"
+    "  6. 'tidak bisa login email perusahaan'        → IT_PROBLEM (access issue)\n"
+    "  7. 'printer tidak terdeteksi'                 → IT_PROBLEM (connectivity)\n"
+    "  8. 'aplikasi saya crash/error'                → IT_PROBLEM (software issue)\n"
+    "  9. 'bagaimana cara reset password'            → IT_PROBLEM (bantuan teknis)\n"
+    "  10. 'file saya tiba-tiba hilang'              → IT_PROBLEM (data issue)\n"
 )
 
 
 def detect_intent_rules(question: str) -> Optional[str]:
     """
-    Layer 1: Rule-based — hanya untuk kasus yang 100% pasti.
-    Return None jika tidak yakin → lanjut ke Layer 2/3.
+    Layer 1: Rule-based regex — hanya untuk kasus yang 100% pasti.
+    Return None jika tidak yakin → lanjut ke Layer 2 (Semantic) / Layer 3 (LLM).
+    
+    Pola yang tersisa:
+    - ESCALATION_PATTERNS: "hubungi IT Support", "minta siapa/operator", dll
+    - REJECT_PATTERNS: "tidak mau", "batal", "cancel", dll
+    - GREETING_PATTERNS: "halo", "terima kasih", "ok", dll
+    - IT_PROBLEM_PATTERNS: "tidak bisa", "error", "install", "lupa password", dll
+    
+    OUT_OF_SCOPE detection sudah dipindah ke Layer 2 (Semantic Routing)
+    menggunakan cosine similarity embedding untuk akurasi lebih tinggi.
     """
     q = question.strip()
 
     if _ESCALATION_PATTERNS.search(q): return "REQUEST_IT_SUPPORT"
     if _REJECT_PATTERNS.search(q):     return "REJECT_IT_SUPPORT"
     if _GREETING_PATTERNS.match(q):    return "GENERAL_CHAT"
+    if _IT_PROBLEM_PATTERNS.search(q): return "IT_PROBLEM"
+    if _OUT_OF_SCOPE_OPINION_PATTERNS.search(q): return "OUT_OF_SCOPE"
 
-    # Cek NON_IT SEBELUM IT_PROBLEM agar "jokes wifi" tidak lolos sebagai IT_PROBLEM
-    if _NON_IT_INTENT_PATTERNS.search(q): return "OUT_OF_SCOPE"
-    if _IT_PROBLEM_PATTERNS.search(q):    return "IT_PROBLEM"
-
-    return None  # Ambigu → lanjut ke Layer 2/3
+    return None  # Ambigu → lanjut ke Layer 2 (Semantic) atau Layer 3 (LLM)
 
 
 def detect_intent_llm_fallback(question: str) -> str:
@@ -602,45 +662,88 @@ def detect_intent_llm_fallback(question: str) -> str:
 
 def detect_intent(question: str, embedding_service=None) -> str:
     """
-    Entry point intent detection: 3-layer pipeline.
+    Entry point intent detection: 3-layer pipeline FINAL ARCHITECTURE.
 
-    Layer 1 → Rule-based regex (instant, ~80% kasus)
-    Layer 2 → Semantic Routing via embedding cosine similarity (~10% kasus)
-    Layer 3 → LLM JSON classifier (~10% kasus ambigu)
+    INSTRUKSI WAJIB (Poin 3 dari 5):
+    Layer 2 (Semantic Routing) WAJIB dipanggil SETELAH Layer 1 (Rules)
+    dan SEBELUM Layer 3 (LLM Fallback), menggunakan cosine similarity.
+
+    Pipeline:
+      Layer 1 (RULES)
+        ├─ Instant keputusan untuk: Escalation, Reject, Greeting, IT_Problem
+        ├─ Performa: < 1ms, 100% deterministic
+        └─ Coverage: ~80% kasus standar
+
+      Layer 2 (SEMANTIC ROUTING) ← PENDETEKSI OUT_OF_SCOPE UTAMA
+        ├─ Cosine similarity embedding vs anchor texts
+        ├─ Tolerance: jika tidak menemukan akan fallback ke Layer 3
+        ├─ Performa: ~100-200ms per query (embedding call)
+        └─ Coverage: ~10% kasus out-of-scope (craft, culinary, physical damage, dll)
+
+      Layer 3 (LLM FALLBACK)
+        ├─ JSON format classification dengan Few-Shot examples
+        ├─ Performa: ~500ms-2s (depends on model)
+        └─ Coverage: ~10% kasus ambigu/edge case
+
+    PERBAIKAN DARI VERSI LAMA:
+    - Hapus _NON_IT_INTENT_PATTERNS dari Layer 1 (pindah ke Layer 2)
+    - Layer 2 sekarang menangani OUT_OF_SCOPE detection dengan semantic understanding
+    - LLM prompt (Layer 3) diperkaya dengan Few-Shot examples
     """
-    # Layer 1: Rule-based
+    # ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+    # LAYER 1: RULE-BASED CLASSIFICATION (Instant)
+    # ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
     rule_result = detect_intent_rules(question)
     if rule_result:
         logger.info("intent_detected", extra={
-            "intent_source": "rules",
+            "intent_source": "layer1_rules",
             "intent": rule_result,
             "confidence": 0.95,
+            "latency_ms": "<1",
         })
         return rule_result
 
-    # Layer 2: Semantic Routing
+    # ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+    # LAYER 2: SEMANTIC ROUTING (Cosine Similarity)
+    # ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
     if embedding_service:
         try:
             detector = get_semantic_detector(embedding_service)
             semantic_category, similarity = detector.detect(question)
             if semantic_category:
                 logger.info("intent_detected", extra={
-                    "intent_source": "semantic_routing",
-                    "intent"       : "OUT_OF_SCOPE",
-                    "category"     : semantic_category,
-                    "confidence"   : round(similarity, 3),
+                    "intent_source": "layer2_semantic_routing",
+                    "intent": "OUT_OF_SCOPE",
+                    "category": semantic_category,
+                    "similarity": round(similarity, 3),
+                    "threshold": SEMANTIC_THRESHOLD,
+                    "confidence": round(similarity, 3),
+                    "latency_ms": "~100-200",
                 })
                 return "OUT_OF_SCOPE"
+            else:
+                logger.debug("layer2_semantic_no_match", extra={
+                    "question": question[:80],
+                    "best_similarity": round(similarity, 3),
+                    "threshold": SEMANTIC_THRESHOLD,
+                })
         except Exception as e:
             # Semantic layer gagal → lanjut ke LLM, jangan crash
-            logger.warning("semantic_layer_skipped", extra={"error": str(e)})
+            logger.warning("layer2_semantic_error", extra={
+                "error": str(e),
+                "fallback": "to_layer3_llm"
+            })
 
-    # Layer 3: LLM fallback
+    # ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+    # LAYER 3: LLM JSON CLASSIFIER (Fallback untuk kasus ambigu)
+    # ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
     llm_result = detect_intent_llm_fallback(question)
     logger.info("intent_detected", extra={
-        "intent_source": "llm_fallback",
-        "intent"       : llm_result,
-        "confidence"   : 0.80,
+        "intent_source": "layer3_llm_fallback",
+        "intent": llm_result,
+        "confidence": 0.75,
+        "latency_ms": "~500-2000",
+        "reason": "ambiguous_query",
     })
     return llm_result
 
@@ -790,42 +893,217 @@ def needs_clarification(question: str, history: List[Dict]) -> Optional[str]:
 # ESCALATION GUIDE
 # =====================================================
 
+def get_ticket_process(category: str) -> str:
+    """
+    Dapatkan informasi cara membuat tiket melalui portal IT Support.
+    Jika tidak ada detil kategori, gunakan alur umum.
+    """
+    ticket_processes = {
+        "access_control": (
+            "1. Masuk ke portal IT Support.\n"
+            "2. Klik menu \"Akses & Keamanan\".\n"
+            "3. Pilih sub-menu \"Manajemen User ID\".\n"
+            "4. Klik \"User ID ERP & Non ERP\".\n"
+            "5. Pilih jenis permintaan: [Buat User Baru] / [Tambah Role/Otorisasi] / [Cabut Akses] / [Perpanjangan] / [Pengalihan Akses].\n"
+            "6. Isi detail lengkap: nama user, sistem (SAP/Non-ERP apa), role yang diminta, dan periode akses.\n"
+            "7. Lampirkan persetujuan atasan langsung dan dokumen pendukung (SK, surat tugas).\n"
+            "8. Klik \"Ajukan Permintaan User ID\".\n"
+            "CATATAN KHUSUS: Setiap permintaan otorisasi SAP Production WAJIB memiliki approval dari atasan minimal setingkat Supervisor dan fungsi SAP Functional Lead terkait. Proses verifikasi keamanan memakan waktu 3-5 hari kerja untuk SAP Production."
+        ),
+        "vpn_access": (
+            "1. Masuk ke portal IT Support.\n"
+            "2. Klik menu \"Jaringan & Konektivitas\".\n"
+            "3. Pilih sub-menu \"VPN / Remote Access\".\n"
+            "4. Pilih jenis permintaan: [Aktivasi VPN] / [Reset VPN] / [Perubahan Akses].\n"
+            "5. Isi detail lengkap: username, lokasi, perangkat, dan masalah yang terjadi.\n"
+            "6. Lampirkan dokumen pendukung jika diperlukan.\n"
+            "7. Klik \"Ajukan Permintaan VPN\".\n"
+            "CATATAN KHUSUS: Pastikan Anda menyertakan error message lengkap dan status koneksi saat ini."
+        ),
+        "hardware": (
+            "1. Masuk ke portal IT Support.\n"
+            "2. Klik menu \"Perangkat Keras & Infrastruktur\".\n"
+            "3. Pilih sub-menu \"Permintaan Perbaikan / Penggantian Perangkat\".\n"
+            "4. Pilih jenis permintaan sesuai keluhan: [Kerusakan Perangkat] / [Tidak Menyala] / [Ganti Aksesoris].\n"
+            "5. Isi detail lengkap: model perangkat, nomor asset, gejala masalah, dan langkah yang sudah dicoba.\n"
+            "6. Lampirkan foto kerusakan atau tangkapan layar jika tersedia.\n"
+            "7. Klik \"Ajukan Permintaan Perbaikan\".\n"
+            "CATATAN KHUSUS: Sebutkan apakah perangkat dalam masa garansi atau sudah pernah direparasi sebelumnya."
+        ),
+        "software": (
+            "1. Masuk ke portal IT Support.\n"
+            "2. Klik menu \"Aplikasi & Software\".\n"
+            "3. Pilih sub-menu \"Permintaan Dukungan Aplikasi\".\n"
+            "4. Pilih jenis masalah: [Error Aplikasi] / [Instalasi] / [Lisensi / Akses].\n"
+            "5. Isi detail lengkap: nama aplikasi, versi, error message, dan langkah yang sudah dicoba.\n"
+            "6. Lampirkan screenshot error jika ada.\n"
+            "7. Klik \"Ajukan Permintaan Software\".\n"
+            "CATATAN KHUSUS: Sertakan informasi sistem operasi dan apakah masalah terjadi pada SAP atau aplikasi Non-ERP."
+        ),
+        "network": (
+            "1. Masuk ke portal IT Support.\n"
+            "2. Klik menu \"Jaringan & Konektivitas\".\n"
+            "3. Pilih sub-menu \"Permintaan Layanan Jaringan\".\n"
+            "4. Pilih jenis permintaan: [Gangguan Koneksi] / [Permintaan Akses Jaringan] / [Perubahan Konfigurasi].\n"
+            "5. Isi detail lengkap: lokasi, tipe koneksi (WiFi/LAN), perangkat, dan gejala.\n"
+            "6. Lampirkan hasil diagnosa awal jika tersedia (misal: ipconfig, screenshot error).\n"
+            "7. Klik \"Ajukan Permintaan Jaringan\".\n"
+            "CATATAN KHUSUS: Pastikan menyebutkan apakah masalah terjadi hanya pada satu perangkat atau banyak perangkat."
+        ),
+        "email": (
+            "1. Masuk ke portal IT Support.\n"
+            "2. Klik menu \"Email & Kolaborasi\".\n"
+            "3. Pilih sub-menu \"Permintaan Dukungan Email\".\n"
+            "4. Pilih jenis permintaan: [Tidak Bisa Login] / [Tidak Bisa Kirim/Terima] / [Pengaturan Email].\n"
+            "5. Isi detail lengkap: alamat email, error message, dan jenis perangkat yang digunakan.\n"
+            "6. Lampirkan screenshot error jika ada.\n"
+            "7. Klik \"Ajukan Permintaan Email\".\n"
+            "CATATAN KHUSUS: Sertakan apakah masalah terjadi pada webmail, desktop client, atau mobile."
+        ),
+        "printer": (
+            "1. Masuk ke portal IT Support.\n"
+            "2. Klik menu \"Perangkat Keras & Infrastruktur\".\n"
+            "3. Pilih sub-menu \"Dukungan Printer\".\n"
+            "4. Pilih jenis permintaan: [Printer Tidak Terdeteksi] / [Hasil Cetak Buruk] / [Antrian Macet].\n"
+            "5. Isi detail lengkap: model printer, lokasi, dan gejala.\n"
+            "6. Lampirkan screenshot atau foto masalah jika tersedia.\n"
+            "7. Klik \"Ajukan Permintaan Printer\".\n"
+            "CATATAN KHUSUS: Sebutkan apakah printer terhubung via jaringan atau USB."
+        ),
+        "security": (
+            "1. Masuk ke portal IT Support.\n"
+            "2. Klik menu \"Keamanan & Akses\".\n"
+            "3. Pilih sub-menu \"Insiden Keamanan / Permintaan Akses\".\n"
+            "4. Pilih jenis permintaan: [Insiden Keamanan] / [Penguncian Akun] / [Permintaan Akses Khusus].\n"
+            "5. Isi detail lengkap: deskripsi insiden, dampak, dan langkah yang sudah diambil.\n"
+            "6. Lampirkan bukti atau screenshot jika ada.\n"
+            "7. Klik \"Ajukan Permintaan Keamanan\".\n"
+            "CATATAN KHUSUS: Untuk masalah SAP Production, pastikan menyebutkan approval Supervisor dan SAP Functional Lead."
+        ),
+        "database": (
+            "1. Masuk ke portal IT Support.\n"
+            "2. Klik menu \"Database & Infrastruktur\".\n"
+            "3. Pilih sub-menu \"Permintaan Dukungan Database\".\n"
+            "4. Pilih jenis permintaan: [Gangguan Database] / [Akses Database] / [Query Error].\n"
+            "5. Isi detail lengkap: nama database, error message, waktu kejadian, dan sistem.\n"
+            "6. Lampirkan log atau screenshot jika tersedia.\n"
+            "7. Klik \"Ajukan Permintaan Database\".\n"
+            "CATATAN KHUSUS: Sebutkan apakah masalah terjadi di environment Production atau Non-Production."
+        ),
+        "general_it": (
+            "1. Masuk ke portal IT Support.\n"
+            "2. Klik menu \"Permintaan Umum IT\".\n"
+            "3. Pilih kategori masalah paling sesuai.\n"
+            "4. Isi detail lengkap: deskripsi masalah, perangkat, dan langkah yang sudah dicoba.\n"
+            "5. Lampirkan dokumen pendukung jika diperlukan.\n"
+            "6. Klik \"Ajukan Permintaan\".\n"
+            "CATATAN KHUSUS: Pastikan Anda menjelaskan masalah dengan jelas agar tiket dapat diarahkan ke tim yang tepat."
+        )
+    }
+    return ticket_processes.get(category, ticket_processes["general_it"])
+
+
 def escalation_guide(query_issue: str, vector_store, embedding_service) -> str:
     """
-    Cari panduan eskalasi dari database.
+    Cari panduan eskalasi dari database dengan routing spesifik ke UI portal.
 
     Strategi:
-    1. Cari di doc_type="ESCALATION" dulu (database khusus eskalasi)
-    2. Fallback ke doc_type="TROUBLESHOOT" jika tidak ada
-       (kb_troubleshoot.txt sering diupload sebagai TROUBLESHOOT)
-
-    PENTING: query_issue harus berisi masalah IT awal (last_it_problem),
-    bukan kalimat "tolong hubungi IT Support" — karena kalimat itu
-    tidak semantically similar dengan isi database.
+    1. Deteksi kategori masalah dari query_issue
+    2. Cari di doc_type="ESCALATION" dulu (database khusus eskalasi)
+    3. Jika ada di database: tampilkan UI ticketing + panduan lengkap
+    4. Jika tidak ada di database: tampilkan UI ticketing umum + catatan bahwa tim belum ada di database
     """
     try:
+        category = detect_problem_category(query_issue.lower())
+        ticket_process = get_ticket_process(category)
+        
+        # Cari panduan ESCALATION dari database (prioritas: cara membuat tiket)
         results = retrieve_context(
             query_issue, vector_store, embedding_service,
             doc_type="ESCALATION", top_k=1,
         )
 
-        if not results:
-            logger.info("escalation_fallback_troubleshoot", extra={"query": query_issue[:50]})
-            results = retrieve_context(
-                query_issue, vector_store, embedding_service,
-                doc_type="TROUBLESHOOT", top_k=1,
+        if results and results[0].get("score", 0) >= MIN_SIMILARITY_SCORE:
+            logger.info("escalation_guide_found", extra={
+                "category": category,
+                "score": results[0].get("score"),
+            })
+            guide_content = results[0]["content"]
+            return ROUTING_TEMPLATE_WITH_GUIDE.format(
+                ticket_process=ticket_process,
+                team_name=get_it_support_team(category),
+            ) + f"\n\n**Panduan Lengkap:**\n{guide_content}"
+        else:
+            logger.info("escalation_guide_not_found", extra={
+                "category": category,
+                "query": query_issue[:60],
+            })
+            return ROUTING_TEMPLATE_NO_GUIDE.format(
+                ticket_process=ticket_process,
+                team_name=get_it_support_team(category),
             )
-
-        if not results:
-            return (
-                "Panduan eskalasi spesifik belum tersedia di database kami.\n"
-                "Silakan hubungi IT Support melalui portal helpdesk."
-            )
-        return results[0]["content"]
 
     except Exception as e:
         logger.error("escalation_guide_error", extra={"error": str(e)})
-        return "Terjadi kesalahan saat mengambil panduan eskalasi. Hubungi IT Support secara langsung."
+        return "Terjadi kesalahan saat mengambil panduan eskalasi. Silakan gunakan portal IT Support untuk membuat tiket."
+
+
+def detect_problem_category(query: str) -> str:
+    """Deteksi kategori masalah dari query user"""
+    if any(word in query for word in ['kartu akses', 'pintu', 'access control']):
+        return "access_control"
+    elif any(word in query for word in ['vpn', 'remote', 'akses jarak jauh']):
+        return "vpn_access"
+    elif any(word in query for word in ['laptop', 'komputer', 'hardware', 'rusak', 'pecah']):
+        return "hardware"
+    elif any(word in query for word in ['aplikasi', 'software', 'erp', 'program']):
+        return "software"
+    elif any(word in query for word in ['internet', 'wifi', 'jaringan', 'network']):
+        return "network"
+    elif any(word in query for word in ['email', 'surat elektronik', 'kirim email']):
+        return "email"
+    elif any(word in query for word in ['printer', 'cetak']):
+        return "printer"
+    elif any(word in query for word in ['keamanan', 'security', 'password']):
+        return "security"
+    elif any(word in query for word in ['database', 'basis data']):
+        return "database"
+    else:
+        return "general_it"
+
+
+def get_contact_info(category: str) -> str:
+    """Informasi kontak berdasarkan kategori"""
+    contacts = {
+        "access_control": "ext. 1234 atau email: access@pertamina.com",
+        "vpn_access": "ext. 5678 atau portal VPN: vpn.pertamina.com",
+        "hardware": "ext. 9012 atau email: hardware@pertamina.com",
+        "software": "ext. 3456 atau email: software@pertamina.com",
+        "network": "ext. 7890 atau email: network@pertamina.com",
+        "email": "ext. 1111 atau email: email@pertamina.com",
+        "printer": "ext. 2222 atau email: printer@pertamina.com",
+        "security": "ext. 3333 atau email: security@pertamina.com",
+        "database": "ext. 4444 atau email: database@pertamina.com",
+        "general_it": "ext. 0000 atau portal helpdesk: helpdesk.pertamina.com"
+    }
+    return contacts.get(category, "ext. 0000 atau portal helpdesk: helpdesk.pertamina.com")
+
+
+def get_required_info(category: str) -> str:
+    """Informasi yang dibutuhkan untuk eskalasi"""
+    info_mapping = {
+        "access_control": "nomor kartu akses, lokasi, waktu kejadian",
+        "vpn_access": "username, error message, sistem operasi",
+        "hardware": "model perangkat, gejala kerusakan, nomor asset",
+        "software": "nama aplikasi, versi, error message, langkah yang sudah dicoba",
+        "network": "lokasi, kecepatan koneksi, perangkat yang digunakan",
+        "email": "alamat email, jenis masalah (kirim/terima), error message",
+        "printer": "model printer, jenis masalah, nomor printer",
+        "security": "jenis insiden, dampak, langkah yang sudah diambil",
+        "database": "nama database, error message, waktu kejadian",
+        "general_it": "deskripsi masalah lengkap, langkah yang sudah dicoba"
+    }
+    return info_mapping.get(category, "deskripsi masalah lengkap dan langkah yang sudah dicoba")
 
 
 def detect_confirmation(text: str) -> Optional[bool]:
@@ -842,30 +1120,33 @@ def detect_confirmation(text: str) -> Optional[bool]:
 
 # Disclaimer hardcoded (bukan instruksi ke LLM) → 100% muncul saat SOP tidak ada
 DISCLAIMER = (
-    "⚠️ *Mohon maaf, masalah ini belum tercatat dalam SOP resmi kami.*\n\n"
-    "Berikut adalah saran umum yang dapat Anda coba:\n\n"
+    "⚠️ *Masalah ini belum tercatat dalam panduan SOP resmi kami.*\n\n"
+    "Namun, berikut beberapa langkah umum yang dapat Anda coba terlebih dahulu:\n\n"
 )
 
 _SOP_SYSTEM_PROMPT_TEMPLATE = """\
 Anda adalah SITI, AI IT Support tingkat L1 di perusahaan. \
 Anda sangat disiplin, profesional, dan kaku terhadap prosedur.
 
+⚠️ INSTRUKSI KETAT BAHASA ⚠️
+WAJIB 100%: Gunakan Bahasa Indonesia formal. DILARANG SEKALI Inggris kecuali istilah teknis (Cache, Login, Restart).
+
+Jika user bertanya dalam English, TETAP jawab dalam Bahasa Indonesia.
+
 === KONTEKS SOP RESMI (WAJIB DIIKUTI 100%) ===
 {context}
 ==============================================
 
 INSTRUKSI KETAT:
-1. BAHASA MUTLAK: Wajib 100% menggunakan Bahasa Indonesia formal. \
-DILARANG menggunakan Bahasa Inggris kecuali istilah teknis (Cache, Login, Restart).
-2. KEPATUHAN SOP: Anda HANYA boleh memberikan langkah yang tertulis di KONTEKS SOP di atas. \
+1. KEPATUHAN SOP: Anda HANYA boleh memberikan langkah yang tertulis di KONTEKS SOP di atas. \
 DILARANG mengarang, menambah, atau memodifikasi berdasarkan pengetahuan eksternal.
-3. EKSEKUSI BERURUTAN: Berikan panduan TAHAP DEMI TAHAP (1, 2, 3...). \
+2. EKSEKUSI BERURUTAN: Berikan panduan TAHAP DEMI TAHAP (1, 2, 3...). \
 JANGAN melompati atau merangkum beberapa langkah.
-4. LARANGAN ESKALASI PREMATUR: JANGAN suruh user buat tiket ke IT Helpdesk \
+3. LARANGAN ESKALASI PREMATUR: JANGAN suruh user buat tiket ke IT Helpdesk \
 KECUALI user sudah menyatakan SELURUH langkah teknis telah gagal.
-5. ISOLASI TOPIK: Jika ada >1 KATEGORI SOP di konteks, pilih SATU yang paling cocok. \
+4. ISOLASI TOPIK: Jika ada >1 KATEGORI SOP di konteks, pilih SATU yang paling cocok. \
 Abaikan kategori lainnya.
-6. KONSISTENSI TOPIK: Jika user bilang langkah gagal, tetap gunakan SOP dari KATEGORI \
+5. KONSISTENSI TOPIK: Jika user bilang langkah gagal, tetap gunakan SOP dari KATEGORI \
 yang sama. JANGAN comot langkah dari kategori lain.{failed_note}
 
 FORMAT JAWABAN (ikuti persis):
@@ -896,12 +1177,25 @@ Apakah ada masalah jaringan/perangkat yang bisa saya bantu?"
 
 _FALLBACK_SYSTEM_PROMPT = """\
 Anda adalah teknisi IT Support. Jawab dengan empati.
-PENTING: Masalah ini TIDAK ADA di SOP resmi. Berikan saran umum saja.
-Format:
-  - Periksakan hal X
-  - Coba langkah Y
-  - Jika masih bermasalah, hubungi IT Support
-Jawab dalam Bahasa Indonesia.\
+
+⚠️ INSTRUKSI KETAT BAHASA ⚠️
+WAJIB 100%: Gunakan Bahasa Indonesia formal. DILARANG SEKALI Inggris.
+Istilah teknis saja yang boleh (Cache, Login, Restart).
+
+PENTING: Masalah ini TIDAK ADA di SOP resmi kami. 
+Berikan saran umum yang terstruktur bertahap:
+
+FORMAT:
+**ANALISIS MASALAH:**
+(Ringkas masalahnya)
+
+**LANGKAH PENYELESAIAN:**
+1. [Cek hal ini]
+2. [Coba langkah ini]
+3. [Jika masih bermasalah, lakukan ini]
+
+Jangan langsung menyuruh hubungi IT sebelum user coba langkah-langkah di atas.
+Tunjukkan empati dan ingatkan bahwa ada support team jika semua gagal.\
 """
 
 
@@ -942,6 +1236,7 @@ def get_llm_response(
         logger.info("llm_response_ok", extra={
             "type": "small_talk", "elapsed_ms": int((time.time()-t0)*1000)
         })
+        
         return answer
 
     # Ambil context (pakai cache jika session ada)
@@ -1025,19 +1320,65 @@ def get_llm_response_stream(
 # =====================================================
 
 _FAILURE_SIGNALS = re.compile(
-    r'\b(masih|belum|tidak berhasil|gagal|tidak bisa|sama saja|tidak mempan)\b',
+    r'\b(masih|belum|tidak berhasil|gagal|tidak bisa|sama saja|tidak mempan|'  
+    r'tetap|tidak reset|tidak membantu|masih error|langkah tidak berhasil)\b',
     re.IGNORECASE,
 )
 
 
 def _track_failed_steps(question: str, session: Dict) -> None:
-    """Catat ringkasan jawaban bot terakhir sebagai 'langkah yang sudah dicoba'."""
+    """
+    Track langkah-langkah yang sudah dicoba user tapi GAGAL.
+    
+    Mekanisme:
+    1. Deteksi kata-kata failure: "masih tidak bisa", "gagal", "belum berhasil", dll
+    2. Jika terdeteksi, ambil ringkasan jawaban bot sebelumnya yang berisi instruksi
+    3. Simpan ke session["failed_steps"] sebagai catatan
+    4. LLM SOP akan MENGHINDARI mengulangi langkah yang sama
+    
+    Contoh:
+      Turn 1: Bot → "Langkah 1: Cek DNS di Settings > Network..."
+               session["failed_steps"] = ["Cek DNS di Settings > Network..."]
+      Turn 2: User → "masih tidak bisa"
+               LLM akan: SKIP langkah DNS → maret ke Langkah 2 berdasarkan SOP
+    
+    Update versi ini:
+    - Lebih panjang ringkasan (hingga 150 karakter) untuk konteks lebih jelas
+    - Extrak HANYA bullet points/numbered steps dari jawaban bot, skip disclaimer
+    - Deduplicate: jangan track langkah yang sama 2x
+    - Log setiap step yang di-track untuk debugging
+    """
     if _FAILURE_SIGNALS.search(question) and session["history"]:
         last_bot_msgs = [m["content"] for m in session["history"] if m["role"] == "assistant"]
         if last_bot_msgs:
-            summary = last_bot_msgs[-1][:60] + "..."
-            if summary not in session["failed_steps"]:
-                session["failed_steps"].append(summary)
+            bot_answer = last_bot_msgs[-1]
+            
+            # Extract langkah-langkah dari jawaban bot (cari pola "1. ", "2. ", "- ", dll)
+            # Bukan hanya substring pertama, tapi instruksi yang meaningful
+            step_pattern = re.compile(r'^\s*(?:\d+\.|[-*]|►)\s*(.+?)$', re.MULTILINE)
+            steps = step_pattern.findall(bot_answer)
+            
+            if steps:
+                # Ambil beberapa langkah pertama yang paling relevan (max 2-3 langkah)
+                for step in steps[:3]:
+                    step_summary = step.strip()[:100].rstrip('.')
+                    # Deduplicate: jangan track langkah duplikat
+                    if step_summary and step_summary not in session["failed_steps"]:
+                        session["failed_steps"].append(step_summary)
+                        logger.info("failed_step_tracked", extra={
+                            "step": step_summary[:80],
+                            "total_failed_steps": len(session["failed_steps"])
+                        })
+            else:
+                # Fallback: ambil ringkasan dari seluruh jawaban bot (150 karakter)
+                # Tapi skip disclaimer dan formatting noise
+                summary = bot_answer.replace("⚠️", "").replace("**", "")[:150].strip()
+                if summary and summary not in session["failed_steps"]:
+                    session["failed_steps"].append(summary)
+                    logger.info("failed_step_tracked_fallback", extra={
+                        "step": summary[:80],
+                        "total_failed_steps": len(session["failed_steps"])
+                    })
 
 
 def _update_history(session: Dict, question: str, answer: str) -> None:
@@ -1063,6 +1404,46 @@ _OUT_OF_SCOPE_REPLY = (
     "masalah wifi, printer, laptop, email, VPN, atau software perusahaan. 😊\n\n"
     "Apakah ada masalah IT yang bisa saya bantu?"
 )
+
+
+# =====================================================
+# IT SUPPORT TEAM ROUTING
+# =====================================================
+
+def get_it_support_team(problem_category: str) -> str:
+    """Mapping masalah ke tim IT yang sesuai"""
+    team_mapping = {
+        "access_control": "Access Control Device Team",
+        "vpn_access": "Access Management End User Team", 
+        "hardware": "Hardware Support Team",
+        "software": "Software Support Team",
+        "network": "Network Support Team",
+        "email": "Email/Messaging Support Team",
+        "printer": "Printer Support Team",
+        "security": "IT Security Team",
+        "database": "Database Administration Team"
+    }
+    return team_mapping.get(problem_category, "IT Helpdesk")
+
+# Template ketika DITEMUKAN panduan di database
+ROUTING_TEMPLATE_WITH_GUIDE = """
+PANDUAN UI:
+{ticket_process}
+
+TIM IT TERKAIT: {team_name}
+"""
+
+# Template ketika TIDAK ADA panduan di database
+ROUTING_TEMPLATE_NO_GUIDE = """
+PANDUAN UI:
+{ticket_process}
+
+TIM IT TERKAIT: {team_name}
+
+CATATAN:
+Saat ini tim IT terkait untuk masalah ini belum ada di database panduan kami.
+Gunakan alur umum portal IT Support dan pilih kategori yang paling mendekati masalah Anda.
+"""
 
 
 # =====================================================
@@ -1220,6 +1601,11 @@ def _process_chat_sync(
             failed_steps= session["failed_steps"],
             session     = session,
         )
+        
+        # JANGAN tambahkan routing note otomatis pada turn 1 — prioritaskan troubleshooting
+        # Routing note hanya ditambahkan jika user sudah coba dan gagal (attempts >= 1)
+        # atau saat escalation offer (attempts >= 2)
+        
         session["attempts"] += 1
 
         if session["attempts"] >= 2 and not session["offered_support"]:
@@ -1312,7 +1698,10 @@ def _process_chat_stream(
             full_answer.append(token)
             yield token
         answer = "".join(full_answer)
-
+        
+        # JANGAN tambahkan routing note otomatis pada turn 1 — prioritaskan troubleshooting
+        # Routing note hanya ditambahkan saat escalation offer (attempts >= 2)
+        
         session["attempts"] += 1
 
         if session["attempts"] >= 2 and not session["offered_support"]:

@@ -16,6 +16,32 @@ from .serializers import (
     ConversationListSerializer,
     MessageSerializer
 )
+from apps.rag.services.chat_service import SYSTEM_RULE_CONTENT, DISCLAIMER, _FALLBACK_SYSTEM_PROMPT
+
+
+def _get_rag_dependencies():
+    """Ambil vector_store dan embedding_service dari singleton."""
+    from apps.rag.apps import get_vector_store, get_embedding_service
+    return get_vector_store(), get_embedding_service()
+
+
+def _get_relevant_context(query: str, vector_store, embedding_service, similarity_threshold=0.35):
+    """Simple RAG retrieval untuk check apakah ada SOP yang relevan."""
+    if not vector_store or not embedding_service:
+        return None
+    
+    try:
+        query_embedding = embedding_service.embed([query])[0]
+        results, distances = vector_store.search_similar(query_embedding, top_k=3)
+        
+        # Check jika ada hasil dengan similarity score di atas threshold
+        if results and len(results) > 0:
+            best_distance = distances[0] if isinstance(distances, (list, tuple)) else distances
+            if best_distance > similarity_threshold:
+                return "\n".join(results)
+        return None
+    except Exception:
+        return None
 
 # ==============================
 # NEGATIVE RESPONSE DETECTION
@@ -75,7 +101,7 @@ Jawab HANYA satu kata kategori.
     response = ollama.chat(
         model="llama3:8b",
         messages=[
-            {"role": "system", "content": "Anda adalah classifier masalah IT."},
+            {"role": "system", "content": "Anda adalah classifier masalah IT yang sangat ahli. WAJIB gunakan Bahasa Indonesia."},
             {"role": "user", "content": prompt}
         ],
         options={"temperature": 0}
@@ -170,6 +196,20 @@ class ConversationViewSet(viewsets.ModelViewSet):
 
         if session.failure_count < 3:
 
+            # Cek apakah ada SOP yang relevan (RAG retrieval)
+            vector_store, embedding_service = _get_rag_dependencies()
+            context = _get_relevant_context(content, vector_store, embedding_service)
+            
+            # Build system prompt berdasarkan ada/tidaknya SOP
+            if context:
+                system_prompt = (
+                    "Anda adalah SITI, AI IT Support tingkat L1 di perusahaan.\n\n"
+                    f"KONTEKS SOP RESMI:\n{context}\n\n"
+                    "Ikuti panduan SOP di atas dengan KETAT dan PERSIS."
+                )
+            else:
+                system_prompt = _FALLBACK_SYSTEM_PROMPT
+
             prompt = f"""
 User bertanya:
 
@@ -185,13 +225,17 @@ Di akhir jawaban WAJIB bertanya:
             response = ollama.chat(
                 model="llama3:8b",
                 messages=[
-                    {"role": "system", "content": "Anda adalah IT Support perusahaan."},
+                    {"role": "system", "content": system_prompt},
                     {"role": "user", "content": prompt}
                 ],
                 options={"temperature": 0.3}
             )
 
             answer = response["message"]["content"]
+            
+            # Tambahkan disclaimer jika tidak ada SOP
+            if not context:
+                answer = DISCLAIMER + answer
 
         else:
 
@@ -277,10 +321,26 @@ def stream_chat(request):
     def generate():
 
         try:
+            # Cek apakah ada SOP yang relevan (RAG retrieval)
+            vector_store, embedding_service = _get_rag_dependencies()
+            context = _get_relevant_context(query, vector_store, embedding_service)
+            
+            # Build system prompt berdasarkan ada/tidaknya SOP
+            if context:
+                system_prompt = (
+                    "Anda adalah SITI, AI IT Support tingkat L1 di perusahaan.\n\n"
+                    f"KONTEKS SOP RESMI:\n{context}\n\n"
+                    "Ikuti panduan SOP di atas dengan KETAT dan PERSIS."
+                )
+            else:
+                system_prompt = _FALLBACK_SYSTEM_PROMPT
+                # Yield disclaimer dulu jika tidak ada SOP
+                yield DISCLAIMER
 
             stream = ollama.chat(
                 model="llama3:8b",
                 messages=[
+                    {"role": "system", "content": system_prompt},
                     {"role": "user", "content": query}
                 ],
                 stream=True

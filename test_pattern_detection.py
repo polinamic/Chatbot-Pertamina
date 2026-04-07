@@ -25,7 +25,9 @@ _NON_IT_INTENT_PATTERNS = re.compile(
     r'berikanlah.*tutorial|berikanlah.*panduan|berikanlah.*cara\s+membuat|'
     r'coret|baret|lecet|goresan|cacat\s+fisik|rusak\s+fisik|pecah|penyok|kotor|'
     r'membersihkan|merawat|memoles|poles|lap|gosok|cuci|'
-    r'cara\s+(membersihkan|merawat|memoles)\s+(laptop|komputer|perangkat|monitor|keyboard|printer|mouse|debu))\b',
+    r'cara\s+(membersihkan|merawat|memoles)\s+(laptop|komputer|perangkat|monitor|keyboard|printer|mouse|debu)|'
+    r'tuhan|agama|kepercayaan|filsafat|filosofi|etika|makna\s+hidup|spiritual|metafisika|esoterik|nihilisme|psikologi|'
+    r'(?:tv|televisi|hp|handphone|dompet|motor|mobil)\s+(?:saya\s+)?hilang)\b',
     re.IGNORECASE
 )
 
@@ -52,6 +54,8 @@ TEST_OUT_OF_SCOPE = [
     "keyboard saya kotor cara membersihkannya gimana",
     "printer saya terlihat bersih bagaimana cara memoles bodi",
     "cara membersihkan debu dari keyboard",
+    "apakah tuhan ada",
+    "tv saya hilang gimana cara lapornya",
 ]
 
 # Test cases yang TIDAK harus di-detect sebagai OUT_OF_SCOPE
