@@ -199,3 +199,4 @@ def retrieve_context(question, vector_store, embedding_service, doc_type=None, t
     except Exception as e:
         logger.error("retrieval_error", extra={"error": str(e)})
         return []
+    

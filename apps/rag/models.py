@@ -21,6 +21,7 @@ class Document(models.Model):
     file_name = models.CharField(max_length=255, blank=True, null=True)
     file_size = models.IntegerField(null=True, blank=True)
     uploaded_by = models.ForeignKey(User, on_delete=models.SET_NULL, null=True, blank=True)
+    is_processed = models.BooleanField(default=False)  # FIX: Matches migration 0005
 
     # --- TIMESTAMP ---
     created_at = models.DateTimeField(auto_now_add=True)
