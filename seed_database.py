@@ -42,8 +42,7 @@ for i, user in enumerate(users):
     for j in range(2):
         conv = Conversation.objects.create(
             user=user,
-            title=f'{conversation_topics[(i*2 + j) % len(conversation_topics)]} #{i}-{j}',
-            is_archived=random.choice([True, False])
+            title=f'{conversation_topics[(i*2 + j) % len(conversation_topics)]} #{i}-{j}'
         )
         
         # Create messages for each conversation
@@ -80,8 +79,7 @@ if admin_user:
             uploaded_by=admin_user,
             file_name=doc_name,
             file_size=random.randint(100000, 5000000),
-            file_path=f'documents/{doc_name}',
-            is_processed=random.choice([True, False])
+            file_path=f'documents/{doc_name}'
         )
         
         ActivityLog.objects.create(

@@ -283,14 +283,12 @@ Silakan buka portal IT Support dan buat tiket baru.
 
     @action(detail=True, methods=['post'])
     def archive(self, request, pk=None):
-        """Archive a conversation"""
+        """Archive endpoint - returns success without action (field removed)"""
 
-        conversation = self.get_object()
-
-        conversation.is_archived = True
-        conversation.save()
-
-        serializer = self.get_serializer(conversation)
+        return Response(
+            {'detail': 'Archive functionality has been removed'},
+            status=status.HTTP_200_OK
+        )
 
         return Response(serializer.data)
 

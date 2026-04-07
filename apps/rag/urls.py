@@ -4,7 +4,7 @@ from rest_framework.routers import DefaultRouter
 
 # Semua view diimport dari apps.rag.views — JANGAN dari apps.core.views
 # karena siti_chat ada di apps.rag.views, bukan apps.core
-from .views import DocumentViewSet, upload_knowledge, siti_chat
+from .views import DocumentViewSet, upload_knowledge, siti_chat, get_chat_history
 
 app_name = 'rag'
 
@@ -36,4 +36,10 @@ urlpatterns = [
     #   → siti_chat diimport langsung dari .views (apps.rag.views)
     # =====================================================
     path('chat/', siti_chat, name='siti_chat'),
+    
+    # =====================================================
+    # GET CHAT HISTORY ENDPOINT
+    # GET /api/v1/rag/history/?user_id=<user_id>
+    # =====================================================
+    path('history/', get_chat_history, name='get_chat_history'),
 ]

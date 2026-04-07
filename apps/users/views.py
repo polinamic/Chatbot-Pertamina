@@ -305,17 +305,17 @@ class LogoutView(views.APIView):
 
 # Template Views (untuk backward compatibility)
 def signup_page(request):
-    """Handle signup page"""
+    """Handle signup page - form-based signup"""
     from django.shortcuts import render, redirect
-    from django.contrib.auth import login as auth_login
+    from django.contrib.auth import authenticate, login as auth_login
+    
+    if request.method == 'GET':
+        return render(request, 'users/signup.html')
     
     if request.method == 'POST':
         username = request.POST.get('username', '').strip()
         email = request.POST.get('email', '').strip().lower()
         password = request.POST.get('password', '')
-        password_confirm = request.POST.get('password_confirm', '')
-        company = request.POST.get('company', '').strip()
-        phone = request.POST.get('phone', '').strip()
         
         errors = {}
         
@@ -332,36 +332,55 @@ def signup_page(request):
         
         if not password or len(password) < 8:
             errors['password'] = 'Password minimal 8 karakter'
-        elif password != password_confirm:
-            errors['password'] = 'Password tidak cocok'
+        elif not any(char.isupper() for char in password):
+            errors['password'] = 'Password harus mengandung minimal 1 huruf besar'
+        elif not any(char.isdigit() for char in password):
+            errors['password'] = 'Password harus mengandung minimal 1 angka'
         
         if errors:
             return render(request, 'users/signup.html', {
                 'errors': errors,
                 'username': username,
-                'email': email,
-                'company': company,
-                'phone': phone
+                'email': email
             })
         
         try:
+            # Create user
             user = User.objects.create_user(
                 username=username,
                 email=email,
                 password=password
             )
             
+            # Create user profile
             profile = UserProfile.objects.create(
                 user=user,
-                company=company if company else 'Pertamina',
-                phone=phone
+                company='Pertamina'
             )
             
-            auth_login(request, user)
-            return redirect('dashboard:index')
+            # Log activity
+            ActivityLog.objects.create(
+                action='CREATE',
+                description=f'New user registered via web form: {email}',
+                user_id=str(user.id)
+            )
+            
+            # Auto-login user
+            user = authenticate(username=username, password=password)
+            if user is not None:
+                auth_login(request, user)
+                return redirect('chatbot:chat')
+            else:
+                return redirect('users:login')
+                
         except Exception as e:
-            errors['general'] = str(e)
-            return render(request, 'users/signup.html', {'errors': errors})
+            logger.error(f"Signup error: {str(e)}", exc_info=True)
+            errors['general'] = f'Terjadi kesalahan saat membuat akun: {str(e)}'
+            return render(request, 'users/signup.html', {
+                'errors': errors,
+                'username': username,
+                'email': email
+            })
     
     return render(request, 'users/signup.html')
 
@@ -389,7 +408,17 @@ def login_page(request):
             )
             
             auth_login(request, user)
-            return redirect('dashboard:index')
+            
+            # Redirect based on user role
+            try:
+                profile = user.profile
+                if profile.role == 'A':  # Admin
+                    return redirect('dashboard:index')
+                else:  # User, Support, Manager
+                    return redirect('chatbot:chat')
+            except UserProfile.DoesNotExist:
+                # Default to chatbot if profile not found
+                return redirect('chatbot:chat')
         else:
             return render(request, 'users/login.html', {
                 'error': 'Username atau password salah'
@@ -412,5 +441,3 @@ def logout_page(request):
     
     logout(request)
     return redirect('users:login')
-
-

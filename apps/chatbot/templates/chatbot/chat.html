@@ -31,19 +31,8 @@
             <i class="bi bi-plus-lg"></i> Chat Baru
         </button>
         
-        <div class="chat-history">
-            <div class="chat-item active" onclick="selectChat(this)">
-                Ketika laptop saya tidak bisa terhubung ke wifi, apa yang harus saya lakukan?
-            </div>
-            <div class="chat-item" onclick="selectChat(this)">
-                Bagaimana cara memperbaiki laptop yang lemot
-            </div>
-            <div class="chat-item" onclick="selectChat(this)">
-                Bagaimana cara menyambungkan wifi di laptop saya
-            </div>
-            <div class="chat-item" onclick="selectChat(this)">
-                Bagaimana cara membetulkan laptop yang sinyalnya eror
-            </div>
+        <div class="chat-history" id="chat-history">
+            <!-- Chat history will be loaded here dynamically -->
         </div>
         
         <div style="border-top: 1px solid var(--border-light); padding-top: 1rem; margin-top: auto;">
@@ -109,10 +98,12 @@
     //   → marked(string) bekerja dengan benar
     // =========================================================
     const API_ENDPOINT = "/api/v1/rag/chat/";
+    const HISTORY_ENDPOINT = "/api/v1/rag/history/";
 
     const input = document.getElementById('message-input');
     const sendBtn = document.getElementById('send-btn');
     const messagesContainer = document.getElementById('chat-messages');
+    const chatHistoryContainer = document.getElementById('chat-history');
 
     marked.setOptions({
         breaks: true,
@@ -120,6 +111,89 @@
     });
     
     let isBotThinking = false;
+    let currentUserId = null;
+
+    // =====================================
+    // GET CURRENT USER ID & LOAD HISTORY
+    // =====================================
+    async function loadCurrentUser() {
+        try {
+            const response = await fetch('/api/v1/users/me/', {
+                method: 'GET',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-CSRFToken': getCookie('csrftoken')
+                }
+            });
+
+            if (response.ok) {
+                const data = await response.json();
+                currentUserId = data.id;
+                console.log('Current user ID:', currentUserId);
+                loadChatHistory();
+            }
+        } catch (error) {
+            console.error('Failed to load current user:', error);
+        }
+    }
+
+    // =====================================
+    // LOAD CHAT HISTORY FROM BACKEND
+    // =====================================
+    async function loadChatHistory() {
+        if (!currentUserId) {
+            console.warn('Current user ID not available');
+            return;
+        }
+
+        try {
+            const response = await fetch(`${HISTORY_ENDPOINT}?user_id=${currentUserId}`, {
+                method: 'GET',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-CSRFToken': getCookie('csrftoken')
+                }
+            });
+
+            if (response.ok) {
+                const data = await response.json();
+                displayChatHistory(data.history);
+            }
+        } catch (error) {
+            console.error('Failed to load chat history:', error);
+            // Show empty state if loading fails
+            chatHistoryContainer.innerHTML = '<p style="padding: 1rem; font-size: 0.85rem; color: var(--gray-600);">Tidak ada riwayat chat</p>';
+        }
+    }
+
+    // =====================================
+    // DISPLAY CHAT HISTORY
+    // =====================================
+    function displayChatHistory(history) {
+        if (!history || history.length === 0) {
+            chatHistoryContainer.innerHTML = '<p style="padding: 1rem; font-size: 0.85rem; color: var(--gray-600);">Tidak ada riwayat chat</p>';
+            return;
+        }
+
+        chatHistoryContainer.innerHTML = '';
+        
+        history.forEach((item, index) => {
+            const div = document.createElement('div');
+            div.className = 'chat-item' + (index === 0 ? ' active' : '');
+            div.onclick = function() { selectChat(this); };
+            
+            // Truncate title if too long
+            const displayTitle = item.title.length > 50 
+                ? item.title.substring(0, 47) + '...' 
+                : item.title;
+            
+            div.textContent = displayTitle;
+            div.title = item.title; // Show full title on hover
+            div.setAttribute('data-id', item.id);
+            
+            chatHistoryContainer.appendChild(div);
+        });
+    }
 
     // PERBAIKAN 2: Manajemen Session ID untuk Stateful RAG (Eskalasi 3x)
     let sessionId = sessionStorage.getItem('chatSessionId');
@@ -164,6 +238,9 @@
         // Reset Session ID saat mulai percakapan baru
         sessionId = "session_" + Math.random().toString(36).substr(2, 9);
         sessionStorage.setItem('chatSessionId', sessionId);
+        
+        // Reload chat history
+        loadChatHistory();
     }
 
     // =====================================
@@ -372,6 +449,13 @@
     // =====================================
     // PERBAIKAN 5: Pastikan memanggil fungsi sendMessage tanpa mengharapkan string HTML yang salah
     sendBtn.addEventListener("click", sendMessage);
+
+    // =====================================
+    // LOAD CHAT HISTORY ON PAGE LOAD
+    // =====================================
+    document.addEventListener('DOMContentLoaded', function() {
+        loadCurrentUser();
+    });
 
 </script>
 {% endblock %}

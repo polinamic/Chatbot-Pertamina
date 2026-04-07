@@ -46,7 +46,6 @@ class Document(models.Model):
     file_name = models.CharField(max_length=255)
     file_size = models.IntegerField(null=True, blank=True)  # dalam bytes
     file_path = models.TextField()
-    is_processed = models.BooleanField(default=False)
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
 

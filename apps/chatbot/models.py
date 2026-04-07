@@ -7,9 +7,9 @@ class Conversation(models.Model):
     """Model untuk menyimpan percakapan dengan chatbot"""
     user = models.ForeignKey(User, on_delete=models.CASCADE, related_name='conversations')
     title = models.CharField(max_length=200)
+    is_archived = models.BooleanField(default=False)
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
-    is_archived = models.BooleanField(default=False)
 
     class Meta:
         ordering = ['-created_at']
