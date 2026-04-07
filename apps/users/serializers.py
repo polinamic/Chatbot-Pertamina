@@ -21,24 +21,39 @@ class UserProfileSerializer(serializers.ModelSerializer):
 class UserSerializer(serializers.ModelSerializer):
     """User serializer untuk GET operations"""
     profile = UserProfileSerializer(read_only=True)
+    role = serializers.SerializerMethodField()
+    is_admin = serializers.SerializerMethodField()
     
     class Meta:
         model = User
-        fields = ['id', 'username', 'email', 'first_name', 'last_name', 'profile', 'date_joined']
+        fields = ['id', 'username', 'email', 'first_name', 'last_name', 'profile', 'role', 'is_admin', 'date_joined']
         read_only_fields = ['id', 'date_joined']
+    
+    def get_role(self, obj):
+        """Get user role dari profile"""
+        try:
+            return obj.profile.role
+        except:
+            return 'U'  # Default user
+    
+    def get_is_admin(self, obj):
+        """Check apakah user adalah admin"""
+        if obj.is_staff or obj.is_superuser:
+            return True
+        try:
+            return obj.profile.role == 'A'
+        except:
+            return False
 
 
 class UserSignupSerializer(serializers.ModelSerializer):
     """Serializer untuk sign up user"""
     password = serializers.CharField(write_only=True, min_length=8)
-    password_confirm = serializers.CharField(write_only=True, min_length=8)
     email = EmailField(required=True)
-    company = serializers.CharField(required=False, default='')
-    phone = serializers.CharField(required=False, default='')
     
     class Meta:
         model = User
-        fields = ['username', 'email', 'password', 'password_confirm', 'first_name', 'last_name', 'company', 'phone']
+        fields = ['username', 'email', 'password']
     
     def validate_username(self, value):
         """Validate username"""
@@ -77,30 +92,19 @@ class UserSignupSerializer(serializers.ModelSerializer):
         return value
     
     def validate(self, data):
-        """Validate password match"""
-        password = data.get('password')
-        password_confirm = data.pop('password_confirm', None)
-        
-        if password != password_confirm:
-            raise serializers.ValidationError({
-                'password_confirm': 'Password tidak cocok'
-            })
-        
+        """Validate data"""
         return data
     
     def create(self, validated_data):
         """Create user with hashed password"""
         password = validated_data.pop('password')
-        company = validated_data.pop('company', '')
-        phone = validated_data.pop('phone', '')
         
         user = User.objects.create_user(**validated_data, password=password)
         
         # Create user profile
         UserProfile.objects.create(
             user=user,
-            company=company,
-            phone=phone
+            company='Pertamina'
         )
         
         return user
