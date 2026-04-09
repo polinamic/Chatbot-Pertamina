@@ -258,9 +258,8 @@ Di akhir jawaban WAJIB bertanya:
 
             answer = response["message"]["content"]
             
-            # Tambahkan disclaimer jika tidak ada SOP
-            if not context:
-                answer = DISCLAIMER + answer
+            # PERBAIKAN: Disclaimer sudah ditambah di chat_service.py, jangan duplikat
+            # Hapus: if not context: answer = DISCLAIMER + answer
 
         else:
 

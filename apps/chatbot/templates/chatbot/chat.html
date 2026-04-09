@@ -197,6 +197,104 @@
             chatHistoryContainer.appendChild(div);
         });
 
+    // =====================================
+    // SELECT CHAT (LOAD CONVERSATION)
+    // =====================================
+    async function selectChat(element) {
+        // Tidak bisa klik jika bot sedang thinking
+        if(isBotThinking) return;
+        
+        // Tandai item yang dipilih
+        document.querySelectorAll('.chat-item').forEach(el => {
+            el.classList.remove('active');
+        });
+        element.classList.add('active');
+        
+        // Get conversation ID
+        const conversationId = element.getAttribute('data-id');
+        if (!conversationId) return;
+        
+        console.log('Loading conversation:', conversationId);
+        
+        // Clear previous messages
+        messagesContainer.innerHTML = `
+            <div class="chat-empty">
+                <div class="chat-empty-icon"><i class="bi bi-hourglass-split"></i></div>
+                <h3>Loading...</h3>
+                <p>Memuat percakapan Anda...</p>
+            </div>
+        `;
+        
+        try {
+            // Fetch messages dari endpoint
+            const response = await fetch(`/api/v1/rag/conversation/${conversationId}/messages/`, {
+                method: 'GET',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-CSRFToken': getCookie('csrftoken')
+                }
+            });
+            
+            if (!response.ok) {
+                throw new Error(`HTTP ${response.status}`);
+            }
+            
+            const data = await response.json();
+            
+            if (!data.success) {
+                throw new Error(data.error || 'Failed to load conversation');
+            }
+            
+            // Clear messages container
+            messagesContainer.innerHTML = '';
+            
+            // Display all messages
+            const messages = data.messages;
+            if (messages.length === 0) {
+                messagesContainer.innerHTML = `
+                    <div class="chat-empty">
+                        <div class="chat-empty-icon"><i class="bi bi-chat-left"></i></div>
+                        <h3>Percakapan Kosong</h3>
+                        <p>Belum ada pesan dalam percakapan ini.</p>
+                    </div>
+                `;
+            } else {
+                messages.forEach(msg => {
+                    if (msg.role === 'user') {
+                        addUserMessage(msg.content);
+                    } else {
+                        addBotMessage(msg.content);
+                    }
+                });
+            }
+            
+            // Scroll ke bawah
+            messagesContainer.scrollTop = messagesContainer.scrollHeight;
+            
+            // Set session ID untuk conversation ini
+            // Format: conversation_<conversation_id>
+            sessionId = "conversation_" + conversationId;
+            sessionStorage.setItem('chatSessionId', sessionId);
+            
+            console.log('Conversation loaded successfully');
+            
+        } catch(error) {
+            console.error('Error loading conversation:', error);
+            messagesContainer.innerHTML = `
+                <div class="chat-empty">
+                    <div class="chat-empty-icon"><i class="bi bi-exclamation-triangle"></i></div>
+                    <h3>Gagal Memuat</h3>
+                    <p>Terjadi kesalahan saat memuat percakapan: ${error.message}</p>
+                </div>
+            `;
+        }
+    }
+
+    // PERBAIKAN 2: Manajemen Session ID untuk Stateful RAG (Eskalasi 3x)
+    let sessionId = sessionStorage.getItem('chatSessionId');
+    if (!sessionId) {
+        sessionId = "session_" + Math.random().toString(36).substr(2, 9);
+        sessionStorage.setItem('chatSessionId', sessionId);
         // Auto-select first conversation and load its messages
         if (history.length > 0) {
             currentConversationId = history[0].id;
@@ -547,6 +645,12 @@
                     "Content-Type": "application/json",
                     "X-CSRFToken": getCookie("csrftoken")
                 },
+                // PERBAIKAN 3: Menyisipkan Session ID
+                // PERBAIKAN 6: Tambahkan user_id untuk menyimpan conversation
+                body: JSON.stringify({
+                    query: message,
+                    session_id: sessionId,
+                    user_id: currentUserId
                 body: JSON.stringify({
                     content: message
                 })

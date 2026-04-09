@@ -280,7 +280,13 @@ def analytics(request):
 @login_required
 @user_passes_test(is_admin_or_staff)
 def knowledge_base(request):
-    """Knowledge Base Manager - untuk manage SOP/Dokumen"""
+    """Knowledge Base Manager - untuk manage panduan troubleshooting & eskalasi
+    
+    UI ini menampilkan semua knowledge base documents yang tersimpan, dengan stats
+    tentang jumlah document, breakdown per tipe (troubleshoot vs escalation).
+    """
+    from django.utils import timezone
+    from django.db.models import Count, Q
     
     documents = Document.objects.select_related('uploaded_by').order_by('-created_at')
     
@@ -288,11 +294,20 @@ def knowledge_base(request):
     page_number = request.GET.get('page', 1)
     page_obj = paginator.get_page(page_number)
     
+    # Calculate stats dengan breakdown per doc_type
+    total_docs = Document.objects.count()
+    troubleshoot_count = Document.objects.filter(doc_type='TROUBLESHOOT').count()
+    escalation_count = Document.objects.filter(doc_type='ESCALATION').count()
+    today_count = Document.objects.filter(created_at__date=timezone.now().date()).count()
+    
     stats = {
-        'total': Document.objects.count(),
-        'processed': Document.objects.count(),
+        'total': total_docs,
+        'troubleshoot': troubleshoot_count,
+        'escalation': escalation_count,
+        'today': today_count,
+        # Legacy fields untuk compatibility
+        'processed': total_docs,
         'pending': 0,
-        'today': Document.objects.filter(created_at__date=timezone.now().date()).count(),
     }
     
     context = {
@@ -421,117 +436,181 @@ def dashboard_api_stats(request):
 @user_passes_test(is_admin_or_staff)
 @require_http_methods(["POST"])
 def api_upload_document(request):
-    """API untuk upload document/SOP dengan RAG processing yang disatukan"""
+    """API untuk upload knowledge base document dengan RAG processing
+    
+    Supports:
+    - TROUBLESHOOT: KATEGORI: based format (step-by-step guides)
+    - ESCALATION: Direct link format (NAMA FORM: | TRIGGER KEYWORD: | PANDUAN TIKET: | Link:)
+    
+    File harus TXT (UTF-8) untuk memastikan parsing yang konsisten.
+    """
     import logging
     logger = logging.getLogger(__name__)
     
-    logger.info(f'Upload request from user: {request.user.username}')
+    logger.info(f'KB Upload request from user: {request.user.username}')
     logger.info(f'Request FILES: {list(request.FILES.keys())}')
     
     if 'file' not in request.FILES:
         logger.warning('No file provided in request')
-        return JsonResponse({'status': 'error', 'message': 'No file provided'}, status=400)
+        return JsonResponse({
+            'status': 'error', 
+            'message': 'File tidak ditemukan'
+        }, status=400)
     
     file = request.FILES['file']
-    # Ambil doc_type dari form dropdown HTML (default ke TROUBLESHOOT jika tidak ada)
     doc_type = request.POST.get('doc_type', 'TROUBLESHOOT')
     
-    logger.info(f'File received: {file.name}, size: {file.size} bytes, type: {doc_type}')
+    logger.info(f'File: {file.name}, Size: {file.size} bytes, Type: {doc_type}')
     
-    # Validasi file size
-    max_size = 50 * 1024 * 1024  # 50MB
+    # Validasi file size (50MB max)
+    max_size = 50 * 1024 * 1024
     if file.size > max_size:
         logger.warning(f'File too large: {file.size} bytes')
-        return JsonResponse({'status': 'error', 'message': 'File too large'}, status=400)
+        return JsonResponse({
+            'status': 'error', 
+            'message': 'Ukuran file terlalu besar (max 50MB)'
+        }, status=400)
     
-    # Validasi file type
-    allowed_extensions = ['txt', 'pdf', 'docx', 'md']
+    # Validasi file type - HANYA TXT (per new flow)
+    allowed_extensions = ['txt']
     file_ext = file.name.split('.')[-1].lower()
     if file_ext not in allowed_extensions:
         logger.warning(f'Invalid file type: {file_ext}')
-        return JsonResponse({'status': 'error', 'message': f'File type not allowed. Allowed: {", ".join(allowed_extensions)}'}, status=400)
+        return JsonResponse({
+            'status': 'error', 
+            'message': f'Hanya file TXT (UTF-8) yang diterima. Diterima: {", ".join(allowed_extensions)}'
+        }, status=400)
     
     logger.info(f'File validation passed. Extension: {file_ext}')
     
     try:
-        # Read file content
+        # Read file content dengan encoding UTF-8
         try:
-            if file_ext == 'txt' or file_ext == 'md':
-                content = file.read().decode('utf-8')
-            else:
-                # For now, just read as text for PDF/DOCX (you can enhance with pdf2image, python-docx later)
-                content = file.read().decode('utf-8', errors='ignore')
+            content = file.read().decode('utf-8')
+            logger.info(f'File decoded successfully. Size: {len(content)} characters')
+        except UnicodeDecodeError:
+            logger.error('File encoding is not UTF-8')
+            return JsonResponse({
+                'status': 'error', 
+                'message': 'File harus menggunakan encoding UTF-8. Cek file di text editor dan simpan dengan UTF-8.'
+            }, status=400)
         except Exception as e:
-            return JsonResponse({'status': 'error', 'message': f'Could not read file: {str(e)}'}, status=400)
+            logger.error(f'Error reading file: {str(e)}')
+            return JsonResponse({
+                'status': 'error', 
+                'message': f'Gagal membaca file: {str(e)}'
+            }, status=400)
         
-        # --- PERUBAHAN UTAMA: Hanya membuat SATU document record di tabel RAG ---
+        # Create Document record
         doc = Document.objects.create(
-            title=file.name,  # FIX: Required field - use filename as title
+            title=file.name,
             file_name=file.name,
             file_size=file.size,
             file=file,
             uploaded_by=request.user,
             content=content,
-            category='Dashboard Upload',
+            category='Admin Dashboard',
             doc_type=doc_type,
             is_active=True
         )
-
-        # Process document menggunakan ingestion_service yang lengkap
-        # Ini akan melakukan chunking, embedding, dan menyimpan chunks
+        
+        logger.info(f'Document created: ID={doc.id}, Title={doc.title}')
+        
+        # Process document dengan ingestion service
+        # - Melakukan chunking sesuai format (KATEGORI atau direct-link)
+        # - Generate embeddings untuk setiap chunk
+        # - Simpan ke DocumentChunk table
         try:
             ingest_document(doc)
             chunks_created = doc.chunks.count()
-            logger.info(f'Document processed successfully with {chunks_created} chunks')
+            
+            # Detect format dari content untuk feedback yang lebih baik
+            format_type = "Troubleshoot (KATEGORI)" if "KATEGORI" in content else \
+                         "Direct Link (NAMA FORM)" if "NAMA FORM:" in content else "Unknown"
+            
+            logger.info(f'Document ingested successfully. Chunks: {chunks_created}, Format: {format_type}')
+            
+            type_emoji = "🔧" if doc_type == "TROUBLESHOOT" else "🔗"
+            
+            return JsonResponse({
+                'status': 'success',
+                'message': f'{type_emoji} KB berhasil diupload',
+                'details': f'{chunks_created} chunks diproses ({format_type})',
+                'document_id': doc.id,
+                'chunks_created': chunks_created,
+                'doc_type': doc_type,
+                'format_detected': format_type
+            }, status=200)
+            
         except Exception as e:
-            logger.error(f'Failed to process document: {e}')
+            logger.error(f'Failed to ingest document: {e}', exc_info=True)
+            # Delete document if ingestion failed
+            doc.delete()
+            
             return JsonResponse({
                 'status': 'error',
-                'message': f'Failed to process document: {str(e)}'
+                'message': f'Gagal memproses file: {str(e)}',
+                'details': 'Cek format file sesuai panduan di dalam upload dialog'
             }, status=500)
-        logger.info(f'Document uploaded successfully: {file.name}, Doc ID: {doc.id}, Chunks: {chunks_created}')
         
-        return JsonResponse({
-            'status': 'success',
-            'message': f'Document uploaded successfully ({chunks_created} chunks)',
-            'document_id': doc.id,
-            'chunks_created': chunks_created
-        })
     except Exception as e:
         import traceback
         error_msg = str(e)
-        error_trace = traceback.format_exc()
         logger.error(f'Upload error: {error_msg}')
-        logger.error(f'Traceback: {error_trace}')
+        logger.error(f'Traceback: {traceback.format_exc()}')
+        
         return JsonResponse({
             'status': 'error', 
-            'message': f'Upload failed: {error_msg}'
+            'message': f'Upload gagal: {error_msg}',
+            'details': 'Hubungi admin jika masalah berlanjut'
         }, status=500)
 
 
 @login_required
+@login_required(login_url='/auth/login/')
 @user_passes_test(is_admin_or_staff)
 @require_http_methods(["DELETE"])
 def api_delete_document(request, doc_id):
-    """API untuk delete document"""
+    """API untuk delete knowledge base document dan semua chunks-nya"""
+    import logging
+    logger = logging.getLogger(__name__)
+    
     try:
-        # Menghapus langsung dari model RAG (DocumentChunk akan terhapus otomatis via CASCADE)
         document = Document.objects.get(id=doc_id)
-        file_name = document.file_name
+        file_name = document.file_name or document.title
+        doc_type = document.doc_type
+        chunks_count = document.chunks.count()
+        
+        logger.info(f'Deleting document: {file_name} (ID={doc_id}, Type={doc_type}, Chunks={chunks_count})')
+        
+        # Menghapus document (DocumentChunk akan terhapus otomatis via CASCADE)
         document.delete()
         
         # Log activity
         ActivityLog.objects.create(
             action='DELETE',
-            description=f'Deleted document: {file_name}',
+            description=f'Deleted KB ({doc_type}): {file_name} ({chunks_count} chunks removed)',
             user_id=request.user.id,
         )
         
+        logger.info(f'Document deleted successfully: {file_name}')
+        
         return JsonResponse({
             'status': 'success',
-            'message': 'Document deleted successfully'
-        })
+            'message': f'✅ Knowledge base dihapus ({chunks_count} chunks removed)',
+            'document_id': doc_id,
+            'chunks_removed': chunks_count
+        }, status=200)
+        
     except Document.DoesNotExist:
-        return JsonResponse({'status': 'error', 'message': 'Document not found'}, status=404)
+        logger.warning(f'Document not found: ID={doc_id}')
+        return JsonResponse({
+            'status': 'error', 
+            'message': 'Document tidak ditemukan'
+        }, status=404)
     except Exception as e:
-        return JsonResponse({'status': 'error', 'message': str(e)}, status=500)
+        logger.error(f'Error deleting document: {str(e)}', exc_info=True)
+        return JsonResponse({
+            'status': 'error', 
+            'message': f'Gagal menghapus document: {str(e)}'
+        }, status=500)
