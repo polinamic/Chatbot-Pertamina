@@ -354,19 +354,19 @@ def signup_page(request):
                 password=password
             )
             
-            # Log activity
-            ActivityLog.objects.create(
-                action='CREATE',
-                description=f'New user registered via web form: {email}',
-                user_id=str(user.id)
+            # Create user profile
+            profile = UserProfile.objects.create(
+                user=user,
+                company='Pertamina'
             )
             
-            # ✅ FIX: Do NOT auto-login. Redirect to login page instead.
-            return render(request, 'users/signup.html', {
-                'success': 'Akun berhasil dibuat! Silakan login dengan akun Anda.',
-                'show_login_redirect': True
-            })
-                
+            # Auto-login user
+            user = authenticate(username=username, password=password)
+            if user is not None:
+                auth_login(request, user)
+                return redirect('chatbot:chat')
+            else:
+                return redirect('users:login')
         except Exception as e:
             logger.error(f"Signup error: {str(e)}", exc_info=True)
             errors['general'] = f'Terjadi kesalahan saat membuat akun: {str(e)}'
