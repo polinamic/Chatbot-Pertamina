@@ -80,23 +80,36 @@ TEMPLATES = [
 WSGI_APPLICATION = 'config.wsgi.application'
 
 # Database
-# MSSQL Server Configuration - Using Named Pipes
-DATABASES = {
-    'default': {
-        'ENGINE': 'mssql',
-        'NAME': 'chatbot_pertamina',
-        'USER': '',  # Leave empty for Windows Authentication
-        'PASSWORD': '',  # Leave empty for Windows Authentication
-        'HOST': '.',  # Use . for local named pipes
-        'PORT': '',  # Empty for named pipes
-        'OPTIONS': {
-            'driver': 'ODBC Driver 17 for SQL Server',
-            'Trusted_Connection': 'yes',
-            'autocommit': True,
-            'TrustServerCertificate': 'yes',
+# Use SQLite for tests, MSSQL for production
+TESTING = 'pytest' in os.environ.get('_', '') or os.environ.get('DJANGO_SETTINGS_MODULE', '') == 'config.settings'
+
+if TESTING or os.environ.get('TEST_DATABASE', '').lower() == 'true':
+    # SQLite for testing
+    DATABASES = {
+        'default': {
+            'ENGINE': 'django.db.backends.sqlite3',
+            'NAME': ':memory:',
+            'ATOMIC_REQUESTS': True,
         }
     }
-}
+else:
+    # MSSQL Server Configuration - Using Named Pipes
+    DATABASES = {
+        'default': {
+            'ENGINE': 'mssql',
+            'NAME': 'chatbot_pertamina',
+            'USER': '',  # Leave empty for Windows Authentication
+            'PASSWORD': '',  # Leave empty for Windows Authentication
+            'HOST': '.',  # Use . for local named pipes
+            'PORT': '',  # Empty for named pipes
+            'OPTIONS': {
+                'driver': 'ODBC Driver 17 for SQL Server',
+                'Trusted_Connection': 'yes',
+                'autocommit': True,
+                'TrustServerCertificate': 'yes',
+            }
+        }
+    }
 
 
 

@@ -1,0 +1,351 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}Profil - SITI{% endblock %}
+
+{% block extra_css %}
+<style>
+    .profile-container {
+        max-width: 900px;
+        margin: 2rem auto;
+        padding: 0 1rem;
+    }
+
+    .profile-header {
+        display: flex;
+        align-items: center;
+        gap: 2rem;
+        margin-bottom: 2rem;
+        padding: 2rem;
+        background-color: var(--bg-light);
+        border: 1px solid var(--border-light);
+        border-radius: 0.75rem;
+    }
+
+    body.dark-mode .profile-header {
+        background-color: var(--gray-900);
+        border-color: var(--border-dark);
+    }
+
+    .profile-avatar {
+        width: 120px;
+        height: 120px;
+        border-radius: 50%;
+        background-color: var(--primary);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        color: white;
+        font-size: 3rem;
+    }
+
+    .profile-info h1 {
+        margin: 0 0 0.5rem 0;
+        font-size: 2rem;
+    }
+
+    .profile-info p {
+        margin: 0.25rem 0;
+        color: var(--gray-600);
+    }
+
+    body.dark-mode .profile-info p {
+        color: var(--gray-400);
+    }
+
+    .profile-content {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 2rem;
+    }
+
+    .profile-card {
+        padding: 2rem;
+        background-color: var(--bg-light);
+        border: 1px solid var(--border-light);
+        border-radius: 0.75rem;
+    }
+
+    body.dark-mode .profile-card {
+        background-color: var(--gray-900);
+        border-color: var(--border-dark);
+    }
+
+    .profile-card h2 {
+        margin-top: 0;
+        margin-bottom: 1.5rem;
+        font-size: 1.25rem;
+        border-bottom: 2px solid var(--primary);
+        padding-bottom: 0.75rem;
+    }
+
+    .form-group {
+        margin-bottom: 1.5rem;
+    }
+
+    .form-group label {
+        display: block;
+        margin-bottom: 0.5rem;
+        font-weight: 500;
+    }
+
+    .form-group input,
+    .form-group select,
+    .form-group textarea {
+        width: 100%;
+        padding: 0.75rem;
+        border: 1px solid var(--border-light);
+        border-radius: 0.5rem;
+        font-size: 0.95rem;
+        background-color: var(--bg-light);
+        color: var(--text-light);
+        font-family: inherit;
+    }
+
+    body.dark-mode .form-group input,
+    body.dark-mode .form-group select,
+    body.dark-mode .form-group textarea {
+        background-color: var(--gray-900);
+        border-color: var(--border-dark);
+        color: var(--text-dark);
+    }
+
+    .form-group input:focus,
+    .form-group select:focus,
+    .form-group textarea:focus {
+        outline: none;
+        border-color: var(--primary);
+    }
+
+    .form-row {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 1rem;
+    }
+
+    .form-row .form-group {
+        margin-bottom: 0;
+    }
+
+    @media (max-width: 768px) {
+        .profile-content {
+            grid-template-columns: 1fr;
+        }
+
+        .form-row {
+            grid-template-columns: 1fr;
+        }
+
+        .profile-header {
+            flex-direction: column;
+            text-align: center;
+        }
+    }
+
+    .btn-group {
+        display: flex;
+        gap: 1rem;
+        margin-top: 2rem;
+    }
+
+    .btn {
+        flex: 1;
+        padding: 0.75rem;
+        border: none;
+        border-radius: 0.5rem;
+        font-weight: 600;
+        cursor: pointer;
+        transition: all 0.3s ease;
+        font-size: 1rem;
+    }
+
+    .btn-primary {
+        background-color: var(--primary);
+        color: white;
+    }
+
+    .btn-primary:hover {
+        background-color: var(--primary-dark);
+    }
+
+    .btn-secondary {
+        background-color: var(--gray-300);
+        color: var(--text-light);
+    }
+
+    .btn-secondary:hover {
+        background-color: var(--gray-400);
+    }
+
+    body.dark-mode .btn-secondary {
+        background-color: var(--gray-700);
+        color: var(--text-dark);
+    }
+
+    body.dark-mode .btn-secondary:hover {
+        background-color: var(--gray-600);
+    }
+
+    .alert {
+        padding: 1rem;
+        border-radius: 0.5rem;
+        margin-bottom: 1.5rem;
+    }
+
+    .alert-success {
+        background-color: #d4edda;
+        border: 1px solid #c3e6cb;
+        color: #155724;
+    }
+
+    .alert-error {
+        background-color: #f8d7da;
+        border: 1px solid #f5c6cb;
+        color: #721c24;
+    }
+
+    .email-display {
+        padding: 0.75rem;
+        background-color: var(--gray-100);
+        border: 1px solid var(--border-light);
+        border-radius: 0.5rem;
+        color: var(--text-light);
+    }
+
+    body.dark-mode .email-display {
+        background-color: var(--gray-800);
+        border-color: var(--border-dark);
+        color: var(--text-dark);
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="profile-container">
+    <!-- Messages -->
+    {% if success %}
+    <div class="alert alert-success">{{ success }}</div>
+    {% endif %}
+    
+    {% if error %}
+    <div class="alert alert-error">{{ error }}</div>
+    {% endif %}
+
+    <!-- Profile Header -->
+    <div class="profile-header">
+        <div class="profile-avatar">
+            <i class="bi bi-person-circle"></i>
+        </div>
+        <div class="profile-info">
+            <h1>{{ user.get_full_name|default:user.username }}</h1>
+            <p><strong>Email:</strong> {{ user.email }}</p>
+            <p><strong>Username:</strong> {{ user.username }}</p>
+            <p><strong>Member sejak:</strong> {{ user.date_joined|date:"d M Y" }}</p>
+        </div>
+    </div>
+
+    <!-- Profile Edit Form -->
+    <div class="profile-content">
+        <!-- Personal Information -->
+        <div class="profile-card">
+            <h2><i class="bi bi-person"></i> Informasi Pribadi</h2>
+            <form method="POST" action="{% url 'users:profile' %}">
+                {% csrf_token %}
+
+                <div class="form-row">
+                    <div class="form-group">
+                        <label for="first_name">Nama Depan</label>
+                        <input type="text" id="first_name" name="first_name" 
+                               value="{{ user.first_name }}" placeholder="Nama depan Anda">
+                    </div>
+                    <div class="form-group">
+                        <label for="last_name">Nama Belakang</label>
+                        <input type="text" id="last_name" name="last_name" 
+                               value="{{ user.last_name }}" placeholder="Nama belakang Anda">
+                    </div>
+                </div>
+
+                <div class="form-group">
+                    <label for="email">Email (Read-Only)</label>
+                    <div class="email-display">{{ user.email }}</div>
+                    <small style="color: var(--gray-600);">Email tidak dapat diubah</small>
+                </div>
+
+                <div class="form-group">
+                    <label for="phone">Nomor Telepon</label>
+                    <input type="tel" id="phone" name="phone" 
+                           value="{{ profile.phone }}" placeholder="+62...")
+                </div>
+
+                <div class="form-group">
+                    <label for="bio">Biografi</label>
+                    <textarea id="bio" name="bio" rows="3" 
+                              placeholder="Ceritakan tentang Anda...">{{ profile.bio }}</textarea>
+                </div>
+
+                <button type="submit" class="btn btn-primary">💾 Simpan Perubahan</button>
+            </form>
+        </div>
+
+        <!-- Organization Information -->
+        <div class="profile-card">
+            <h2><i class="bi bi-building"></i> Informasi Organisasi</h2>
+            <form method="POST" action="{% url 'users:profile' %}">
+                {% csrf_token %}
+
+                <div class="form-group">
+                    <label for="company">Perusahaan</label>
+                    <input type="text" id="company" name="company" 
+                           value="{{ profile.company }}" placeholder="Contoh: Pertamina">
+                </div>
+
+                <div class="form-group">
+                    <label for="department">Departemen</label>
+                    <select id="department" name="department">
+                        <option value="IT" {% if profile.department == 'IT' %}selected{% endif %}>IT Support</option>
+                        <option value="HR" {% if profile.department == 'HR' %}selected{% endif %}>Human Resources</option>
+                        <option value="OPS" {% if profile.department == 'OPS' %}selected{% endif %}>Operations</option>
+                        <option value="FIN" {% if profile.department == 'FIN' %}selected{% endif %}>Finance</option>
+                        <option value="OTHER" {% if profile.department == 'OTHER' %}selected{% endif %}>Other</option>
+                    </select>
+                </div>
+
+                <div class="form-group">
+                    <label>Tipe Role</label>
+                    <div class="email-display" style="padding: 0.75rem;">
+                        {% if profile.role == 'A' %}
+                            👨‍💼 Administrator
+                        {% elif profile.role == 'S' %}
+                            🎧 Support Staff
+                        {% elif profile.role == 'M' %}
+                            👔 Manager
+                        {% else %}
+                            👤 User Biasa
+                        {% endif %}
+                    </div>
+                    <small style="color: var(--gray-600);">Role tidak dapat diubah</small>
+                </div>
+
+                <div class="form-group">
+                    <label>Verifikasi Status</label>
+                    <div class="email-display" style="padding: 0.75rem;">
+                        {% if profile.is_verified %}
+                            ✅ Terverifikasi
+                        {% else %}
+                            ⏳ Menunggu Verifikasi
+                        {% endif %}
+                    </div>
+                </div>
+
+                <button type="submit" class="btn btn-primary">💾 Simpan Perubahan</button>
+            </form>
+        </div>
+    </div>
+
+    <!-- Quick Links -->
+    <div style="margin-top: 2rem; text-align: center;">
+        <a href="{% url 'users:settings' %}" class="btn btn-secondary" style="display: inline-block; padding: 0.75rem 2rem;">⚙️ Pengaturan</a>
+        <a href="{% url 'chatbot:chat' %}" class="btn btn-secondary" style="display: inline-block; padding: 0.75rem 2rem;">💬 Kembali ke Chat</a>
+    </div>
+</div>
+{% endblock %}
