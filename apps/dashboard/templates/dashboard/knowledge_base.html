@@ -76,7 +76,6 @@
                         <th>Type (RAG)</th> 
                         <th>Size</th>
                         <th>Uploaded By</th>
-                        <th>Status</th>
                         <th>Created</th>
                         <th>Action</th>
 =======
@@ -138,17 +137,6 @@
                         </td>
 <<<<<<< Updated upstream
                         <td>{{ doc.uploaded_by.username|default:"System" }}</td>
-                        <td>
-                            {% if doc.is_processed %}
-                                <span class="badge badge-success">
-                                    <i class="bi bi-check-circle"></i> Processed
-                                </span>
-                            {% else %}
-                                <span class="badge badge-warning">
-                                    <i class="bi bi-hourglass-split"></i> Processing
-                                </span>
-                            {% endif %}
-                        </td>
                         <td>{{ doc.created_at|date:"d M, Y H:i" }}</td>
 =======
 >>>>>>> Stashed changes

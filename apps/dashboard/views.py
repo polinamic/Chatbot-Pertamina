@@ -42,7 +42,6 @@ def dashboard_home(request):
     total_conversations = Conversation.objects.count()
     total_messages = Message.objects.count()
     total_documents = Document.objects.count()
-    total_active_conversations = Conversation.objects.filter(is_archived=False).count()
     
     # Statistik Hari Ini
     today = timezone.now().date()
@@ -60,8 +59,8 @@ def dashboard_home(request):
     avg_response_time = 0.45  # dalam detik, ini bisa dari custom metric
     
     # System health
-    documents_processed = Document.objects.filter(is_processed=True).count()
-    documents_pending = Document.objects.filter(is_processed=False).count()
+    documents_processed = Document.objects.count()
+    documents_pending = 0
     
     # Top Conversations (Most Messages)
     top_conversations = Conversation.objects.annotate(
@@ -94,7 +93,6 @@ def dashboard_home(request):
         'total_conversations': total_conversations,
         'total_messages': total_messages,
         'total_documents': total_documents,
-        'total_active_conversations': total_active_conversations,
         'conversations_today': conversations_today,
         'messages_today': messages_today,
         'users_today': users_today,
@@ -124,11 +122,6 @@ def conversations_management(request):
     # Filter & Search
     status_filter = request.GET.get('status')
     search_query = request.GET.get('search', '')
-    
-    if status_filter == 'archived':
-        conversations = conversations.filter(is_archived=True)
-    elif status_filter == 'active':
-        conversations = conversations.filter(is_archived=False)
     
     if search_query:
         conversations = conversations.filter(
@@ -210,10 +203,6 @@ def documents_management(request):
     
     # Filter
     status_filter = request.GET.get('status')
-    if status_filter == 'processed':
-        documents = documents.filter(is_processed=True)
-    elif status_filter == 'pending':
-        documents = documents.filter(is_processed=False)
     
     # Pagination
     paginator = Paginator(documents, 20)
@@ -222,8 +211,8 @@ def documents_management(request):
     
     stats = {
         'total': Document.objects.count(),
-        'processed': Document.objects.filter(is_processed=True).count(),
-        'pending': Document.objects.filter(is_processed=False).count(),
+        'processed': Document.objects.count(),
+        'pending': 0,
     }
     
     context = {
@@ -314,8 +303,8 @@ def knowledge_base(request):
     stats = {
 <<<<<<< Updated upstream
         'total': Document.objects.count(),
-        'processed': Document.objects.filter(is_processed=True).count(),
-        'pending': Document.objects.filter(is_processed=False).count(),
+        'processed': Document.objects.count(),
+        'pending': 0,
         'today': Document.objects.filter(created_at__date=timezone.now().date()).count(),
 =======
         'total': total_docs,
@@ -346,7 +335,7 @@ def chat_monitoring(request):
     ).order_by('-updated_at')[:50]
     
     stats = {
-        'active_conversations': Conversation.objects.filter(is_archived=False).count(),
+        'active_conversations': Conversation.objects.count(),
         'total_messages_today': Message.objects.filter(
             created_at__date=timezone.now().date()
         ).count(),
@@ -445,7 +434,7 @@ def dashboard_api_stats(request):
             'total_documents': Document.objects.count(),
             'conversations_today': Conversation.objects.filter(created_at__date=today).count(),
             'messages_today': Message.objects.filter(created_at__date=today).count(),
-            'active_conversations': Conversation.objects.filter(is_archived=False).count(),
+            'active_conversations': Conversation.objects.count(),
         }
     })
 
@@ -529,8 +518,7 @@ def api_upload_document(request):
             content=content,
             category='Admin Dashboard',
             doc_type=doc_type,
-            is_active=True,
-            is_processed=False
+            is_active=True
         )
         
         logger.info(f'Document created: ID={doc.id}, Title={doc.title}')

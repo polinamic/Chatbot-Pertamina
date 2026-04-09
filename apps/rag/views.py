@@ -17,14 +17,6 @@ import ollama
 from .models import Document, DocumentChunk  # apps.rag.models — hanya model RAG
 from .serializers import DocumentSerializer   # serializer untuk Document RAG
 
-# Model & serializer chatbot ada di app terpisah
-from apps.chatbot.models import Conversation, Message, ChatSession, UINavigatorMap
-from apps.chatbot.serializers import (
-    ConversationSerializer,
-    ConversationListSerializer,
-    MessageSerializer,
-)
-
 logger = logging.getLogger("chatbot")
 
 # ==============================
@@ -130,7 +122,6 @@ def upload_knowledge(request):
             file_size=uploaded_file.size,
             doc_type=doc_type,
             uploaded_by=request.user if request.user.is_authenticated else None,
-            is_processed=False,
         )
 
         # Proses chunking & embedding secara async jika tersedia,
@@ -233,157 +224,6 @@ def chat_view(request):
 def chat_page(request):
     """Render main chat page"""
     return render(request, 'chatbot/chat.html')
-
-
-# ==============================
-# CONVERSATION VIEWSET
-# ==============================
-
-class ConversationViewSet(viewsets.ModelViewSet):
-    """
-    ViewSet untuk mengelola conversations
-    """
-    permission_classes = [IsAuthenticated]
-    serializer_class = ConversationSerializer
-
-    def get_queryset(self):
-        return Conversation.objects.filter(user=self.request.user)
-
-    def get_serializer_class(self):
-        if self.action == 'list':
-            return ConversationListSerializer
-        return ConversationSerializer
-
-    def perform_create(self, serializer):
-        serializer.save(user=self.request.user)
-
-    @action(detail=True, methods=['post'])
-    def send_message(self, request, pk=None):
-        """
-        Send message dengan Agentic Workflow
-        """
-
-        conversation = self.get_object()
-        content = request.data.get('content')
-
-        if not content:
-            return Response(
-                {'error': 'Content is required'},
-                status=status.HTTP_400_BAD_REQUEST
-            )
-
-        # =============================
-        # SAVE USER MESSAGE
-        # =============================
-
-        user_message = Message.objects.create(
-            conversation=conversation,
-            role='user',
-            content=content
-        )
-
-        # =============================
-        # GET OR CREATE CHAT SESSION
-        # =============================
-
-        session, created = ChatSession.objects.get_or_create(
-            conversation=conversation,
-            defaults={"user": conversation.user}
-        )
-
-        # =============================
-        # DETECT NEGATIVE RESPONSE
-        # =============================
-
-        if is_negative_response(content):
-            session.failure_count += 1
-            session.save()
-
-        # =============================
-        # PHASE 1: NORMAL RAG
-        # =============================
-
-        if session.failure_count < 3:
-
-            prompt = f"""
-User bertanya:
-
-{content}
-
-Berikan solusi troubleshooting IT.
-
-Di akhir jawaban WAJIB bertanya:
-
-"Apakah solusi ini menyelesaikan masalah Anda?"
-"""
-
-            response = ollama.chat(
-                model="llama3:8b",
-                messages=[
-                    {"role": "system", "content": "Anda adalah IT Support perusahaan."},
-                    {"role": "user", "content": prompt}
-                ],
-                options={"temperature": 0.3}
-            )
-
-            answer = response["message"]["content"]
-
-        else:
-
-            # =============================
-            # PHASE 2: UI ESCALATION
-            # =============================
-
-            category = classify_ui_category(content)
-
-            try:
-
-                ui_map = UINavigatorMap.objects.get(
-                    category_name=category
-                )
-
-                answer = f"""
-Sepertinya saya perlu bantuan teknisi.
-
-Silakan ikuti langkah berikut di layar Anda untuk membuat tiket:
-
-{ui_map.ui_steps}
-"""
-
-            except UINavigatorMap.DoesNotExist:
-
-                answer = """
-Sepertinya masalah perlu ditangani teknisi.
-
-Silakan buka portal IT Support dan buat tiket baru.
-"""
-
-        # =============================
-        # SAVE ASSISTANT MESSAGE
-        # =============================
-
-        assistant_message = Message.objects.create(
-            conversation=conversation,
-            role='assistant',
-            content=answer
-        )
-
-        serializer = ConversationSerializer(conversation)
-
-        return Response(serializer.data, status=status.HTTP_201_CREATED)
-
-    @action(detail=True, methods=['post'])
-    def archive(self, request, pk=None):
-        """Archive a conversation"""
-
-        conversation = self.get_object()
-
-        conversation.is_archived = True
-        conversation.save()
-
-        serializer = self.get_serializer(conversation)
-
-        return Response(serializer.data)
 
 
 # ==============================
@@ -551,6 +391,7 @@ def siti_chat(request):
         "elapsed_ms": elapsed_ms,
     })
 
+<<<<<<< HEAD
 <<<<<<< Updated upstream
     return JsonResponse({"answer": answer, "session_id": session_id})
 =======
@@ -653,6 +494,9 @@ def get_conversation_messages(request, conversation_id):
             "error": "Gagal mengambil messages.",
             "detail": str(e)
         }, status=500)
+=======
+    return JsonResponse({"answer": answer, "session_id": session_id})
+>>>>>>> 88e50add2fb3d10c0af5d8fba36ff54be6f69c0a
 
 
 # ==============================
@@ -699,5 +543,9 @@ def get_chat_history(request):
         return JsonResponse(
             {"error": "Gagal mengambil riwayat chat."},
             status=500
+<<<<<<< HEAD
         )
 >>>>>>> Stashed changes
+=======
+        )
+>>>>>>> 88e50add2fb3d10c0af5d8fba36ff54be6f69c0a

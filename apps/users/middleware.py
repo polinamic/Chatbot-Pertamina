@@ -48,6 +48,41 @@ class JWTAuthenticationMiddleware:
                     'code': 'INVALID_TOKEN'
                 }, status=401)
 
+        if '/auth/signup' in request.path or '/signup' in request.path:
+            with open('middleware_debug.log', 'a') as f:
+                f.write(f"[JWTAuthenticationMiddleware] No bearer token for signup endpoint, calling get_response\n")
+        
+        response = self.get_response(request)
+        
+        if '/auth/signup' in request.path or '/signup' in request.path:
+            with open('middleware_debug.log', 'a') as f:
+                f.write(f"[JWTAuthenticationMiddleware EXIT] Response status: {response.status_code if hasattr(response, 'status_code') else 'unknown'}\n")
+        
+        return response
+
+        # Ambil token dari Authorization header
+        auth_header = request.META.get('HTTP_AUTHORIZATION', '')
+        
+        if auth_header.startswith('Bearer '):
+            token = auth_header[7:]  # Hapus "Bearer " prefix
+            try:
+                # Decode token
+                payload = jwt.decode(token, self.secret_key, algorithms=['HS256'])
+                request.user_id = payload.get('user_id')
+                request.token = token
+            except jwt.ExpiredSignatureError:
+                logger.warning(f"Expired token from {request.META.get('REMOTE_ADDR')}")
+                return JsonResponse({
+                    'error': 'Token expired',
+                    'code': 'TOKEN_EXPIRED'
+                }, status=401)
+            except jwt.InvalidTokenError:
+                logger.warning(f"Invalid token from {request.META.get('REMOTE_ADDR')}")
+                return JsonResponse({
+                    'error': 'Invalid token',
+                    'code': 'INVALID_TOKEN'
+                }, status=401)
+
         response = self.get_response(request)
         return response
 
