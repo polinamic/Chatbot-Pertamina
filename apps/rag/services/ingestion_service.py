@@ -67,6 +67,9 @@ def category_aware_chunking(content: str) -> list[str]:
     Returns:
         List of chunks, masing-masing mengandung header KATEGORI: yang lengkap.
     """
+    # Normalize line endings to \n for consistent processing
+    content = content.replace('\r\n', '\n')
+    
     chunks = []
 
     # Split berdasarkan 'KATEGORI:' — setiap elemen adalah 1 entri KB
@@ -112,6 +115,57 @@ def category_aware_chunking(content: str) -> list[str]:
     return chunks
 
 
+def escalation_aware_chunking(content: str) -> list[str]:
+    """
+    Chunking untuk ESCALATION format dengan delimiter "---" dan "NAMA FORM:".
+    
+    Format:
+    ---
+    NAMA FORM: Form Name
+    TRIGGER KEYWORD: keywords
+    PANDUAN TIKET: guidance text
+    Link: url
+    
+    Setiap entry = 1 chunk (sudah singkat, tidak perlu dipecah lebih lagi)
+    """
+    import re
+    
+    chunks = []
+    
+    # Normalize line endings to \n for consistent regex matching
+    content = content.replace('\r\n', '\n')
+    
+    # Robust regex untuk match format dengan --- delimiter
+    form_pattern = re.compile(
+        r'---\n'  # Mandatory delimiter
+        r'NAMA FORM:\s*([^\n]+)\n'
+        r'TRIGGER KEYWORD:\s*([^\n]+)\n'
+        r'PANDUAN TIKET:\s*([^\n]+)\n'
+        r'Link:\s*([^\n]+)',
+        re.MULTILINE
+    )
+    
+    forms = list(form_pattern.finditer(content))
+    logger.info(f"Found {len(forms)} ESCALATION forms in content")
+    
+    for form_match in forms:
+        nama_form = form_match.group(1).strip()
+        trigger_keywords = form_match.group(2).strip()
+        panduan_tiket = form_match.group(3).strip()
+        link = form_match.group(4).strip()
+        
+        # Reconstruct full text untuk chunk
+        full_text = f"""NAMA FORM: {nama_form}
+TRIGGER KEYWORD: {trigger_keywords}
+PANDUAN TIKET: {panduan_tiket}
+Link: {link}"""
+        
+        chunks.append(full_text)
+    
+    logger.info(f"Escalation chunking created {len(chunks)} chunks")
+    return chunks
+
+
 def ingest_document(document):
     """
     Proses dokumen: delete chunk lama → chunking → embedding → simpan.
@@ -138,8 +192,13 @@ def ingest_document(document):
 
     embedding_service = EmbeddingService()
 
-    # PERBAIKAN: Gunakan category-aware chunking
-    chunks = category_aware_chunking(document.content)
+    # Choose chunking strategy based on document type
+    if document.doc_type == 'ESCALATION':
+        # Use ESCALATION format chunking (NAMA FORM: with --- delimiter)
+        chunks = escalation_aware_chunking(document.content)
+    else:
+        # Default to KATEGORI/TROUBLESHOOT format chunking
+        chunks = category_aware_chunking(document.content)
     
     # Extract metadata dari chunks untuk monitoring
     chunk_metadata = []

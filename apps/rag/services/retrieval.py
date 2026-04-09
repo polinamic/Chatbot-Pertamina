@@ -52,14 +52,15 @@ def _get_reranker():
     """
     Lazy load model Cross-Encoder untuk Re-Ranking.
     Model ini berat, jadi hanya di-load ke RAM saat benar-benar dibutuhkan pertama kali.
+    PERBAIKAN: Force CPU untuk menghindari CUDA error pada GPU yang incompatible
     """
     global _reranker_model
     if _reranker_model is None:
         try:
             from sentence_transformers import CrossEncoder
             logger.info("loading_reranker_model", extra={"model": RERANKER_MODEL_NAME})
-            # Menggunakan device CPU/GPU secara otomatis
-            _reranker_model = CrossEncoder(RERANKER_MODEL_NAME, max_length=512)
+            # Force CPU untuk menghindari CUDA error
+            _reranker_model = CrossEncoder(RERANKER_MODEL_NAME, max_length=512, device='cpu')
             logger.info("reranker_model_loaded_successfully")
         except ImportError:
             logger.error("sentence_transformers_not_installed", extra={
@@ -197,6 +198,10 @@ def retrieve_context(question, vector_store, embedding_service, doc_type=None, t
         return final_results
         
     except Exception as e:
-        logger.error("retrieval_error", extra={"error": str(e)})
+        import traceback
+        logger.error("retrieval_error", extra={
+            "error": str(e),
+            "traceback": traceback.format_exc()
+        })
         return []
     

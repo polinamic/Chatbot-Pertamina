@@ -459,6 +459,11 @@ def siti_chat(request):
     Endpoint utama chatbot SITI.
     Menerima query dari frontend, meneruskan ke chat_v2.chat(),
     mengembalikan jawaban sebagai JSON { "answer": "..." }.
+    
+    PERBAIKAN 7: Menyimpan chat history ke database.
+    - Frontend mengirim user_id
+    - Endpoint membuat/mendapatkan Conversation
+    - Menyimpan user message dan bot answer ke Message model
     """
     if request.method != "POST":
         return JsonResponse({"error": "Method not allowed. Gunakan POST."}, status=405)
@@ -471,9 +476,30 @@ def siti_chat(request):
 
     query = body.get("query", "").strip()
     session_id = body.get("session_id", "default")
+    user_id = body.get("user_id")
 
     if not query:
         return JsonResponse({"error": "Field 'query' wajib diisi."}, status=400)
+
+    # --- Get or create conversation for user ---
+    conversation = None
+    if user_id:
+        try:
+            from django.contrib.auth.models import User
+            from apps.chatbot.models import Conversation, Message
+            
+            user = User.objects.get(id=user_id)
+            # Ambil conversation terbaru, atau buat baru jika tidak ada
+            conversation = Conversation.objects.filter(user=user).order_by('-created_at').first()
+            if not conversation:
+                conversation = Conversation.objects.create(
+                    user=user,
+                    title=query[:50] + "..." if len(query) > 50 else query
+                )
+        except User.DoesNotExist:
+            logger.warning("siti_chat_user_not_found", extra={"user_id": user_id})
+        except Exception as e:
+            logger.error("siti_chat_conversation_error", extra={"error": str(e)})
 
     # --- Panggil chat engine ---
     start_time = time.time()
@@ -525,4 +551,153 @@ def siti_chat(request):
         "elapsed_ms": elapsed_ms,
     })
 
+<<<<<<< Updated upstream
     return JsonResponse({"answer": answer, "session_id": session_id})
+=======
+    # --- Simpan pesan ke database jika user terautentikasi ---
+    if conversation:
+        try:
+            from apps.chatbot.models import Message
+            # Simpan user message
+            Message.objects.create(
+                conversation=conversation,
+                role='user',
+                content=query
+            )
+            # Simpan bot answer
+            Message.objects.create(
+                conversation=conversation,
+                role='assistant',
+                content=answer
+            )
+            # Update conversation title jika masih default
+            if conversation.title == query[:50] + ("..." if len(query) > 50 else ""):
+                conversation.title = query[:100] + ("..." if len(query) > 100 else "")
+                conversation.save()
+        except Exception as e:
+            logger.error("siti_chat_save_message_error", extra={"error": str(e), "user_id": user_id})
+
+    return JsonResponse({"answer": answer, "session_id": session_id})
+
+
+# ==============================
+# GET CONVERSATION MESSAGES
+# ==============================
+def get_conversation_messages(request, conversation_id):
+    """
+    Get all messages dari specific conversation.
+    Frontend gunakan endpoint ini untuk load chat history saat user klik conversation di sidebar.
+    
+    GET /api/v1/rag/conversation/<conversation_id>/messages/
+    
+    Response:
+    {
+        "success": true,
+        "conversation": {
+            "id": 1,
+            "title": "...",
+            "created_at": "...",
+            "updated_at": "..."
+        },
+        "messages": [
+            {
+                "id": 1,
+                "role": "user",
+                "content": "...",
+                "created_at": "..."
+            },
+            ...
+        ]
+    }
+    """
+    if request.method != "GET":
+        return JsonResponse({"error": "Method not allowed. Gunakan GET."}, status=405)
+    
+    try:
+        from apps.chatbot.models import Conversation, Message
+        
+        # Get conversation
+        conversation = Conversation.objects.get(id=conversation_id)
+        
+        # Get all messages dalam conversation, ordered by created_at
+        messages = Message.objects.filter(conversation=conversation).order_by('created_at')
+        
+        # Build response
+        messages_data = []
+        for msg in messages:
+            messages_data.append({
+                'id': msg.id,
+                'role': msg.role,
+                'content': msg.content,
+                'created_at': msg.created_at.isoformat()
+            })
+        
+        return JsonResponse({
+            'success': True,
+            'conversation': {
+                'id': conversation.id,
+                'title': conversation.title,
+                'created_at': conversation.created_at.isoformat(),
+                'updated_at': conversation.updated_at.isoformat()
+            },
+            'messages': messages_data
+        })
+    
+    except Conversation.DoesNotExist:
+        return JsonResponse({
+            "error": "Conversation not found"
+        }, status=404)
+    except Exception as e:
+        logger.error("get_conversation_messages_error", extra={"error": str(e), "conversation_id": conversation_id})
+        return JsonResponse({
+            "error": "Gagal mengambil messages.",
+            "detail": str(e)
+        }, status=500)
+
+
+# ==============================
+# GET CHAT HISTORY (USER'S CONVERSATIONS)
+# ==============================
+def get_chat_history(request):
+    """
+    Get user's chat history (conversations).
+    Returns list of recent conversations for the logged-in user.
+    """
+    if request.method != "GET":
+        return JsonResponse({"error": "Method not allowed. Gunakan GET."}, status=405)
+    
+    # Check if user is authenticated
+    user_id = request.GET.get('user_id')
+    if not user_id:
+        return JsonResponse({"error": "user_id parameter required"}, status=400)
+    
+    try:
+        from django.contrib.auth.models import User
+        from apps.chatbot.models import Conversation
+        
+        user = User.objects.get(id=user_id)
+        conversations = Conversation.objects.filter(user=user).order_by('-created_at')[:10]
+        
+        history = []
+        for conv in conversations:
+            history.append({
+                'id': conv.id,
+                'title': conv.title,
+                'created_at': conv.created_at.isoformat(),
+                'updated_at': conv.updated_at.isoformat()
+            })
+        
+        return JsonResponse({
+            'success': True,
+            'history': history,
+            'count': len(history)
+        })
+    except User.DoesNotExist:
+        return JsonResponse({"error": "User not found"}, status=404)
+    except Exception as e:
+        logger.error("get_chat_history_error", extra={"error": str(e), "user_id": user_id})
+        return JsonResponse(
+            {"error": "Gagal mengambil riwayat chat."},
+            status=500
+        )
+>>>>>>> Stashed changes

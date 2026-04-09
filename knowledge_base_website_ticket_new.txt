@@ -1,0 +1,274 @@
+==============================================================================
+  KNOWLEDGE BASE: PANDUAN PENGGUNAAN WEBSITE & PEMBUATAN TIKET IT SUPPORT
+  Versi: 2.0 | Format: Direct Link Routing (Sesuai Permintaan Perusahaan)
+==============================================================================
+
+INSTRUKSI PENGGUNAAN KNOWLEDGE BASE INI:
+Setiap entri dalam KB ini memiliki:
+  - NAMA FORM      : Nama formulir/kategori tiket di website IT Support
+  - TRIGGER KEYWORD: Kata kunci yang diketik user di chatbot
+  - PANDUAN TIKET  : Format jawaban baku yang WAJIB diberikan oleh AI kepada user
+
+==============================================================================
+
+---
+NAMA FORM: Acces Control Device
+TRIGGER KEYWORD: access, control, acs, pintu
+PANDUAN TIKET: Untuk menghubungi tim IT silahkan klik link dibawah ini dan ikuti alur yang ada pada link tersebut.
+Link: https://myssc.pertamina.com/dwp/app/#/itemprofile/101
+
+---
+NAMA FORM: Access Management End User Details
+TRIGGER KEYWORD: access, akses, internet, working group, wifi, p_6c, vpn, mailing, group, file, sharing, global, member, email, e-mail, sharepoint, ftp
+PANDUAN TIKET: Untuk menghubungi tim IT silahkan klik link dibawah ini dan ikuti alur yang ada pada link tersebut.
+Link: https://myssc.pertamina.com/dwp/app/#/itemprofile/276
+
+---
+NAMA FORM: Approval Change (PJS, Cuti, etc)
+TRIGGER KEYWORD: approval, pjs, cuti
+PANDUAN TIKET: Untuk menghubungi tim IT silahkan klik link dibawah ini dan ikuti alur yang ada pada link tersebut.
+Link: https://myssc.pertamina.com/dwp/app/#/itemprofile/604
+
+---
+NAMA FORM: Broadcast Email & Message Sstem SAP- Persero
+TRIGGER KEYWORD: broadcast, email, sap, wallpaper, video display, email blast, wallpaper broadcast, sistem sap, video, videotron
+PANDUAN TIKET: Untuk menghubungi tim IT silahkan klik link dibawah ini dan ikuti alur yang ada pada link tersebut.
+Link: https://myssc.pertamina.com/dwp/app/#/itemprofile/201
+
+---
+NAMA FORM: CCTV
+TRIGGER KEYWORD: kamera, cctv
+PANDUAN TIKET: Untuk menghubungi tim IT silahkan klik link dibawah ini dan ikuti alur yang ada pada link tersebut.
+Link: https://myssc.pertamina.com/dwp/app/#/itemprofile/209
+
+---
+NAMA FORM: Change, Reset, Unlock Password Details
+TRIGGER KEYWORD: user id, erp, non- erp, reset, password, lock, unlock, reset password, change password, email, unlock, user, aplikasi
+PANDUAN TIKET: Untuk menghubungi tim IT silahkan klik link dibawah ini dan ikuti alur yang ada pada link tersebut.
+Link: https://myssc.pertamina.com/dwp/app/#/itemprofile/207
+
+---
+NAMA FORM: Customer service
+TRIGGER KEYWORD: setup, asistensi, onsite, on-site, bantuan, service
+PANDUAN TIKET: Untuk menghubungi tim IT silahkan klik link dibawah ini dan ikuti alur yang ada pada link tersebut.
+Link: [LINK_BELUM_TERSEDIA_DI_CSV]
+
+---
+NAMA FORM: Database Storage
+TRIGGER KEYWORD: database, storage
+PANDUAN TIKET: Untuk menghubungi tim IT silahkan klik link dibawah ini dan ikuti alur yang ada pada link tersebut.
+Link: [LINK_BELUM_TERSEDIA_DI_CSV]
+
+---
+NAMA FORM: Dekstop
+TRIGGER KEYWORD: pc, desktop, notebook, laptop, scanner, printer, instalasi, software, backup, data, fax, driver, os, windows
+PANDUAN TIKET: Untuk menghubungi tim IT silahkan klik link dibawah ini dan ikuti alur yang ada pada link tersebut.
+Link: https://myssc.pertamina.com/dwp/app/#/itemprofile/206
+
+---
+NAMA FORM: Developer Key
+TRIGGER KEYWORD: developer, SAP
+PANDUAN TIKET: Untuk menghubungi tim IT silahkan klik link dibawah ini dan ikuti alur yang ada pada link tersebut.
+Link: [LINK_BELUM_TERSEDIA_DI_CSV]
+
+---
+NAMA FORM: Email & Collaboration Tools Details
+TRIGGER KEYWORD: email, chat, file sharing, sharing, sharepoint, working drive, skype for business, email
+PANDUAN TIKET: Untuk menghubungi tim IT silahkan klik link dibawah ini dan ikuti alur yang ada pada link tersebut.
+Link: https://myssc.pertamina.com/dwp/app/#/itemprofile/306
+
+---
+NAMA FORM: ERP Front Page & LSMW Access
+TRIGGER KEYWORD: sap, lsmw
+PANDUAN TIKET: Untuk menghubungi tim IT silahkan klik link dibawah ini dan ikuti alur yang ada pada link tersebut.
+Link: [LINK_BELUM_TERSEDIA_DI_CSV]
+
+---
+NAMA FORM: Exit Clearance Details
+TRIGGER KEYWORD: exit, pensiun, resign, fasilitas, sarana ti
+PANDUAN TIKET: Untuk menghubungi tim IT silahkan klik link dibawah ini dan ikuti alur yang ada pada link tersebut.
+Link: [LINK_BELUM_TERSEDIA_DI_CSV]
+
+---
+NAMA FORM: Fasilitas Data Center
+TRIGGER KEYWORD: fasilitas, data, center, rak, ups
+PANDUAN TIKET: Untuk menghubungi tim IT silahkan klik link dibawah ini dan ikuti alur yang ada pada link tersebut.
+Link: [LINK_BELUM_TERSEDIA_DI_CSV]
+
+---
+NAMA FORM: Geomatika
+TRIGGER KEYWORD: geomatika, geodesi, data, geologi, GGRP
+PANDUAN TIKET: Untuk menghubungi tim IT silahkan klik link dibawah ini dan ikuti alur yang ada pada link tersebut.
+Link: [LINK_BELUM_TERSEDIA_DI_CSV]
+
+---
+NAMA FORM: Hak Akses Admin - VRA
+TRIGGER KEYWORD: akses, admin, administrator
+PANDUAN TIKET: Untuk menghubungi tim IT silahkan klik link dibawah ini dan ikuti alur yang ada pada link tersebut.
+Link: [LINK_BELUM_TERSEDIA_DI_CSV]
+
+---
+NAMA FORM: Handset
+TRIGGER KEYWORD: handphone, tablet, explosion proof, seluler, ponsel, telepon
+PANDUAN TIKET: Untuk menghubungi tim IT silahkan klik link dibawah ini dan ikuti alur yang ada pada link tersebut.
+Link: https://myssc.pertamina.com/dwp/app/#/itemprofile/303
+
+---
+NAMA FORM: Incident
+TRIGGER KEYWORD: sap error, down, mati, rusak, error, bug, tidak bisa login, gagal akses, blue screen, aplikasi lambat, absensi, finger
+PANDUAN TIKET: Untuk menghubungi tim IT silahkan klik link dibawah ini dan ikuti alur yang ada pada link tersebut.
+Link: https://myssc.pertamina.com/dwp/app/#/itemprofile/313
+
+---
+NAMA FORM: IT Helpdesk Query
+TRIGGER KEYWORD: faq, help, bantuan, guide, panduan
+PANDUAN TIKET: Untuk menghubungi tim IT silahkan klik link dibawah ini dan ikuti alur yang ada pada link tersebut.
+Link: [LINK_BELUM_TERSEDIA_DI_CSV]
+
+---
+NAMA FORM: IT Supplies
+TRIGGER KEYWORD: tinta, toner, flashdisk, cd, hard, disk, record, baterai, battery, kertas, pointer, dvd, it, supply, supplies
+PANDUAN TIKET: Untuk menghubungi tim IT silahkan klik link dibawah ini dan ikuti alur yang ada pada link tersebut.
+Link: https://myssc.pertamina.com/dwp/app/#/itemprofile/218
+
+---
+NAMA FORM: Jaringan BIZ
+TRIGGER KEYWORD: lan, jaringan, kabel, internet, wifi, koneksi
+PANDUAN TIKET: Untuk menghubungi tim IT silahkan klik link dibawah ini dan ikuti alur yang ada pada link tersebut.
+Link: https://myssc.pertamina.com/dwp/app/#/itemprofile/229
+
+---
+NAMA FORM: Layanan Pekerja Baru, Konsultan, Auditor dan Mitra Kerja
+TRIGGER KEYWORD: pekerja, baru, konsultan,mitra, kerja, auditor, user, telepon, printer, extension, ekstensi, mps, akun, email, e-mail, file, sharing, laptop, notebook, desktop, pc, bps, bpa, hire, bps, bpa, pc
+PANDUAN TIKET: Untuk menghubungi tim IT silahkan klik link dibawah ini dan ikuti alur yang ada pada link tersebut.
+Link: https://myssc.pertamina.com/dwp/app/#/itemprofile/311
+
+---
+NAMA FORM: Modifikasi Akses Port...
+TRIGGER KEYWORD: firewall, port, open, security
+PANDUAN TIKET: Untuk menghubungi tim IT silahkan klik link dibawah ini dan ikuti alur yang ada pada link tersebut.
+Link: [LINK_BELUM_TERSEDIA_DI_CSV]
+
+---
+NAMA FORM: Multimedia and Sound System
+TRIGGER KEYWORD: multimedia, sound, system, proyektor, projector, screen, layar, tv, televisi, kabel, vga, hdmi, vga, hdmi, display, splitter, switcher, toa, toa, converter
+PANDUAN TIKET: Untuk menghubungi tim IT silahkan klik link dibawah ini dan ikuti alur yang ada pada link tersebut.
+Link: https://myssc.pertamina.com/dwp/app/#/itemprofile/228
+
+---
+NAMA FORM: Object Key Access
+TRIGGER KEYWORD: object, key, access, sap
+PANDUAN TIKET: Untuk menghubungi tim IT silahkan klik link dibawah ini dan ikuti alur yang ada pada link tersebut.
+Link: [LINK_BELUM_TERSEDIA_DI_CSV]
+
+---
+NAMA FORM: Otorisasi MPS
+TRIGGER KEYWORD: mps, printer, user, kartu, id
+PANDUAN TIKET: Untuk menghubungi tim IT silahkan klik link dibawah ini dan ikuti alur yang ada pada link tersebut.
+Link: https://myssc.pertamina.com/dwp/app/#/itemprofile/306
+
+---
+NAMA FORM: Package Service New RIG
+TRIGGER KEYWORD: RIG, rig, pengeboran, package, windows, akun, email, explosion, mobile, VSAT, HT, RTS, printer, scanner, desktop, pc, laptop, notebook, proyektor, projector, PABX, telepon, VHF
+PANDUAN TIKET: Untuk menghubungi tim IT silahkan klik link dibawah ini dan ikuti alur yang ada pada link tersebut.
+Link: [LINK_BELUM_TERSEDIA_DI_CSV]
+
+---
+NAMA FORM: Pengembangan Aplikasi
+TRIGGER KEYWORD: aplikasi, pengembangan, erp, non- erp, fitur baru, dashboard
+PANDUAN TIKET: Untuk menghubungi tim IT silahkan klik link dibawah ini dan ikuti alur yang ada pada link tersebut.
+Link: https://myssc.pertamina.com/dwp/app/#/itemprofile/309
+
+---
+NAMA FORM: Printer ERP
+TRIGGER KEYWORD: printer, sap, erp, ERP, SAP
+PANDUAN TIKET: Untuk menghubungi tim IT silahkan klik link dibawah ini dan ikuti alur yang ada pada link tersebut.
+Link: https://myssc.pertamina.com/dwp/app/#/itemprofile/217
+
+---
+NAMA FORM: Radio Handy Talky
+TRIGGER KEYWORD: radio, marine, fix, base, rts, rts, subscriber, trunking, 2, way, plan, station, battery, baterai, charger
+PANDUAN TIKET: Untuk menghubungi tim IT silahkan klik link dibawah ini dan ikuti alur yang ada pada link tersebut.
+Link: https://myssc.pertamina.com/dwp/app/#/itemprofile/227
+
+---
+NAMA FORM: SAP Locking Process
+TRIGGER KEYWORD: sap, locking
+PANDUAN TIKET: Untuk menghubungi tim IT silahkan klik link dibawah ini dan ikuti alur yang ada pada link tersebut.
+Link: [LINK_BELUM_TERSEDIA_DI_CSV]
+
+---
+NAMA FORM: SAP Runtime Dialogue Extension
+TRIGGER KEYWORD: runtime, sap
+PANDUAN TIKET: Untuk menghubungi tim IT silahkan klik link dibawah ini dan ikuti alur yang ada pada link tersebut.
+Link: [LINK_BELUM_TERSEDIA_DI_CSV]
+
+---
+NAMA FORM: SAPBATCH Locking Process
+TRIGGER KEYWORD: sap, batch, SAP, locking, job
+PANDUAN TIKET: Untuk menghubungi tim IT silahkan klik link dibawah ini dan ikuti alur yang ada pada link tersebut.
+Link: [LINK_BELUM_TERSEDIA_DI_CSV]
+
+---
+NAMA FORM: Server atau Virtual Desktop
+TRIGGER KEYWORD: server, virtual desktop
+PANDUAN TIKET: Untuk menghubungi tim IT silahkan klik link dibawah ini dan ikuti alur yang ada pada link tersebut.
+Link: [LINK_BELUM_TERSEDIA_DI_CSV]
+
+---
+NAMA FORM: SIM Card Corporate
+TRIGGER KEYWORD: sim, card, corporate, kartu, handphone, pulsa, migrasi, ganti
+PANDUAN TIKET: Untuk menghubungi tim IT silahkan klik link dibawah ini dan ikuti alur yang ada pada link tersebut.
+Link: https://myssc.pertamina.com/dwp/app/#/itemprofile/214
+
+---
+NAMA FORM: SIM Card Support
+TRIGGER KEYWORD: sim, card, corporate, kartu, handphone, pulsa, roaming, paket, fisik, tagihan, internasional, mikro, nano
+PANDUAN TIKET: Untuk menghubungi tim IT silahkan klik link dibawah ini dan ikuti alur yang ada pada link tersebut.
+Link: https://myssc.pertamina.com/dwp/app/#/itemprofile/214
+
+---
+NAMA FORM: Software
+TRIGGER KEYWORD: aplikasi, 7zip, abby, finereader, acrobat, adobe, autocad, instalasi
+PANDUAN TIKET: Untuk menghubungi tim IT silahkan klik link dibawah ini dan ikuti alur yang ada pada link tersebut.
+Link: https://myssc.pertamina.com/dwp/app/#/itemprofile/312
+
+---
+NAMA FORM: Souvenir
+TRIGGER KEYWORD: souvenir
+PANDUAN TIKET: Untuk menghubungi tim IT silahkan klik link dibawah ini dan ikuti alur yang ada pada link tersebut.
+Link: [LINK_BELUM_TERSEDIA_DI_CSV]
+
+---
+NAMA FORM: Telephone
+TRIGGER KEYWORD: telephone, telepon, extension, extention, ekstensi
+PANDUAN TIKET: Untuk menghubungi tim IT silahkan klik link dibawah ini dan ikuti alur yang ada pada link tersebut.
+Link: https://myssc.pertamina.com/dwp/app/#/itemprofile/213
+
+---
+NAMA FORM: Upgrade Quota Online Mailbox dan/atau Online Archive
+TRIGGER KEYWORD: upgrade, quota, kuota, mailbox , email, e-mail, archive
+PANDUAN TIKET: Untuk menghubungi tim IT silahkan klik link dibawah ini dan ikuti alur yang ada pada link tersebut.
+Link: [LINK_BELUM_TERSEDIA_DI_CSV]
+
+---
+NAMA FORM: User ID ERP & Non ERP
+TRIGGER KEYWORD: user id, erp, user, id, non erp, akses, otorisasi, autorisasi, pengalihan, perpanjangan, akun, email, aplikasi, sap, SAP
+PANDUAN TIKET: Untuk menghubungi tim IT silahkan klik link dibawah ini dan ikuti alur yang ada pada link tersebut.
+Link: https://myssc.pertamina.com/dwp/app/#/itemprofile/271
+
+---
+NAMA FORM: Video Conference atau Audio Converence
+TRIGGER KEYWORD: video, conference, audio, townhall, meeting
+PANDUAN TIKET: Untuk menghubungi tim IT silahkan klik link dibawah ini dan ikuti alur yang ada pada link tersebut.
+Link: https://myssc.pertamina.com/dwp/app/#/itemprofile/225
+
+---
+NAMA FORM: Wifi Access
+TRIGGER KEYWORD: wifi, guest, temporer, tamu, jaringan
+PANDUAN TIKET: Untuk menghubungi tim IT silahkan klik link dibawah ini dan ikuti alur yang ada pada link tersebut.
+Link: [LINK_BELUM_TERSEDIA_DI_CSV]
+
+==============================================================================
+  AKHIR KNOWLEDGE BASE
+==============================================================================
