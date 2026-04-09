@@ -301,12 +301,6 @@ def knowledge_base(request):
     today_count = Document.objects.filter(created_at__date=timezone.now().date()).count()
     
     stats = {
-<<<<<<< Updated upstream
-        'total': Document.objects.count(),
-        'processed': Document.objects.count(),
-        'pending': 0,
-        'today': Document.objects.filter(created_at__date=timezone.now().date()).count(),
-=======
         'total': total_docs,
         'troubleshoot': troubleshoot_count,
         'escalation': escalation_count,
@@ -314,7 +308,6 @@ def knowledge_base(request):
         # Legacy fields untuk compatibility
         'processed': total_docs,
         'pending': 0,
->>>>>>> Stashed changes
     }
     
     context = {

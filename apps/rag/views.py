@@ -158,15 +158,11 @@ NEGATIVE_WORDS = [
     "tidak bisa",
 ]
 
-
 def is_negative_response(text: str):
-
     text = text.lower()
-
     for word in NEGATIVE_WORDS:
         if word in text:
             return True
-
     return False
 
 
@@ -175,11 +171,14 @@ def is_negative_response(text: str):
 # ==============================
 
 def classify_ui_category(problem_history):
-
-    categories = UINavigatorMap.objects.all()
+    # Asumsikan UINavigatorMap sudah di-import jika model ini digunakan
+    try:
+        from apps.rag.models import UINavigatorMap
+        categories = UINavigatorMap.objects.all()
+    except ImportError:
+        categories = []
 
     category_prompt = ""
-
     for cat in categories:
         category_prompt += f"{cat.category_name}: {cat.description}\n"
 
@@ -235,7 +234,6 @@ def stream_chat(request):
     """
     Streaming endpoint untuk token streaming LLM
     """
-
     if request.method != "POST":
         return JsonResponse({"error": "POST required"}, status=405)
 
@@ -250,9 +248,7 @@ def stream_chat(request):
         return JsonResponse({"error": "Query is required"}, status=400)
 
     def generate():
-
         try:
-
             stream = ollama.chat(
                 model="llama3:8b",
                 messages=[
@@ -262,7 +258,6 @@ def stream_chat(request):
             )
 
             for chunk in stream:
-
                 if "message" in chunk and "content" in chunk["message"]:
                     token = chunk["message"]["content"]
                     yield token
@@ -277,20 +272,7 @@ def stream_chat(request):
 
 
 # ==============================
-# SITI CHAT ENDPOINT  ← BARU
-#
-# Ini adalah endpoint yang menghubungkan frontend
-# (chat.html) dengan chat engine (chat_v2.py).
-#
-# Route yang harus didaftarkan di urls.py:
-#   path("api/v1/rag/chat/", views.siti_chat, name="siti_chat"),
-#
-# Frontend mengirim:
-#   POST /api/v1/rag/chat/
-#   { "query": "...", "session_id": "session_xxx" }
-#
-# Backend mengembalikan:
-#   { "answer": "...", "session_id": "session_xxx" }
+# SITI CHAT ENDPOINT
 # ==============================
 
 @csrf_exempt
@@ -353,17 +335,6 @@ def siti_chat(request):
             session_id=session_id,
         )
 
-        # =====================================================
-        # PERBAIKAN: Consume generator jika chat() mengembalikan
-        # generator instead of string.
-        #
-        # Penyebab: _process_chat() dengan stream=False pada
-        # kondisi tertentu (yield di dalam fungsi yang sama)
-        # membuat Python memperlakukan seluruh fungsi sebagai
-        # generator — sehingga return value-pun jadi generator.
-        #
-        # Solusi: Cek tipe, jika generator → join semua token.
-        # =====================================================
         import types
         if isinstance(answer, (types.GeneratorType,)):
             answer = "".join(answer)
@@ -391,10 +362,6 @@ def siti_chat(request):
         "elapsed_ms": elapsed_ms,
     })
 
-<<<<<<< HEAD
-<<<<<<< Updated upstream
-    return JsonResponse({"answer": answer, "session_id": session_id})
-=======
     # --- Simpan pesan ke database jika user terautentikasi ---
     if conversation:
         try:
@@ -428,28 +395,6 @@ def get_conversation_messages(request, conversation_id):
     """
     Get all messages dari specific conversation.
     Frontend gunakan endpoint ini untuk load chat history saat user klik conversation di sidebar.
-    
-    GET /api/v1/rag/conversation/<conversation_id>/messages/
-    
-    Response:
-    {
-        "success": true,
-        "conversation": {
-            "id": 1,
-            "title": "...",
-            "created_at": "...",
-            "updated_at": "..."
-        },
-        "messages": [
-            {
-                "id": 1,
-                "role": "user",
-                "content": "...",
-                "created_at": "..."
-            },
-            ...
-        ]
-    }
     """
     if request.method != "GET":
         return JsonResponse({"error": "Method not allowed. Gunakan GET."}, status=405)
@@ -494,9 +439,6 @@ def get_conversation_messages(request, conversation_id):
             "error": "Gagal mengambil messages.",
             "detail": str(e)
         }, status=500)
-=======
-    return JsonResponse({"answer": answer, "session_id": session_id})
->>>>>>> 88e50add2fb3d10c0af5d8fba36ff54be6f69c0a
 
 
 # ==============================
@@ -543,9 +485,4 @@ def get_chat_history(request):
         return JsonResponse(
             {"error": "Gagal mengambil riwayat chat."},
             status=500
-<<<<<<< HEAD
         )
->>>>>>> Stashed changes
-=======
-        )
->>>>>>> 88e50add2fb3d10c0af5d8fba36ff54be6f69c0a
