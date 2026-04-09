@@ -12,6 +12,7 @@ from rest_framework.routers import DefaultRouter
 from apps.users.views import UserViewSet
 from apps.users.urls import api_urlpatterns as users_api_urls
 from apps.chatbot.views import ConversationViewSet
+from apps.chatbot.urls import api_urlpatterns as chatbot_api_urls
 
 
 # ==============================
@@ -37,7 +38,7 @@ urlpatterns = [
     # ==============================
 
     path('auth/', include('apps.users.urls')),
-    path('', include('apps.chatbot.urls')),
+    path('', include(('apps.chatbot.urls', 'chatbot'))),
     path('dashboard/', include('apps.dashboard.urls')),
 
 
@@ -48,14 +49,8 @@ urlpatterns = [
     path('api/v1/users/', include(users_api_urls)),
     path('api/v1/', include(api_router.urls)),
     path('api/v1/rag/', include('apps.rag.urls')),
+    path('api/v1/chat/', include(chatbot_api_urls)),
     path('api-auth/', include('rest_framework.urls')),
-
-
-    # ==============================
-    # Chatbot Streaming Endpoint
-    # ==============================
-
-    path("api/", include("apps.chatbot.urls")),
 ]
 
 
