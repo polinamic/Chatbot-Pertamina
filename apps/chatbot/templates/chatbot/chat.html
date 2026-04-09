@@ -99,6 +99,7 @@
     // =========================================================
     const API_ENDPOINT = "/api/v1/rag/chat/";
     const HISTORY_ENDPOINT = "/api/v1/rag/history/";
+    const CONVERSATIONS_ENDPOINT = "/api/v1/conversations/";
 
     const input = document.getElementById('message-input');
     const sendBtn = document.getElementById('send-btn');
@@ -112,6 +113,7 @@
     
     let isBotThinking = false;
     let currentUserId = null;
+    let currentConversationId = null; // Track active conversation
 
     // =====================================
     // GET CURRENT USER ID & LOAD HISTORY
@@ -172,6 +174,7 @@
     function displayChatHistory(history) {
         if (!history || history.length === 0) {
             chatHistoryContainer.innerHTML = '<p style="padding: 1rem; font-size: 0.85rem; color: var(--gray-600);">Tidak ada riwayat chat</p>';
+            currentConversationId = null;
             return;
         }
 
@@ -193,7 +196,6 @@
             
             chatHistoryContainer.appendChild(div);
         });
-    }
 
     // =====================================
     // SELECT CHAT (LOAD CONVERSATION)
@@ -293,7 +295,15 @@
     if (!sessionId) {
         sessionId = "session_" + Math.random().toString(36).substr(2, 9);
         sessionStorage.setItem('chatSessionId', sessionId);
+        // Auto-select first conversation and load its messages
+        if (history.length > 0) {
+            currentConversationId = history[0].id;
+            sessionStorage.setItem('currentConversationId', currentConversationId);
+            loadConversationMessages(currentConversationId);
+        }
     }
+
+    // Session ID no longer needed - using database conversation IDs instead
 
     // =====================================
     // AUTO RESIZE TEXTAREA
@@ -315,9 +325,49 @@
     });
 
     // =====================================
+    // CREATE NEW CONVERSATION
+    // =====================================
+    async function createNewConversation() {
+        try {
+            const timestamp = new Date().toLocaleTimeString('id-ID', { 
+                year: 'numeric', 
+                month: 'long', 
+                day: 'numeric',
+                hour: '2-digit',
+                minute: '2-digit'
+            });
+            
+            const response = await fetch(CONVERSATIONS_ENDPOINT, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-CSRFToken': getCookie('csrftoken')
+                },
+                body: JSON.stringify({
+                    title: `Chat - ${timestamp}`
+                })
+            });
+
+            if (response.ok) {
+                const data = await response.json();
+                currentConversationId = data.id;
+                sessionStorage.setItem('currentConversationId', currentConversationId);
+                console.log('New conversation created:', currentConversationId);
+                return currentConversationId;
+            } else {
+                console.error('Failed to create conversation:', response.status);
+                return null;
+            }
+        } catch (error) {
+            console.error('Error creating conversation:', error);
+            return null;
+        }
+    }
+
+    // =====================================
     // START NEW CHAT
     // =====================================
-    function startNewChat() {
+    async function startNewChat() {
         messagesContainer.innerHTML = `
             <div class="chat-empty">
                 <div class="chat-empty-icon"><i class="bi bi-robot"></i></div>
@@ -328,12 +378,91 @@
         input.value = "";
         input.style.height = "auto";
         
-        // Reset Session ID saat mulai percakapan baru
-        sessionId = "session_" + Math.random().toString(36).substr(2, 9);
-        sessionStorage.setItem('chatSessionId', sessionId);
+        // Create new conversation in database
+        const convId = await createNewConversation();
+        if (convId) {
+            // Deselect all history items
+            document.querySelectorAll('.chat-item').forEach(item => {
+                item.classList.remove('active');
+            });
+            // Reload chat history to show new conversation
+            loadChatHistory();
+        }
+    }
+
+    // =====================================
+    // SELECT CHAT & LOAD MESSAGES
+    // =====================================
+    async function selectChat(element) {
+        // Remove active class from all items
+        document.querySelectorAll('.chat-item').forEach(item => {
+            item.classList.remove('active');
+        });
         
-        // Reload chat history
-        loadChatHistory();
+        // Add active class to clicked item
+        element.classList.add('active');
+        
+        // Get conversation ID from data attribute
+        const conversationId = element.getAttribute('data-id');
+        currentConversationId = conversationId;
+        sessionStorage.setItem('currentConversationId', conversationId);
+        
+        console.log('Selected conversation:', conversationId);
+        
+        // Load messages untuk conversation ini
+        await loadConversationMessages(conversationId);
+    }
+
+    // =====================================
+    // LOAD CONVERSATION MESSAGES
+    // =====================================
+    async function loadConversationMessages(conversationId) {
+        try {
+            const response = await fetch(`${CONVERSATIONS_ENDPOINT}${conversationId}/`, {
+                method: 'GET',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-CSRFToken': getCookie('csrftoken')
+                }
+            });
+
+            if (response.ok) {
+                const data = await response.json();
+                displayMessages(data.messages || []);
+            } else {
+                console.error('Failed to load conversation:', response.status);
+                messagesContainer.innerHTML = '<p style="padding: 1rem; color: var(--gray-600);">Failed to load messages</p>';
+            }
+        } catch (error) {
+            console.error('Error loading conversation messages:', error);
+            messagesContainer.innerHTML = '<p style="padding: 1rem; color: var(--gray-600);">Error loading messages</p>';
+        }
+    }
+
+    // =====================================
+    // DISPLAY MESSAGES FROM CONVERSATION
+    // =====================================
+    function displayMessages(messages) {
+        messagesContainer.innerHTML = '';
+        
+        if (!messages || messages.length === 0) {
+            messagesContainer.innerHTML = `
+                <div class="chat-empty">
+                    <div class="chat-empty-icon"><i class="bi bi-robot"></i></div>
+                    <h3>Tidak ada pesan</h3>
+                    <p>Mulai percakapan dengan mengetik pertanyaan Anda.</p>
+                </div>
+            `;
+            return;
+        }
+
+        messages.forEach(msg => {
+            if (msg.role === 'user') {
+                addUserMessage(msg.content);
+            } else {
+                addBotMessage(msg.content);
+            }
+        });
     }
 
     // =====================================
@@ -487,6 +616,15 @@
         const message = input.value.trim();
         if(!message) return;
 
+        // Ensure conversation exists
+        if (!currentConversationId) {
+            const convId = await createNewConversation();
+            if (!convId) {
+                addBotMessage("Gagal membuat conversation baru. Silakan coba lagi.");
+                return;
+            }
+        }
+
         addUserMessage(message);
 
         isBotThinking = true;
@@ -500,11 +638,12 @@
         showTyping();
 
         try {
-            const response = await fetch(API_ENDPOINT,{
-                method:"POST",
-                headers:{
-                    "Content-Type":"application/json",
-                    "X-CSRFToken":getCookie("csrftoken")
+            // Send message to conversation endpoint (saves to DB)
+            const response = await fetch(`${CONVERSATIONS_ENDPOINT}${currentConversationId}/send_message/`, {
+                method: "POST",
+                headers: {
+                    "Content-Type": "application/json",
+                    "X-CSRFToken": getCookie("csrftoken")
                 },
                 // PERBAIKAN 3: Menyisipkan Session ID
                 // PERBAIKAN 6: Tambahkan user_id untuk menyimpan conversation
@@ -512,6 +651,8 @@
                     query: message,
                     session_id: sessionId,
                     user_id: currentUserId
+                body: JSON.stringify({
+                    content: message
                 })
             });
 
@@ -521,11 +662,9 @@
                 throw new Error("HTTP Status " + response.status);
             }
 
-            // PERBAIKAN: Ambil field 'answer' dari response JSON.
-            // Guard tipe string mencegah marked() crash jika
-            // backend tidak sengaja mengembalikan tipe lain.
+            // Get response with bot answer
             const data = await response.json();
-            const rawAnswer = data.answer;
+            const rawAnswer = data.messages ? data.messages[data.messages.length - 1].content : null;
             const botText = (typeof rawAnswer === "string" && rawAnswer.trim())
                 ? rawAnswer
                 : "Maaf, terjadi kesalahan pada server.";
@@ -549,6 +688,11 @@
     // LOAD CHAT HISTORY ON PAGE LOAD
     // =====================================
     document.addEventListener('DOMContentLoaded', function() {
+        // Restore conversation ID from session storage if it exists
+        const savedConversationId = sessionStorage.getItem('currentConversationId');
+        if (savedConversationId) {
+            currentConversationId = savedConversationId;
+        }
         loadCurrentUser();
     });
 

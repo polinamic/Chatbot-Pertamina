@@ -1,0 +1,217 @@
+"""
+QUICK TEST REFERENCE CARD
+
+One-line commands for common testing scenarios
+"""
+
+# INSTALL TESTING DEPENDENCIES
+pip install -r requirements-test.txt
+
+# RUN ALL TESTS
+pytest
+
+# RUN SPECIFIC TEST FILES
+pytest tests/test_models.py          # Model tests only
+pytest tests/test_auth.py            # Auth tests only
+pytest tests/test_views.py           # View tests only
+pytest tests/test_api.py             # API tests only
+pytest tests/test_database.py        # Database tests only
+pytest tests/test_e2e.py             # E2E tests only
+
+# RUN SPECIFIC TEST CLASS
+pytest tests/test_auth.py::TestLoginFlow
+
+# RUN SPECIFIC TEST FUNCTION
+pytest tests/test_auth.py::TestLoginFlow::test_successful_login
+
+# RUN TESTS WITH COVERAGE REPORT
+pytest --cov=apps --cov-report=html
+
+# RUN TESTS IN PARALLEL (FASTER)
+pytest -n auto
+
+# RUN ONLY FAST TESTS (SKIP E2E)
+pytest -m "not e2e"
+
+# RUN SECURITY TESTS ONLY
+pytest tests/test_database.py::TestSecurityVulnerabilities
+
+# RUN WITH VERBOSE OUTPUT
+pytest -v
+
+# RUN TESTS THAT MATCH A PATTERN
+pytest -k "login"         # All tests with "login" in name
+
+# RUN TESTS AND STOP ON FIRST FAILURE
+pytest -x
+
+# RUN LAST FAILED TESTS ONLY
+pytest --lf
+
+# RUN A NUMBER OF TIMES (FOR FLAKY TEST DETECTION)
+pytest --count=5
+
+# GENERATE HTML COVERAGE REPORT
+pytest --cov=apps --cov-report=html
+# View: htmlcov/index.html
+
+# TEST WITH SPECIFIC MARKER
+pytest -m django_db      # Only database tests
+pytest -m "not e2e"      # Skip E2E tests
+
+# DEBUG A FAILING TEST
+pytest tests/test_auth.py::TestLoginFlow::test_successful_login -vv --tb=short
+
+# CI/CD PRE-COMMIT CHECKS
+pytest -m "not e2e" --tb=short && echo "Ready for commit!"
+
+# COVERAGE PERCENTAGE
+pytest --cov=apps --cov-report=term-missing | grep TOTAL
+
+# CHECK SLOW TESTS
+pytest --durations=10
+
+# TEST DATABASE-ONLY (WITHOUT MODELS)
+pytest tests/test_database.py::TestDatabaseRelationships
+
+# TEST USER ISOLATION
+pytest -k "isolation"
+
+# TEST SECURITY
+pytest tests/test_database.py::TestSecurityVulnerabilities -v
+
+# TEST AUTHENTICATION
+pytest tests/test_auth.py -v
+
+# TEST API ENDPOINTS
+pytest tests/test_api.py -v
+
+# GENERATE JUnit XML REPORT (FOR CI INTEGRATION)
+pytest --junit-xml=test-results.xml
+
+# FULL TEST REPORT
+pytest --verbose --tb=short --color=yes
+
+# FAST CHECKS (30 SECONDS)
+pytest tests/ -m "not e2e" --tb=line -q
+
+# COMPREHENSIVE CHECK (BEFORE PUSHING)
+pytest -v --cov=apps --cov-report=term-missing -m "not e2e"
+
+# E2E TESTS (REQUIRES RUNNING SERVER)
+python manage.py runserver &
+pytest tests/test_e2e.py -v
+
+# KILL ANY RUNNING TEST SERVERS
+pkill -f "runserver"
+
+# CHECK WHAT TESTS EXIST
+pytest --collect-only
+
+# DRY RUN (COLLECT TESTS, DON'T RUN)
+pytest --collect-only tests/
+
+# TEST SPECIFIC FUNCTION AND SHOW PRINT STATEMENTS
+pytest tests/test_auth.py::TestLoginFlow::test_successful_login -s
+
+# MEASURE TEST EXECUTION TIME
+pytest --durations=5
+
+# GENERATE DETAILED COVERAGE REPORT
+pytest --cov=apps --cov-report=html --cov-report=term-missing
+
+# RUN TESTS WITH TIMEOUT (30 SECONDS)
+pytest --timeout=30
+
+# FOR DEVELOPMENT: WATCH MODE (AUTO-RERUN ON FILE CHANGE)
+pytest-watch tests/
+
+# QUICK PRE-COMMIT CHECK (USE BEFORE GIT COMMIT)
+pytest tests/test_models.py tests/test_auth.py -q && echo "✓ Ready" || echo "✗ Fix tests"
+
+---
+
+## KEY FIXTURE NAMES (Available in All Tests)
+
+- test_user                           # Basic user without profile/settings
+- test_user_with_profile_and_settings # Full user with related models
+- test_admin_user                     # Admin/superuser
+- authenticated_client                # Logged-in HTTP client
+- api_client                          # DRF API client
+- authenticated_api_client            # Logged-in API client
+- test_conversation                   # Sample conversation
+- test_conversation_with_messages     # Conversation with pre-loaded messages
+- multiple_users                      # 3 test users for isolation testing
+- valid_signup_data                   # Signup form data
+- valid_login_data                    # Login form data
+- valid_profile_data                  # Profile update data
+- valid_settings_data                 # Settings update data
+
+## TEST CATEGORIES
+
+@pytest.mark.django_db              # Requires database access
+@pytest.mark.e2e                    # End-to-end browser tests
+@pytest.mark.slow                   # Slow tests (>1 second)
+
+## COMMON TEST PATTERNS
+
+# Test requires database
+@pytest.mark.django_db
+def test_user_creation(self):
+    user = User.objects.create_user(...)
+
+# Test HTTP client
+def test_homepage(self, client):
+    response = client.get('/')
+
+# Test with authentication
+def test_chat_page(self, authenticated_client):
+    response = authenticated_client.get('/chatbot/')
+
+# Test API
+def test_api_endpoint(self, authenticated_api_client):
+    response = authenticated_api_client.get('/api/v1/conversations/')
+
+# Test with fixtures
+def test_something(self, test_user, test_conversation):
+    ...
+
+# Test multiple users
+def test_isolation(self, multiple_users):
+    user1, user2, user3 = multiple_users
+    ...
+
+# Test factory
+def test_with_factory(self):
+    user = UserFactory()
+    conversation = ConversationFactory(user=user)
+
+## COVERAGE TARGETS
+
+Models:    95%+ (data integrity critical)
+Views:     85%+ (functionality important)
+API:       90%+ (client integration essential)
+Utils:     80%+ (helpers and utilities)
+Overall:   80%+ target
+
+## CONTINUOUS INTEGRATION
+
+Automatic on:
+- Push to main/develop branches
+- Pull requests
+- Manual GitHub Actions trigger
+
+View results: https://github.com/YOUR_REPO/actions
+
+## TIPS & TRICKS
+
+1. Use -x flag to stop on first failure
+2. Use -k to run tests matching a pattern
+3. Use --lf to re-run last failed tests
+4. Use --durations to find slow tests
+5. Use -s to show print statements
+6. Use -n auto for parallel execution
+7. Use --tb=short for concise error output
+8. Check htmlcov/index.html for coverage details
+9. Use -m "not e2e" for quick feedback
+10. Run tests before every commit!

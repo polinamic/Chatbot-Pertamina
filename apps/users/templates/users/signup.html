@@ -266,6 +266,18 @@
                 <p>Buat akun baru untuk mengakses AI Chatbot Pertamina</p>
             </div>
 
+            <!-- Success Message -->
+            {% if success %}
+            <div
+                style="background-color: #d4edda; border: 1px solid #c3e6cb; color: #155724; padding: 1rem; border-radius: 0.5rem; margin-bottom: 1.5rem;">
+                <strong>✅ Sukses!</strong>
+                <p style="margin: 0.5rem 0 0 0;">{{ success }}</p>
+                <p style="margin: 0.75rem 0 0 0;">
+                    <a href="{% url 'users:login' %}" style="color: #155724; font-weight: 600;">Klik di sini untuk login →</a>
+                </p>
+            </div>
+            {% endif %}
+
             <!-- Error Messages -->
             {% if errors %}
             <div
@@ -285,6 +297,13 @@
                 style="background-color: #d4edda; border: 1px solid #c3e6cb; color: #155724; padding: 1rem; border-radius: 0.5rem; margin-bottom: 1.5rem;">
                 <strong>✅ Sukses!</strong>
                 <p style="margin: 0.5rem 0 0 0;">{{ success }}</p>
+                {% if show_login_redirect %}
+                <p style="margin: 1rem 0 0 0;">
+                    <a href="{% url 'users:login' %}" style="color: #155724; font-weight: 600; text-decoration: underline;">
+                        Klik di sini untuk login →
+                    </a>
+                </p>
+                {% endif %}
             </div>
             {% endif %}
 
@@ -321,6 +340,7 @@
             <div class="signup-footer">
                 Sudah punya akun? <a href="{% url 'users:login' %}">Masuk di sini</a>
             </div>
+            {% endif %}
         </div>
     </div>
 

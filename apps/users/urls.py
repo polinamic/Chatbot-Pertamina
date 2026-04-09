@@ -8,7 +8,9 @@ from .views import (
     LogoutView,
     signup_page,
     login_page,
-    logout_page
+    logout_page,
+    profile_page,
+    settings_page,
 )
 
 app_name = 'users'
@@ -31,4 +33,6 @@ urlpatterns = [
     path('signup/', signup_page, name='signup'),
     path('login/', login_page, name='login'),
     path('logout/', logout_page, name='logout'),
+    path('profile/', profile_page, name='profile'),
+    path('settings/', settings_page, name='settings'),
 ]
