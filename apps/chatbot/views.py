@@ -115,6 +115,7 @@ Jawab HANYA satu kata kategori.
 # ==============================
 
 def chat_view(request):
+    """❌ DEPRECATED - use chat_page instead"""
     return render(request, 'chatbot/chat.html', {
         "conversations": [],
         "messages": []
@@ -122,8 +123,32 @@ def chat_view(request):
 
 
 def chat_page(request):
-    """Render main chat page"""
-    return render(request, 'chatbot/chat.html')
+    """
+    Render main chat page
+    ✅ PROTECTED: Requires user to be authenticated
+    Redirects to login if user is not logged in
+    """
+    from apps.users.decorators import login_required_redirect
+    
+    @login_required_redirect
+    def _chat_page(request):
+        # Load user-specific data
+        user = request.user
+        conversations = []
+        
+        if user.is_authenticated:
+            # Fetch user's conversations
+            from .models import Conversation
+            conversations = Conversation.objects.filter(
+                user=user
+            ).order_by('-created_at')[:10]
+        
+        return render(request, 'chatbot/chat.html', {
+            "user": user,
+            "conversations": conversations,
+        })
+    
+    return _chat_page(request)
 
 
 # ==============================

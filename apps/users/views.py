@@ -7,7 +7,7 @@ from django.utils import timezone
 import jwt
 import logging
 
-from .models import UserProfile
+from .models import UserProfile, UserSettings
 from .serializers import (
     UserSerializer, 
     UserProfileSerializer, 
@@ -305,9 +305,11 @@ class LogoutView(views.APIView):
 
 # Template Views (untuk backward compatibility)
 def signup_page(request):
-    """Handle signup page - form-based signup"""
+    """
+    Handle signup page - form-based signup
+    After successful signup, redirect to login page (do NOT auto-login)
+    """
     from django.shortcuts import render, redirect
-    from django.contrib.auth import authenticate, login as auth_login
     
     if request.method == 'GET':
         return render(request, 'users/signup.html')
@@ -345,17 +347,11 @@ def signup_page(request):
             })
         
         try:
-            # Create user
+            # Create user (signals.py will automatically create UserProfile and UserSettings)
             user = User.objects.create_user(
                 username=username,
                 email=email,
                 password=password
-            )
-            
-            # Create user profile
-            profile = UserProfile.objects.create(
-                user=user,
-                company='Pertamina'
             )
             
             # Log activity
@@ -365,13 +361,11 @@ def signup_page(request):
                 user_id=str(user.id)
             )
             
-            # Auto-login user
-            user = authenticate(username=username, password=password)
-            if user is not None:
-                auth_login(request, user)
-                return redirect('chatbot:chat')
-            else:
-                return redirect('users:login')
+            # ✅ FIX: Do NOT auto-login. Redirect to login page instead.
+            return render(request, 'users/signup.html', {
+                'success': 'Akun berhasil dibuat! Silakan login dengan akun Anda.',
+                'show_login_redirect': True
+            })
                 
         except Exception as e:
             logger.error(f"Signup error: {str(e)}", exc_info=True)
@@ -441,3 +435,128 @@ def logout_page(request):
     
     logout(request)
     return redirect('users:login')
+
+
+def profile_page(request):
+    """
+    Display and edit user profile
+    ✅ PROTECTED: Requires authentication
+    """
+    from django.shortcuts import render, redirect
+    from apps.users.decorators import login_required_redirect
+    
+    @login_required_redirect
+    def _profile_page(request):
+        user = request.user
+        
+        if request.method == 'POST':
+            # Update profile
+            first_name = request.POST.get('first_name', '').strip()
+            last_name = request.POST.get('last_name', '').strip()
+            phone = request.POST.get('phone', '').strip()
+            bio = request.POST.get('bio', '').strip()
+            department = request.POST.get('department', 'OTHER')
+            company = request.POST.get('company', '').strip()
+            
+            try:
+                # Update user
+                user.first_name = first_name
+                user.last_name = last_name
+                user.save()
+                
+                # Update profile
+                profile = user.profile
+                profile.phone = phone
+                profile.bio = bio
+                profile.department = department
+                profile.company = company
+                profile.save()
+                
+                # Log activity
+                ActivityLog.objects.create(
+                    action='UPDATE',
+                    description=f'User {user.email} updated profile',
+                    user_id=str(user.id)
+                )
+                
+                return render(request, 'users/profile.html', {
+                    'user': user,
+                    'profile': profile,
+                    'success': '✅ Profil berhasil diperbarui!'
+                })
+            except Exception as e:
+                logger.error(f"Profile update error: {str(e)}", exc_info=True)
+                return render(request, 'users/profile.html', {
+                    'user': user,
+                    'profile': user.profile,
+                    'error': f'Error: {str(e)}'
+                })
+        
+        return render(request, 'users/profile.html', {
+            'user': user,
+            'profile': user.profile,
+        })
+    
+    return _profile_page(request)
+
+
+def settings_page(request):
+    """
+    Display and edit user settings
+    ✅ PROTECTED: Requires authentication
+    Each user has their own settings stored in database
+    """
+    from django.shortcuts import render
+    from apps.users.decorators import login_required_redirect
+    
+    @login_required_redirect
+    def _settings_page(request):
+        user = request.user
+        
+        # Get or create user settings
+        settings, created = UserSettings.objects.get_or_create(user=user)
+        
+        if request.method == 'POST':
+            # Update settings
+            theme = request.POST.get('theme', 'auto')
+            language = request.POST.get('language', 'id')
+            enable_notifications = request.POST.get('enable_notifications') == 'on'
+            enable_history_logging = request.POST.get('enable_history_logging') == 'on'
+            receive_email_updates = request.POST.get('receive_email_updates') == 'on'
+            is_profile_public = request.POST.get('is_profile_public') == 'on'
+            
+            try:
+                settings.theme = theme
+                settings.language = language
+                settings.enable_notifications = enable_notifications
+                settings.enable_history_logging = enable_history_logging
+                settings.receive_email_updates = receive_email_updates
+                settings.is_profile_public = is_profile_public
+                settings.save()
+                
+                # Log activity
+                ActivityLog.objects.create(
+                    action='UPDATE',
+                    description=f'User {user.email} updated settings',
+                    user_id=str(user.id)
+                )
+                
+                return render(request, 'users/settings.html', {
+                    'user': user,
+                    'settings': settings,
+                    'success': '✅ Pengaturan berhasil disimpan!'
+                })
+            except Exception as e:
+                logger.error(f"Settings update error: {str(e)}", exc_info=True)
+                return render(request, 'users/settings.html', {
+                    'user': user,
+                    'settings': settings,
+                    'error': f'Error: {str(e)}'
+                })
+        
+        return render(request, 'users/settings.html', {
+            'user': user,
+            'settings': settings,
+        })
+    
+    return _settings_page(request)

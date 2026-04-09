@@ -1,0 +1,52 @@
+# ===========================
+# TESTING FRAMEWORK
+# ===========================
+pytest>=7.4.0
+pytest-django>=4.5.2
+pytest-cov>=4.1.0
+pytest-xdist>=3.3.1              # Parallel test execution
+pytest-timeout>=2.1.0            # Prevent hanging tests
+
+# ===========================
+# TEST DATA & FIXTURES
+# ===========================
+factory-boy>=3.3.0               # ORM factories for test data
+faker>=19.3.0                    # Fake data generation
+
+# ===========================
+# E2E TESTING
+# ===========================
+selenium>=4.13.0                 # Browser automation
+playwright>=1.39.0               # Alternative to Selenium
+python-dotenv>=1.0.0             # Load .env in tests
+
+# ===========================
+# MOCKING & PATCHING
+# ===========================
+responses>=0.24.1                # Mock HTTP responses
+freezegun>=1.4.0                 # Mock datetime
+
+# ===========================
+# TESTING UTILITIES
+# ===========================
+model-bakery>=1.12.0             # Alternative to factory_boy
+django-test-plus>=2.2.1          # Django testing helpers
+
+# ===========================
+# CODE QUALITY & SECURITY
+# ===========================
+bandit>=1.7.5                    # Security issue scanner
+django-security>=0.16.0          # Django security checker
+safety>=2.3.5                    # Dependency vulnerability checker
+coverage>=7.3.1                  # Code coverage measurement
+
+# ===========================
+# PERFORMANCE TESTING
+# ===========================
+django-silk>=5.0.4               # Performance profiling
+locust>=2.15.1                   # Load testing
+
+# ===========================
+# FIXTURES & TEST UTILITIES
+# ===========================
+django-stubs>=4.2.4              # Type hints for Django
