@@ -36,12 +36,12 @@
         </div>
         
         <div style="border-top: 1px solid var(--border-light); padding-top: 1rem; margin-top: auto;">
-            <div style="padding: 0.75rem; font-size: 0.875rem; color: var(--gray-600); cursor: pointer; border-radius: 0.5rem; transition: all 0.2s; display: flex; align-items: center; gap: 0.5rem;" onmouseover="this.style.backgroundColor='var(--gray-100)'" onmouseout="this.style.backgroundColor='transparent'">
+            <a href="{% url 'users:profile' %}" style="text-decoration: none; padding: 0.75rem; font-size: 0.875rem; color: var(--gray-600); border-radius: 0.5rem; transition: all 0.2s; display: flex; align-items: center; gap: 0.5rem;" onmouseover="this.style.backgroundColor='var(--gray-100)'" onmouseout="this.style.backgroundColor='transparent'">
                 <i class="bi bi-person"></i> Profil
-            </div>
-            <div style="padding: 0.75rem; font-size: 0.875rem; color: var(--gray-600); cursor: pointer; border-radius: 0.5rem; transition: all 0.2s; display: flex; align-items: center; gap: 0.5rem;" onmouseover="this.style.backgroundColor='var(--gray-100)'" onmouseout="this.style.backgroundColor='transparent'">
+            </a>
+            <a href="{% url 'users:settings' %}" style="text-decoration: none; padding: 0.75rem; font-size: 0.875rem; color: var(--gray-600); border-radius: 0.5rem; transition: all 0.2s; display: flex; align-items: center; gap: 0.5rem;" onmouseover="this.style.backgroundColor='var(--gray-100)'" onmouseout="this.style.backgroundColor='transparent'">
                 <i class="bi bi-gear"></i> Pengaturan
-            </div>
+            </a>
             <a href="{% url 'users:logout' %}" style="text-decoration: none; padding: 0.75rem; font-size: 0.875rem; cursor: pointer; border-radius: 0.5rem; transition: all 0.2s; color: var(--error); display: flex; align-items: center; gap: 0.5rem;" onmouseover="this.style.backgroundColor='var(--gray-100)'" onmouseout="this.style.backgroundColor='transparent'">
                 <i class="bi bi-box-arrow-right"></i> Keluar
             </a>
