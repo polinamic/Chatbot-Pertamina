@@ -14,6 +14,8 @@ from apps.users.urls import api_urlpatterns as users_api_urls
 from apps.chatbot.views import ConversationViewSet
 from apps.chatbot.urls import api_urlpatterns as chatbot_api_urls
 
+# --- IMPORT FUNGSI SEND_MESSAGE DARI RAG VIEWS ---
+from apps.rag.views import send_message
 
 # ==============================
 # API Router
@@ -47,6 +49,11 @@ urlpatterns = [
     # ==============================
 
     path('api/v1/users/', include(users_api_urls)),
+    
+    # --- TAMBAHKAN BARIS INI SEBELUM ROUTER ---
+    # Agar Django menangkap endpoint ini lebih dulu sebelum dilempar ke api_router
+    path('api/v1/conversations/<int:conversation_id>/send_message/', send_message, name='api_send_message'),
+    
     path('api/v1/', include(api_router.urls)),
     path('api/v1/rag/', include('apps.rag.urls')),
     path('api/v1/chat/', include(chatbot_api_urls)),

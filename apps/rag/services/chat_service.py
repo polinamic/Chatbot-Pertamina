@@ -7,6 +7,15 @@ Arsitektur Intent Detection (3 Layer):
   Layer 2: Semantic Routing   → embedding cosine similarity (~10% kasus)
   Layer 3: LLM JSON fallback  → akurat tapi lambat (~10% kasus ambigu)
 
+Intent yang didukung:
+  - IT_PROBLEM      : Masalah teknis/troubleshoot (jalankan alur RAG)
+  - SERVICE_ORDER   : Permintaan pengadaan/pemasangan barang/layanan IT
+                      (langsung ke escalation_guide, skip RAG troubleshoot)
+  - REQUEST_IT_SUPPORT: User minta dihubungkan ke tim IT manusia
+  - REJECT_IT_SUPPORT : User menolak eskalasi
+  - GENERAL_CHAT    : Sapaan/small talk
+  - OUT_OF_SCOPE    : Pertanyaan di luar domain IT
+
 Fitur utama:
   - OutOfScopeSemanticsDetector: tolak pertanyaan non-IT sebelum LLM dipanggil
   - rewrite_query_for_rag: contextual query rewriting untuk follow-up
@@ -14,6 +23,8 @@ Fitur utama:
   - failed_steps tracking: ingat langkah yang sudah gagal, tidak mengulang
   - Hardcoded DISCLAIMER: 100% muncul saat SOP tidak ditemukan
   - _process_chat router: pisah sync/stream agar tidak ada campur yield+return
+  - Konfirmasi Sudah/Belum: turn ke-2 menawarkan konfirmasi penyelesaian;
+    jika "Belum" → langsung arahkan ke form Incident (link hardcoded)
 """
 
 import os
@@ -515,6 +526,11 @@ _GREETING_PATTERNS = re.compile(
     r'permisi|saya ada pertanyaan.*|mau tanya.*|bisa bantu.*)[!.,\s]*$',
     re.IGNORECASE,
 )
+_ACCIDENT_PATTERNS = re.compile(
+    r'\b(accident|kecelakaan|incident|kejadian)\b',
+    re.IGNORECASE
+    
+)
 # PEMBERSIHAN: _NON_IT_INTENT_PATTERNS telah dihapus sepenuhnya.
 # Alasan: Layer 2 (OutOfScopeSemanticsDetector) dengan cosine similarity embedding
 # sudah lebih akurat mendeteksi non-IT/out-of-scope queries dibanding regex manual.
@@ -554,6 +570,34 @@ _IT_PROBLEM_PATTERNS = re.compile(
     re.IGNORECASE,
 )
 
+# ── SERVICE_ORDER pattern — Layer 1 ──────────────────────────────────────────
+# Mendeteksi permintaan pengadaan, pemesanan, atau pemasangan item/layanan IT.
+# Berbeda dari IT_PROBLEM (troubleshoot kerusakan/error), SERVICE_ORDER adalah
+# request aktif user untuk mendapatkan/memasang sesuatu yang BELUM ADA atau
+# sengaja diminta baru.
+#
+# Contoh match:
+#   "pesan printer"   → SERVICE_ORDER  (bukan: "printer tidak terdeteksi" → IT_PROBLEM)
+#   "order cctv"      → SERVICE_ORDER
+#   "pasang wifi"     → SERVICE_ORDER  (bukan: "wifi tidak bisa konek" → IT_PROBLEM)
+#   "pengadaan laptop"→ SERVICE_ORDER
+#
+# KRITIS: Pola ini harus dicek SEBELUM _IT_PROBLEM_PATTERNS agar kata seperti
+# "pasang" atau "install" pada konteks pengadaan tidak jatuh ke IT_PROBLEM.
+_SERVICE_ORDER_PATTERNS = re.compile(
+    r'(?:'
+    # "pesan X" / "order X" — pemesanan item dengan/tanpa kata depan
+    r'(?:mau\s+|ingin\s+|minta\s+|butuh\s+|perlu\s+)?(?:pesan|order)\s+\w+'
+    # "pasang X" — pemasangan fisik perangkat/layanan IT
+    r'|pasang\s+(?:wifi|wi-fi|cctv|kamera|jaringan|telepon|printer|proyektor|internet|vpn|lan|switch|access\s*point)'
+    # "pengadaan X" — permintaan pengadaan resmi
+    r'|\bpengadaan\b'
+    # "ajukan/pengajuan perangkat/layanan" — formulir pengajuan
+    r'|\b(?:ajukan|pengajuan)\s+(?:perangkat|layanan|akses|hardware|software|laptop|komputer|printer|cctv|handset)'
+    r')',
+    re.IGNORECASE,
+)
+
 # ── Layer 3 system prompt ─────────────────────────────────
 _INTENT_SYSTEM_PROMPT = (
     "Kamu adalah classifier intent untuk chatbot IT Support perusahaan.\n"
@@ -562,42 +606,52 @@ _INTENT_SYSTEM_PROMPT = (
     '{"intent": "<LABEL>"}\n\n'
     "LABEL:\n"
     "- IT_PROBLEM         : User MENGALAMI masalah teknis atau butuh panduan IT\n"
+    "- SERVICE_ORDER      : User MEMESAN atau MEMINTA PENGADAAN perangkat/layanan IT baru\n"
+    "                       (belum rusak, tapi minta dipasang/dipesan/diadakan)\n"
     "- REQUEST_IT_SUPPORT : User minta dihubungkan ke tim IT manusia\n"
     "- REJECT_IT_SUPPORT  : User menolak eskalasi\n"
     "- GENERAL_CHAT       : Sapaan singkat saja (halo, terima kasih, ok)\n"
     "- OUT_OF_SCOPE       : Pertanyaan yang BUKAN tentang masalah IT\n\n"
     "=== CRITICAL RULES ===\n"
     "1. Masalah TEKNIS/MALFUNCTION perangkat IT = IT_PROBLEM (keyboard tidak berfungsi)\n"
-    "2. Pertanyaan EDUKASI tentang teknologi (tanpa masalah) = OUT_OF_SCOPE\n"
-    "3. KERUSAKAN FISIK atau PEMBERSIHAN perangkat = OUT_OF_SCOPE\n"
+    "2. PEMESANAN/PENGADAAN perangkat atau layanan IT = SERVICE_ORDER\n"
+    "   (Contoh: pesan printer, order cctv, pasang wifi, pengadaan laptop)\n"
+    "3. Pertanyaan EDUKASI tentang teknologi (tanpa masalah) = OUT_OF_SCOPE\n"
+    "4. KERUSAKAN FISIK atau PEMBERSIHAN perangkat = OUT_OF_SCOPE\n"
     "   (Contoh: laptop lecet, keyboard kotor, rusak fisik, goresan, penyok)\n"
-    "4. Pertanyaan tentang Rekomendasi/opini produk atau saran beli = OUT_OF_SCOPE\n"
-    "5. Pertanyaan tentang SEJARAH/PEMBUAT teknologi = OUT_OF_SCOPE\n"
-    "6. Tutorial/Panduan/Cara MEMBUAT sesuatu (non-IT) = OUT_OF_SCOPE\n\n"
+    "5. Pertanyaan tentang Rekomendasi/opini produk atau saran beli = OUT_OF_SCOPE\n"
+    "6. Pertanyaan tentang SEJARAH/PEMBUAT teknologi = OUT_OF_SCOPE\n"
+    "7. Tutorial/Panduan/Cara MEMBUAT sesuatu (non-IT) = OUT_OF_SCOPE\n\n"
     "=== FEW-SHOT EXAMPLES ===\n\n"
+    "CONTOH SERVICE_ORDER (PENGADAAN/PEMESANAN):\n"
+    "  1. 'pesan printer untuk ruangan saya'           → SERVICE_ORDER\n"
+    "  2. 'order cctv baru'                            → SERVICE_ORDER\n"
+    "  3. 'pasang wifi di ruang meeting'               → SERVICE_ORDER\n"
+    "  4. 'minta pengadaan laptop baru'                → SERVICE_ORDER\n"
+    "  5. 'bisa tolong pasang access point di sini'    → SERVICE_ORDER\n\n"
     "CONTOH OUT_OF_SCOPE (BUKAN masalah IT)::\n"
-    "  1. 'siapa pencipta wifi'                      → OUT_OF_SCOPE (sejarah/edukasi)\n"
-    "  2. 'berikan jokes tentang wifi'               → OUT_OF_SCOPE (hiburan)\n"
-    "  3. 'mending beli iPhone atau Android'          → OUT_OF_SCOPE (opini/rekomendasi produk)\n"
-    "  4. 'bagaimana cara kerja VPN'                 → OUT_OF_SCOPE (edukasi, bukanmasalah)\n"
-    "  5. 'cara membuat origami pesawat dari kertas' → OUT_OF_SCOPE (kerajinan)\n"
-    "  5. 'bagaimana resep soto ayam'                → OUT_OF_SCOPE (kuliner)\n"
-    "  6. 'laptop jatuh dan lecet fisik'             → OUT_OF_SCOPE (kerusakan fisik)\n"
-    "  7. 'cara membersihkan keyboard dari debu'     → OUT_OF_SCOPE (pembersihan fisik)\n"
-    "  8. 'cara membuat hiasan gantungan kunci'      → OUT_OF_SCOPE (kerajinan DIY)\n"
-    "  9. 'siapa presiden indonesia'                 → OUT_OF_SCOPE (pengetahuan umum)\n"
-    "  10. 'apakah tuhan ada'                        → OUT_OF_SCOPE (agama/filsafat))\n\n"
+    "  1. 'siapa pencipta wifi'                        → OUT_OF_SCOPE (sejarah/edukasi)\n"
+    "  2. 'berikan jokes tentang wifi'                 → OUT_OF_SCOPE (hiburan)\n"
+    "  3. 'mending beli iPhone atau Android'           → OUT_OF_SCOPE (opini/rekomendasi produk)\n"
+    "  4. 'bagaimana cara kerja VPN'                   → OUT_OF_SCOPE (edukasi, bukanmasalah)\n"
+    "  5. 'cara membuat origami pesawat dari kertas'   → OUT_OF_SCOPE (kerajinan)\n"
+    "  5. 'bagaimana resep soto ayam'                  → OUT_OF_SCOPE (kuliner)\n"
+    "  6. 'laptop jatuh dan lecet fisik'               → OUT_OF_SCOPE (kerusakan fisik)\n"
+    "  7. 'cara membersihkan keyboard dari debu'       → OUT_OF_SCOPE (pembersihan fisik)\n"
+    "  8. 'cara membuat hiasan gantungan kunci'        → OUT_OF_SCOPE (kerajinan DIY)\n"
+    "  9. 'siapa presiden indonesia'                   → OUT_OF_SCOPE (pengetahuan umum)\n"
+    "  10. 'apakah tuhan ada'                          → OUT_OF_SCOPE (agama/filsafat))\n\n"
     "CONTOH IT_PROBLEM (MASALAH TEKNIS)::\n"
-    "  1. 'wifi saya tidak bisa konek'               → IT_PROBLEM (malfunction)\n"
-    "  2. 'vpn saya error dan lambat'                → IT_PROBLEM (performance issue)\n"
-    "  3. 'lupa password domain'                     → IT_PROBLEM (account/access)\n"
-    "  4. 'keyboard tidak berfungsi'                 → IT_PROBLEM (hardware malfunction)\n"
-    "  5. 'laptop saya sangat lambat'                → IT_PROBLEM (performance)\n"
-    "  6. 'tidak bisa login email perusahaan'        → IT_PROBLEM (access issue)\n"
-    "  7. 'printer tidak terdeteksi'                 → IT_PROBLEM (connectivity)\n"
-    "  8. 'aplikasi saya crash/error'                → IT_PROBLEM (software issue)\n"
-    "  9. 'bagaimana cara reset password'            → IT_PROBLEM (bantuan teknis)\n"
-    "  10. 'file saya tiba-tiba hilang'              → IT_PROBLEM (data issue)\n"
+    "  1. 'wifi saya tidak bisa konek'                 → IT_PROBLEM (malfunction)\n"
+    "  2. 'vpn saya error dan lambat'                  → IT_PROBLEM (performance issue)\n"
+    "  3. 'lupa password domain'                       → IT_PROBLEM (account/access)\n"
+    "  4. 'keyboard tidak berfungsi'                   → IT_PROBLEM (hardware malfunction)\n"
+    "  5. 'laptop saya sangat lambat'                  → IT_PROBLEM (performance)\n"
+    "  6. 'tidak bisa login email perusahaan'          → IT_PROBLEM (access issue)\n"
+    "  7. 'printer tidak terdeteksi'                   → IT_PROBLEM (connectivity)\n"
+    "  8. 'aplikasi saya crash/error'                  → IT_PROBLEM (software issue)\n"
+    "  9. 'bagaimana cara reset password'              → IT_PROBLEM (bantuan teknis)\n"
+    "  10. 'file saya tiba-tiba hilang'                → IT_PROBLEM (data issue)\n"
 )
 
 
@@ -607,20 +661,26 @@ def detect_intent_rules(question: str) -> Optional[str]:
     Return None jika tidak yakin → lanjut ke Layer 2 (Semantic) / Layer 3 (LLM).
     
     Pola yang tersisa:
-    - ESCALATION_PATTERNS: "hubungi IT Support", "minta siapa/operator", dll
-    - REJECT_PATTERNS: "batal", "cancel", dll
-    - GREETING_PATTERNS: "halo", "terima kasih", "ok", dll
-    - IT_PROBLEM_PATTERNS: "tidak bisa", "error", "install", "lupa password", dll
+    - ESCALATION_PATTERNS : "hubungi IT Support", "minta siapa/operator", dll
+    - REJECT_PATTERNS     : "batal", "cancel", dll
+    - GREETING_PATTERNS   : "halo", "terima kasih", "ok", dll
+    - SERVICE_ORDER_PATTERNS: "pesan printer", "order cctv", "pasang wifi", dll
+    - IT_PROBLEM_PATTERNS : "tidak bisa", "error", "install", "lupa password", dll
+    
+    URUTAN KRITIS:
+    SERVICE_ORDER WAJIB dicek SEBELUM IT_PROBLEM agar "pasang wifi" (pengadaan)
+    tidak jatuh ke IT_PROBLEM karena kata "wifi" juga ada di pola IT.
     
     OUT_OF_SCOPE detection sudah dipindah ke Layer 2 (Semantic Routing)
     menggunakan cosine similarity embedding untuk akurasi lebih tinggi.
     """
     q = question.strip()
 
-    if _ESCALATION_PATTERNS.search(q): return "REQUEST_IT_SUPPORT"
-    if _REJECT_PATTERNS.search(q):     return "REJECT_IT_SUPPORT"
-    if _GREETING_PATTERNS.match(q):    return "GENERAL_CHAT"
-    if _IT_PROBLEM_PATTERNS.search(q): return "IT_PROBLEM"
+    if _ESCALATION_PATTERNS.search(q):     return "REQUEST_IT_SUPPORT"
+    if _REJECT_PATTERNS.search(q):         return "REJECT_IT_SUPPORT"
+    if _GREETING_PATTERNS.match(q):        return "GENERAL_CHAT"
+    if _SERVICE_ORDER_PATTERNS.search(q):  return "SERVICE_ORDER"   # ← SEBELUM IT_PROBLEM
+    if _IT_PROBLEM_PATTERNS.search(q):     return "IT_PROBLEM"
     if _OUT_OF_SCOPE_OPINION_PATTERNS.search(q): return "OUT_OF_SCOPE"
 
     return None  # Ambigu → lanjut ke Layer 2 (Semantic) atau Layer 3 (LLM)
@@ -645,7 +705,7 @@ def detect_intent_llm_fallback(question: str) -> str:
         parsed = json.loads(raw)
         intent = parsed.get("intent", "").strip().upper()
 
-        valid = {"REQUEST_IT_SUPPORT","REJECT_IT_SUPPORT","GENERAL_CHAT","IT_PROBLEM","OUT_OF_SCOPE"}
+        valid = {"REQUEST_IT_SUPPORT","REJECT_IT_SUPPORT","GENERAL_CHAT","IT_PROBLEM","OUT_OF_SCOPE","SERVICE_ORDER"}
         if intent in valid:
             return intent
 
@@ -654,7 +714,7 @@ def detect_intent_llm_fallback(question: str) -> str:
         # Fallback: string matching pada raw output
         raw_text = response.get("message", {}).get("content", "").upper() \
                    if 'response' in locals() else ""
-        for intent in ["REQUEST_IT_SUPPORT","REJECT_IT_SUPPORT","OUT_OF_SCOPE","GENERAL_CHAT","IT_PROBLEM"]:
+        for intent in ["REQUEST_IT_SUPPORT","REJECT_IT_SUPPORT","OUT_OF_SCOPE","SERVICE_ORDER","GENERAL_CHAT","IT_PROBLEM"]:
             if intent in raw_text:
                 return intent
 
@@ -1372,13 +1432,11 @@ def escalation_guide(query_issue: str, vector_store, embedding_service) -> str:
                 })
         
         # STRATEGI 3: Tidak ada hasil, beri tahu user untuk membuat tiket manual
-        ticket_process = get_ticket_process(category)
-        team_name = get_it_support_team(category)
         logger.info("escalation_guide_not_found", extra={
             "category": category,
             "query": query_issue[:60],
         })
-        return f"Silakan buat tiket di portal IT Support untuk tim: {team_name}"
+        return f"Panduan spesifik belum ditemukan. Silakan buat tiket di portal IT Support pada kategori: {category}"
 
     except Exception as e:
         logger.error("escalation_guide_error", extra={"error": str(e)})
@@ -1722,10 +1780,9 @@ def get_required_info(category: str) -> str:
 
 
 def detect_confirmation(text: str) -> Optional[bool]:
-    """Return True/False/None (None = bukan ya maupun tidak)."""
     text = text.lower().strip()
-    if re.search(r'\b(tidak|tak|ga|gak|nggak|batal|stop|jangan)\b', text): return False
-    if re.search(r'\b(iya|ya|yap|yep|betul|oke|ok|sip|silakan|lanjut|mau)\b', text): return True
+    if re.search(r'\b(tidak|belum|gagal|ga|gak|nggak|batal|belum kelar)\b', text): return False
+    if re.search(r'\b(iya|ya|sudah|selesai|kelar|aman|oke|ok|sip|betul)\b', text): return True
     return None
 
 
@@ -1892,8 +1949,7 @@ def get_llm_response(
         # RULE-BASED ROUTING HANYA untuk attempt >= 1 (user sudah coba sebelumnya)
         if current_attempt >= 1 and detected_category != "general_it":
             ticket_process = get_ticket_process(detected_category)
-            team_name = get_it_support_team(detected_category)
-            routing_answer = f"{ROUTING_TEMPLATE_NO_GUIDE.format(ticket_process=ticket_process, team_name=team_name)}"
+            routing_answer = f"{ROUTING_TEMPLATE_NO_GUIDE.format(ticket_process=ticket_process)}"
             
             logger.info("rule_based_routing_applied", extra={
                 "category": detected_category,
@@ -2041,12 +2097,35 @@ def _update_history(session: Dict, question: str, answer: str) -> None:
 # ESCALATION PROMPT
 # =====================================================
 
-_ESCALATION_OFFER = (
+# =====================================================
+# CONTEXTUAL MESSAGES
+# =====================================================
+
+# Pesan konfirmasi yang muncul di turn ke-2
+_SOLVED_CONFIRMATION_PROMPT = (
     "\n\n---\n"
-    "Masalah ini sepertinya membutuhkan penanganan lebih lanjut. "
-    "Apakah Anda ingin saya pandu untuk menghubungi tim IT Support? (Ya/Tidak)"
+    "**Apakah masalah Anda sudah terselesaikan?** (Sudah / Belum)"
 )
 
+# Respon jika masalah selesai
+_HAPPY_TO_HELP_REPLY = (
+    "Alhamdulillah, saya senang bisa membantu! 😊 Jika ada kendala IT lainnya di kemudian hari, "
+    "jangan ragu untuk menyapa saya kembali. Selamat beraktivitas!"
+)
+
+# Respon jika masalah BELUM selesai setelah troubleshooting (konfirmasi "Belum")
+# Form Incident — hardcoded sesuai ketentuan bisnis, tidak perlu query escalation_guide
+_INCIDENT_ESCALATION_REPLY = (
+    "Mohon maaf langkah-langkah di atas belum berhasil membantu. "
+    "Untuk penanganan lebih lanjut oleh tim teknis, silakan buat tiket "
+    "menggunakan panduan berikut:\n\n"
+    "📋 **NAMA FORM:** Incident\n\n"
+    "📌 **PANDUAN TIKET:** Untuk menghubungi tim IT silahkan klik link "
+    "di bawah ini dan ikuti alur yang ada pada link tersebut.\n\n"
+    "🔗 **Link:** https://myssc.pertamina.com/dwp/app/#/itemprofile/313"
+)
+
+# Respon penolakan non-IT (dari versi sebelumnya)
 _OUT_OF_SCOPE_REPLY = (
     "Maaf, saya hanya dapat membantu dengan pertanyaan seputar IT seperti "
     "masalah wifi, printer, laptop, email, VPN, atau software perusahaan. 😊\n\n"
@@ -2058,35 +2137,17 @@ _OUT_OF_SCOPE_REPLY = (
 # IT SUPPORT TEAM ROUTING
 # =====================================================
 
-def get_it_support_team(problem_category: str) -> str:
-    """Mapping masalah ke tim IT yang sesuai"""
-    team_mapping = {
-        "access_control": "Access Control Device Team",
-        "vpn_access": "Access Management End User Team", 
-        "hardware": "Hardware Support Team",
-        "software": "Software Support Team",
-        "network": "Network Support Team",
-        "email": "Email/Messaging Support Team",
-        "printer": "Printer Support Team",
-        "security": "IT Security Team",
-        "database": "Database Administration Team"
-    }
-    return team_mapping.get(problem_category, "IT Helpdesk")
 
 # Template ketika DITEMUKAN panduan di database
 ROUTING_TEMPLATE_WITH_GUIDE = """
 PANDUAN UI:
 {ticket_process}
-
-TIM IT TERKAIT: {team_name}
 """
 
 # Template ketika TIDAK ADA panduan di database
 ROUTING_TEMPLATE_NO_GUIDE = """
 PANDUAN UI:
 {ticket_process}
-
-TIM IT TERKAIT: {team_name}
 
 CATATAN:
 Saat ini tim IT terkait untuk masalah ini belum ada di database panduan kami.
@@ -2149,38 +2210,45 @@ def _handle_escalation_confirmation(
     session_id: str,
 ) -> Optional[str]:
     """
-    Proses konfirmasi eskalasi.
-    Return string jawaban jika konfirmasi ditangani, None jika tidak.
+    Proses konfirmasi penyelesaian masalah.
+    - True  (Sudah): Tampilkan pesan sukses & reset state.
+    - False (Belum): Arahkan langsung ke form Incident (hardcoded, bukan escalation_guide).
+    - None  (Ambigu): Kembalikan None agar logic utama memproses sebagai masalah baru.
+
+    Catatan desain:
+    Ketika user menjawab "Belum", sistem TIDAK memanggil escalation_guide() karena
+    konteks troubleshooting sudah mencapai batas bantuan L1. Sebagai gantinya,
+    ditampilkan form Incident yang merupakan jalur eskalasi resmi universal
+    (_INCIDENT_ESCALATION_REPLY — hardcoded agar konsisten dan tidak bergantung
+    pada hasil RAG yang bisa bervariasi).
     """
     confirmation = detect_confirmation(question)
 
-    if confirmation is True:
+    if confirmation is True:  # User menjawab "Sudah/Iya/Selesai"
         session["awaiting_support_confirmation"] = False
+        session["offered_support"] = False
         session["attempts"] = 0
-        guide  = escalation_guide(
-            session["last_it_problem"] or question, vector_store, embedding_service
-        )
-        answer = f"Baik, saya akan bantu mencarikan panduan eskalasi untuk Anda.\n\n{guide}"
+        session["cached_context"] = None
+        answer = _HAPPY_TO_HELP_REPLY
         _update_history(session, question, answer)
         session_manager.save(session_id, session)
         return answer
 
-    elif confirmation is False:
+    elif confirmation is False:  # User menjawab "Belum/Tidak/Gagal"
         session["awaiting_support_confirmation"] = False
-        session["offered_support"] = False
-        answer = "Baik, mari kita coba langkah lain. Apakah ada hal lain yang bisa saya bantu?"
+        # Gunakan _INCIDENT_ESCALATION_REPLY (hardcoded) — konsisten untuk semua kasus troubleshoot
+        # yang belum terselesaikan, sesuai alur Incident resmi perusahaan.
+        answer = _INCIDENT_ESCALATION_REPLY
         _update_history(session, question, answer)
         session_manager.save(session_id, session)
         return answer
 
     else:
-        # User bertanya hal baru (bukan Ya/Tidak) → reset state eskalasi
+        # Jika user tidak menjawab "Sudah/Belum" tapi malah bertanya hal lain
         session["awaiting_support_confirmation"] = False
-        session["offered_support"]   = False
-        session["attempts"]          = 0
-        session["cached_context"]    = None
-        return None  # Lanjut proses question sebagai request baru
-
+        session["offered_support"] = False
+        # Kita kembalikan None agar logic utama memproses 'question' sebagai masalah baru
+        return None
 
 def _process_chat_sync(
     question: str,
@@ -2189,82 +2257,65 @@ def _process_chat_sync(
     embedding_service,
     session_id: str,
 ) -> str:
-    """NON-STREAMING logic — hanya return str, tidak ada yield."""
-
-    # ── Handle konfirmasi eskalasi ─────────────────────────
-    if session["awaiting_support_confirmation"]:
+    # 1. Handle jika sedang dalam mode menunggu konfirmasi "Sudah/Belum"
+    if session.get("awaiting_support_confirmation"):
         result = _handle_escalation_confirmation(
             question, session, vector_store, embedding_service, session_id
         )
         if result is not None:
             return result
-        # result=None → question baru, lanjut ke bawah
 
-    # ── Deteksi intent (3 layer) ───────────────────────────
+    # 2. Intent Detection
     intent = detect_intent(question, embedding_service)
-    logger.info("intent_resolved", extra={"session_id": session_id, "intent": intent})
 
-    # ── Klarifikasi (hanya IT_PROBLEM turn pertama) ────────
-    if intent == "IT_PROBLEM" and session["attempts"] == 0:
-        clarification = needs_clarification(question, session["history"])
-        if clarification:
-            _update_history(session, question, clarification)
-            session_manager.save(session_id, session)
-            return clarification
-
-    # ── Route berdasarkan intent ───────────────────────────
+    # 3. Routing Berdasarkan Intent
     if intent == "GENERAL_CHAT":
         answer = get_llm_response(question, session["history"], "small_talk")
-
     elif intent == "OUT_OF_SCOPE":
         answer = _OUT_OF_SCOPE_REPLY
-
     elif intent == "REQUEST_IT_SUPPORT":
-        session["attempts"]       = 0
-        session["offered_support"] = False
-        guide  = escalation_guide(
-            session.get("last_it_problem") or question, vector_store, embedding_service
-        )
+        guide = escalation_guide(session.get("last_it_problem") or question, vector_store, embedding_service)
         answer = f"Tentu! Berikut panduan eskalasi ke IT Support:\n\n{guide}"
-
-    elif intent == "REJECT_IT_SUPPORT":
-        session["offered_support"] = False
-        answer = "Baik, saya akan tetap berusaha membantu Anda di sini. Silakan ceritakan masalahnya lebih lanjut."
-
+    elif intent == "SERVICE_ORDER":
+        # SERVICE_ORDER: skip alur RAG troubleshoot, langsung cari form pengadaan yang relevan
+        # via escalation_guide. Session attempt tidak di-increment karena ini bukan troubleshoot.
+        logger.info("intent_service_order", extra={"session_id": session_id, "question": question[:80]})
+        guide = escalation_guide(question, vector_store, embedding_service)
+        answer = (
+            "Baik! Permintaan Anda terdeteksi sebagai **Service Order** (Pengadaan/Pemasangan). "
+            "Berikut panduan pengajuan form yang perlu Anda isi:\n\n"
+            f"{guide}"
+        )
     else:  # IT_PROBLEM
         if session["attempts"] == 0:
             session["last_it_problem"] = question
-
+        
         _track_failed_steps(question, session)
-
+        
         rag_query = rewrite_query_for_rag(
-            question, session["history"],
-            original_problem=session.get("last_it_problem", ""),
+            question, session["history"], 
+            original_problem=session.get("last_it_problem", "")
         )
 
         answer = get_llm_response(
             question, session["history"], "troubleshoot",
             vector_store, embedding_service,
-            rag_query   = rag_query,
-            failed_steps= session["failed_steps"],
-            session     = session,
+            rag_query=rag_query,
+            failed_steps=session["failed_steps"],
+            session=session,
         )
-        
-        # JANGAN tambahkan routing note otomatis pada turn 1 — prioritaskan troubleshooting
-        # Routing note hanya ditambahkan jika user sudah coba dan gagal (attempts >= 1)
-        # atau saat escalation offer (attempts >= 2)
         
         session["attempts"] += 1
 
-        if session["attempts"] >= 2 and not session["offered_support"]:
-            session["offered_support"]              = True
+        # Turn ke-2: Tambahkan pertanyaan konfirmasi penyelesaian
+        if session["attempts"] >= 2 and not session.get("offered_support"):
+            session["offered_support"] = True
             session["awaiting_support_confirmation"] = True
-            answer += _ESCALATION_OFFER
+            answer += _SOLVED_CONFIRMATION_PROMPT
 
     _update_history(session, question, answer)
     session_manager.save(session_id, session)
     return answer
-
 
 def _process_chat_stream(
     question: str,
@@ -2273,50 +2324,56 @@ def _process_chat_stream(
     embedding_service,
     session_id: str,
 ) -> Generator[str, None, None]:
-    """STREAMING logic — hanya yield, tidak ada return nilai."""
-
-    # ── Handle konfirmasi eskalasi ─────────────────────────
-    if session["awaiting_support_confirmation"]:
+    """
+    STREAMING logic — Menangani semua intent agar tidak ada respons kosong.
+    """
+    # 1. Handle konfirmasi "Sudah/Belum" jika sedang aktif
+    if session.get("awaiting_support_confirmation"):
         result = _handle_escalation_confirmation(
             question, session, vector_store, embedding_service, session_id
         )
         if result is not None:
             yield result
             return
-        # result=None → question baru, lanjut ke bawah
 
-    # ── Deteksi intent ─────────────────────────────────────
+    # 2. Deteksi intent
     intent = detect_intent(question, embedding_service)
-    logger.info("intent_resolved", extra={"session_id": session_id, "intent": intent})
+    logger.info("intent_resolved_stream", extra={"session_id": session_id, "intent": intent})
 
-    # ── Klarifikasi ────────────────────────────────────────
-    if intent == "IT_PROBLEM" and session["attempts"] == 0:
-        clarification = needs_clarification(question, session["history"])
-        if clarification:
-            _update_history(session, question, clarification)
-            session_manager.save(session_id, session)
-            yield clarification
-            return
+    # Variable untuk menyimpan jawaban lengkap guna update history di akhir
+    answer = ""
 
-    # ── Route berdasarkan intent ───────────────────────────
+    # 3. Routing Berdasarkan Intent
     if intent == "GENERAL_CHAT":
-        full_answer = []
+        full_answer_list = []
         for token in get_llm_response_stream(question, session["history"], "small_talk"):
-            full_answer.append(token)
+            full_answer_list.append(token)
             yield token
-        answer = "".join(full_answer)
+        answer = "".join(full_answer_list)
 
     elif intent == "OUT_OF_SCOPE":
         answer = _OUT_OF_SCOPE_REPLY
         yield answer
 
     elif intent == "REQUEST_IT_SUPPORT":
-        session["attempts"]       = 0
+        session["attempts"] = 0
         session["offered_support"] = False
-        guide  = escalation_guide(
+        guide = escalation_guide(
             session.get("last_it_problem") or question, vector_store, embedding_service
         )
         answer = f"Tentu! Berikut panduan eskalasi ke IT Support:\n\n{guide}"
+        yield answer
+
+    elif intent == "SERVICE_ORDER":
+        # SERVICE_ORDER: skip alur RAG troubleshoot, langsung cari form pengadaan yang relevan
+        # via escalation_guide. Session attempt tidak di-increment karena ini bukan troubleshoot.
+        logger.info("intent_service_order_stream", extra={"session_id": session_id, "question": question[:80]})
+        guide = escalation_guide(question, vector_store, embedding_service)
+        answer = (
+            "Baik! Permintaan Anda terdeteksi sebagai **Service Order** (Pengadaan/Pemasangan). "
+            "Berikut panduan pengajuan form yang perlu Anda isi:\n\n"
+            f"{guide}"
+        )
         yield answer
 
     elif intent == "REJECT_IT_SUPPORT":
@@ -2325,38 +2382,42 @@ def _process_chat_stream(
         yield answer
 
     else:  # IT_PROBLEM
+        # Turn pertama: simpan masalah utama untuk anchor RAG & Eskalasi
         if session["attempts"] == 0:
             session["last_it_problem"] = question
-
+        
+        # Track langkah gagal jika user bilang "masih tidak bisa" dsb.
         _track_failed_steps(question, session)
-
+        
+        # Tulis ulang query untuk RAG agar kontekstual
         rag_query = rewrite_query_for_rag(
-            question, session["history"],
-            original_problem=session.get("last_it_problem", ""),
+            question, session["history"], 
+            original_problem=session.get("last_it_problem", "")
         )
 
-        full_answer = []
+        full_answer_list = []
+        # Panggil generator streaming dari LLM
         for token in get_llm_response_stream(
             question, session["history"], "troubleshoot",
             vector_store, embedding_service,
-            rag_query   = rag_query,
-            failed_steps= session["failed_steps"],
-            session     = session,
+            rag_query=rag_query,
+            failed_steps=session["failed_steps"],
+            session=session,
         ):
-            full_answer.append(token)
+            full_answer_list.append(token)
             yield token
-        answer = "".join(full_answer)
         
-        # JANGAN tambahkan routing note otomatis pada turn 1 — prioritaskan troubleshooting
-        # Routing note hanya ditambahkan saat escalation offer (attempts >= 2)
-        
+        answer = "".join(full_answer_list)
         session["attempts"] += 1
 
-        if session["attempts"] >= 2 and not session["offered_support"]:
-            session["offered_support"]              = True
+        # Turn ke-2+: Tawarkan konfirmasi penyelesaian (Sudah/Belum)
+        if session["attempts"] >= 2 and not session.get("offered_support"):
+            session["offered_support"] = True
             session["awaiting_support_confirmation"] = True
-            answer += _ESCALATION_OFFER
-            yield _ESCALATION_OFFER
+            yield _SOLVED_CONFIRMATION_PROMPT
+            answer += _SOLVED_CONFIRMATION_PROMPT
 
-    _update_history(session, question, answer)
-    session_manager.save(session_id, session)
+    # 4. Finalisasi: Update history dan simpan session
+    if answer:
+        _update_history(session, question, answer)
+        session_manager.save(session_id, session)

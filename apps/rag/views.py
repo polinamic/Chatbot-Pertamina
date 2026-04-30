@@ -42,10 +42,6 @@ def _get_rag_dependencies():
 
 # ==============================
 # DOCUMENT VIEWSET
-#
-# ViewSet untuk CRUD dokumen knowledge base (RAG).
-# Dipakai oleh router di urls.py:
-#   router.register(r'documents', DocumentViewSet, basename='document')
 # ==============================
 
 class DocumentViewSet(viewsets.ModelViewSet):
@@ -61,7 +57,47 @@ class DocumentViewSet(viewsets.ModelViewSet):
     """
     permission_classes = [IsAuthenticated]
     serializer_class = DocumentSerializer
+    # Gunakan filter is_active sesuai snippet 2, urutkan berdasarkan created_at
     queryset = Document.objects.filter(is_active=True).order_by('-created_at')
+    parser_classes = (MultiPartParser, FormParser)
+
+    def create(self, request, *args, **kwargs):
+        """
+        Custom upload handler (DRF Route):
+        1. Simpan file ke storage
+        2. Chunking teks
+        3. Embedding ke Vector DB (FAISS)
+        """
+        file_obj = request.FILES.get('file')
+        doc_type = request.data.get('doc_type', 'TROUBLESHOOT')
+
+        if not file_obj:
+            return Response({"error": "No file uploaded"}, status=status.HTTP_400_BAD_REQUEST)
+
+        # 1. Simpan metadata dokumen ke DB
+        doc = Document.objects.create(
+            title=file_obj.name,
+            file=file_obj,
+            doc_type=doc_type,
+            # Menambahkan isian dari snippet 2 (opsional, disesuaikan ke model Anda)
+            file_name=file_obj.name,
+            file_size=file_obj.size,
+            uploaded_by=request.user if request.user.is_authenticated else None,
+        )
+
+        # 2. Jalankan Ingestion (Chunking & Embedding)
+        from apps.rag.services.ingestion_service import ingest_document
+        vector_store, embedding_service = _get_rag_dependencies()
+        
+        # Proses sinkronus (untuk production gunakan Celery task)
+        success = ingest_document(doc, vector_store, embedding_service)
+
+        if success:
+            return Response(DocumentSerializer(doc).data, status=status.HTTP_201_CREATED)
+        else:
+            # Cleanup jika gagal ingestion
+            doc.delete()
+            return Response({"error": "Ingestion failed"}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
     @action(detail=False, methods=['post'])
     def search(self, request):
@@ -89,16 +125,13 @@ class DocumentViewSet(viewsets.ModelViewSet):
 
 
 # ==============================
-# UPLOAD KNOWLEDGE BASE
-#
-# View untuk memproses upload dokumen dari form dashboard.
-# Dipanggil via POST dari halaman dashboard knowledge base.
+# UPLOAD KNOWLEDGE BASE (STANDALONE VIEW)
 # ==============================
 
 @csrf_exempt
 def upload_knowledge(request):
     """
-    Terima upload file dokumen untuk knowledge base RAG.
+    Terima upload file dokumen untuk knowledge base RAG (Non-DRF route).
     Menyimpan ke model Document, kemudian memproses chunking & embedding.
     """
     if request.method != 'POST':
@@ -124,8 +157,6 @@ def upload_knowledge(request):
             uploaded_by=request.user if request.user.is_authenticated else None,
         )
 
-        # Proses chunking & embedding secara async jika tersedia,
-        # atau langsung jika tidak ada task queue.
         try:
             from apps.rag.services.processor import process_document
             process_document(doc.id)
@@ -143,19 +174,13 @@ def upload_knowledge(request):
         logger.error("upload_knowledge_error", extra={"error": str(e)})
         return JsonResponse({'error': f'Upload gagal: {str(e)}'}, status=500)
 
+
 # ==============================
-# NEGATIVE RESPONSE DETECTION
+# NEGATIVE RESPONSE DETECTION & HELPERS
 # ==============================
 
 NEGATIVE_WORDS = [
-    "belum",
-    "masih",
-    "tidak",
-    "nggak",
-    "gak",
-    "error",
-    "gagal",
-    "tidak bisa",
+    "belum", "masih", "tidak", "nggak", "gak", "error", "gagal", "tidak bisa",
 ]
 
 def is_negative_response(text: str):
@@ -165,13 +190,7 @@ def is_negative_response(text: str):
             return True
     return False
 
-
-# ==============================
-# UI CATEGORY CLASSIFIER
-# ==============================
-
 def classify_ui_category(problem_history):
-    # Asumsikan UINavigatorMap sudah di-import jika model ini digunakan
     try:
         from apps.rag.models import UINavigatorMap
         categories = UINavigatorMap.objects.all()
@@ -196,7 +215,6 @@ Pilih kategori yang paling cocok.
 
 Jawab HANYA satu kata kategori.
 """
-
     response = ollama.chat(
         model="llama3:8b",
         messages=[
@@ -205,7 +223,6 @@ Jawab HANYA satu kata kategori.
         ],
         options={"temperature": 0}
     )
-
     return response["message"]["content"].strip()
 
 
@@ -218,7 +235,6 @@ def chat_view(request):
         "conversations": [],
         "messages": []
     })
-
 
 def chat_page(request):
     """Render main chat page"""
@@ -256,12 +272,10 @@ def stream_chat(request):
                 ],
                 stream=True
             )
-
             for chunk in stream:
                 if "message" in chunk and "content" in chunk["message"]:
                     token = chunk["message"]["content"]
                     yield token
-
         except Exception as e:
             yield f"\n\n[ERROR] {str(e)}"
 
@@ -272,25 +286,20 @@ def stream_chat(request):
 
 
 # ==============================
-# SITI CHAT ENDPOINT
+# SITI CHAT MAIN ENDPOINT (WITH DB HISTORY)
 # ==============================
 
 @csrf_exempt
 def siti_chat(request):
     """
     Endpoint utama chatbot SITI.
-    Menerima query dari frontend, meneruskan ke chat_v2.chat(),
+    Menerima query dari frontend, meneruskan ke engine,
     mengembalikan jawaban sebagai JSON { "answer": "..." }.
-    
-    PERBAIKAN 7: Menyimpan chat history ke database.
-    - Frontend mengirim user_id
-    - Endpoint membuat/mendapatkan Conversation
-    - Menyimpan user message dan bot answer ke Message model
+    Menyimpan chat history ke database.
     """
     if request.method != "POST":
         return JsonResponse({"error": "Method not allowed. Gunakan POST."}, status=405)
 
-    # --- Parse request body ---
     try:
         body = json.loads(request.body)
     except json.JSONDecodeError:
@@ -308,10 +317,9 @@ def siti_chat(request):
     if user_id:
         try:
             from django.contrib.auth.models import User
-            from apps.chatbot.models import Conversation, Message
+            from apps.chatbot.models import Conversation
             
             user = User.objects.get(id=user_id)
-            # Ambil conversation terbaru, atau buat baru jika tidak ada
             conversation = Conversation.objects.filter(user=user).order_by('-created_at').first()
             if not conversation:
                 conversation = Conversation.objects.create(
@@ -339,7 +347,6 @@ def siti_chat(request):
         if isinstance(answer, (types.GeneratorType,)):
             answer = "".join(answer)
 
-        # Pastikan answer adalah string sebelum dipakai
         if not isinstance(answer, str):
             logger.error("siti_chat_answer_not_string", extra={
                 "type": type(answer).__name__,
@@ -366,19 +373,17 @@ def siti_chat(request):
     if conversation:
         try:
             from apps.chatbot.models import Message
-            # Simpan user message
             Message.objects.create(
                 conversation=conversation,
                 role='user',
                 content=query
             )
-            # Simpan bot answer
             Message.objects.create(
                 conversation=conversation,
                 role='assistant',
                 content=answer
             )
-            # Update conversation title jika masih default
+            # Update title jika masih default
             if conversation.title == query[:50] + ("..." if len(query) > 50 else ""):
                 conversation.title = query[:100] + ("..." if len(query) > 100 else "")
                 conversation.save()
@@ -389,70 +394,18 @@ def siti_chat(request):
 
 
 # ==============================
-# GET CONVERSATION MESSAGES
+# CHAT HISTORY API ENDPOINTS
 # ==============================
-def get_conversation_messages(request, conversation_id):
-    """
-    Get all messages dari specific conversation.
-    Frontend gunakan endpoint ini untuk load chat history saat user klik conversation di sidebar.
-    """
-    if request.method != "GET":
-        return JsonResponse({"error": "Method not allowed. Gunakan GET."}, status=405)
-    
-    try:
-        from apps.chatbot.models import Conversation, Message
-        
-        # Get conversation
-        conversation = Conversation.objects.get(id=conversation_id)
-        
-        # Get all messages dalam conversation, ordered by created_at
-        messages = Message.objects.filter(conversation=conversation).order_by('created_at')
-        
-        # Build response
-        messages_data = []
-        for msg in messages:
-            messages_data.append({
-                'id': msg.id,
-                'role': msg.role,
-                'content': msg.content,
-                'created_at': msg.created_at.isoformat()
-            })
-        
-        return JsonResponse({
-            'success': True,
-            'conversation': {
-                'id': conversation.id,
-                'title': conversation.title,
-                'created_at': conversation.created_at.isoformat(),
-                'updated_at': conversation.updated_at.isoformat()
-            },
-            'messages': messages_data
-        })
-    
-    except Conversation.DoesNotExist:
-        return JsonResponse({
-            "error": "Conversation not found"
-        }, status=404)
-    except Exception as e:
-        logger.error("get_conversation_messages_error", extra={"error": str(e), "conversation_id": conversation_id})
-        return JsonResponse({
-            "error": "Gagal mengambil messages.",
-            "detail": str(e)
-        }, status=500)
 
-
-# ==============================
-# GET CHAT HISTORY (USER'S CONVERSATIONS)
-# ==============================
+@api_view(['GET'])
 def get_chat_history(request):
     """
-    Get user's chat history (conversations).
+    Ambil riwayat chat pengguna (percakapan).
     Returns list of recent conversations for the logged-in user.
     """
     if request.method != "GET":
         return JsonResponse({"error": "Method not allowed. Gunakan GET."}, status=405)
     
-    # Check if user is authenticated
     user_id = request.GET.get('user_id')
     if not user_id:
         return JsonResponse({"error": "user_id parameter required"}, status=400)
@@ -481,8 +434,95 @@ def get_chat_history(request):
     except User.DoesNotExist:
         return JsonResponse({"error": "User not found"}, status=404)
     except Exception as e:
-        logger.error("get_chat_history_error", extra={"error": str(e), "user_id": user_id})
-        return JsonResponse(
-            {"error": "Gagal mengambil riwayat chat."},
-            status=500
+        logger.error("get_chat_history_error", extra={"error": str(e)})
+        return JsonResponse({"error": "Internal server error"}, status=500)
+
+
+def get_conversation_messages(request, conversation_id):
+    """
+    Get all messages dari specific conversation.
+    """
+    if request.method != "GET":
+        return JsonResponse({"error": "Method not allowed. Gunakan GET."}, status=405)
+    
+    try:
+        from apps.chatbot.models import Conversation, Message
+        conversation = Conversation.objects.get(id=conversation_id)
+        messages = Message.objects.filter(conversation=conversation).order_by('created_at')
+        
+        messages_data = []
+        for msg in messages:
+            messages_data.append({
+                'id': msg.id,
+                'role': msg.role,
+                'content': msg.content,
+                'created_at': msg.created_at.isoformat()
+            })
+        
+        return JsonResponse({
+            'success': True,
+            'conversation': {
+                'id': conversation.id,
+                'title': conversation.title,
+                'created_at': conversation.created_at.isoformat(),
+                'updated_at': conversation.updated_at.isoformat()
+            },
+            'messages': messages_data
+        })
+    except Conversation.DoesNotExist:
+        return JsonResponse({"error": "Conversation not found"}, status=404)
+    except Exception as e:
+        logger.error("get_conversation_messages_error", extra={"error": str(e), "conversation_id": conversation_id})
+        return JsonResponse({"error": "Gagal mengambil messages.", "detail": str(e)}, status=500)
+
+
+@api_view(['POST'])
+@csrf_exempt
+def send_message(request, conversation_id):
+    """
+    Kirim pesan baru ke percakapan yang sudah ada via DRF API Endpoint.
+    """
+    content = request.data.get('content')
+    session_id = request.data.get('session_id')
+    user_id = request.data.get('user_id')
+
+    if not content:
+        return Response({"error": "Content is required"}, status=status.HTTP_400_BAD_REQUEST)
+
+    try:
+        from apps.chatbot.models import Conversation, Message
+        
+        Message.objects.create(
+            conversation_id=conversation_id,
+            role="user",
+            content=content
         )
+
+        chat_fn = _get_chat_fn()
+        vector_store, embedding_service = _get_rag_dependencies()
+        actual_session_id = session_id or f"conv_{conversation_id}"
+
+        answer = chat_fn(
+            question=content,
+            vector_store=vector_store,
+            embedding_service=embedding_service,
+            session_id=actual_session_id
+        )
+
+        Message.objects.create(
+            conversation_id=conversation_id,
+            role="assistant",
+            content=answer
+        )
+
+        messages = Message.objects.filter(conversation_id=conversation_id).order_by('created_at')
+        return Response({
+            "success": True,
+            "messages": [
+                {"role": m.role, "content": m.content} for m in messages
+            ]
+        })
+
+    except Exception as e:
+        logger.error("send_message_error", extra={"error": str(e)})
+        return Response({"error": str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)

@@ -71,14 +71,6 @@
                 <thead>
                     <tr>
                         <th>File Name</th>
-<<<<<<< Updated upstream
-                        <th>Category</th>
-                        <th>Type (RAG)</th> 
-                        <th>Size</th>
-                        <th>Uploaded By</th>
-                        <th>Created</th>
-                        <th>Action</th>
-=======
                         <th>Tipe KB</th>
                         <th>Format</th> 
                         <th>Chunks</th>
@@ -86,7 +78,6 @@
                         <th>Upload By</th>
                         <th>Tgl Upload</th>
                         <th>Aksi</th>
->>>>>>> Stashed changes
                     </tr>
                 </thead>
                 <tbody>
@@ -193,7 +184,6 @@
         </div>
 
         <div class="modal-body">
-            <!-- Document Type Selector -->
             <div style="margin-bottom: 1.5rem;">
                 <label for="docType" style="font-weight: 600; margin-bottom: 0.5rem; display: block;">📋 Tipe Knowledge Base:</label>
                 <select id="docType" style="width: 100%; padding: 0.75rem; border-radius: 0.5rem; border: 1px solid var(--border-light); background-color: var(--bg-light); color: inherit;">
@@ -207,7 +197,6 @@
                 </p>
             </div>
 
-            <!-- File Format Info Card -->
             <div style="background-color: rgba(16, 185, 129, 0.05); border-left: 4px solid var(--success); padding: 1rem; border-radius: 0.375rem; margin-bottom: 1rem;">
                 <p style="margin: 0; font-size: 0.9rem; color: var(--text-dark);">
                     <strong>📝 Format File:</strong> TXT (UTF-8)<br>
@@ -216,7 +205,6 @@
                 </p>
             </div>
 
-            <!-- Drop Zone -->
             <div id="dropZone" class="drop-zone">
                 <i class="bi bi-cloud-arrow-up upload-icon"></i>
                 <p><strong>Drag & drop file TXT kesini</strong></p>
@@ -224,7 +212,6 @@
             </div>
             <input type="file" id="fileInput" hidden accept=".txt">
 
-            <!-- Format Examples (Collapsible) -->
             <div style="margin-top: 1rem;">
                 <button type="button" style="background: none; border: none; color: var(--primary); cursor: pointer; padding: 0; text-align: left; width: 100%; padding: 0.5rem;" onclick="toggleFormatExamples()">
                     <i class="bi bi-question-circle"></i> <strong>Lihat Contoh Format</strong> <span id="toggleIcon" style="float: right;">▼</span>
@@ -288,6 +275,8 @@ Link: https://myssc.pertamina.com/dwp/app/#/itemprofile/102</pre>
         color: var(--text-dark, #333333);
         width: 500px;
         max-width: 90%;
+        max-height: 90vh; /* TAMBAHKAN INI: Batasi tinggi maksimal 90% dari layar */
+        overflow-y: auto; /* TAMBAHKAN INI: Munculkan scrollbar jika konten melebihi batas */
         border-radius: 0.75rem;
         padding: 1.5rem;
         animation: fadeIn 0.2s ease-in-out;
@@ -363,9 +352,10 @@ Link: https://myssc.pertamina.com/dwp/app/#/itemprofile/102</pre>
     }
 
     /* Drop Zone Styling */
+    @keyframes fadeIn {
         from { transform: scale(0.95); opacity: 0; }
         to { transform: scale(1); opacity: 1; }
-    
+    }
 
     .drop-zone {
         border: 2px dashed var(--border-light, #ccc);

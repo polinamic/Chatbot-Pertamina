@@ -331,16 +331,19 @@
                 <button type="submit" class="submit-btn">Daftar Sekarang</button>
             </form>
 
-            <div class="divider">atau</div>
-
-            <button class="oauth-btn" onclick="handleGoogleSignup(event)">
-                <i class="bi bi-google" style="margin-right: 0.5rem;"></i> Daftar dengan Google
-            </button>
-
-            <div class="signup-footer">
-                Sudah punya akun? <a href="{% url 'users:login' %}">Masuk di sini</a>
+            {% if messages %}
+            <div class="messages-container mt-4">
+                {% for message in messages %}
+                    <div class="alert {% if message.tags %}alert-{{ message.tags }}{% else %}alert-info{% endif %} alert-dismissible fade show" role="alert">
+                        {{ message }}
+                        <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+                    </div>
+                {% endfor %}
             </div>
-            {% endif %}
+        {% endif %}
+
+        <div class="divider">
+            <span>atau daftar dengan</span>
         </div>
     </div>
 

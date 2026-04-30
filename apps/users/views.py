@@ -307,9 +307,9 @@ class LogoutView(views.APIView):
 def signup_page(request):
     """
     Handle signup page - form-based signup
-    After successful signup, redirect to login page (do NOT auto-login)
     """
     from django.shortcuts import render, redirect
+    from django.contrib.auth import authenticate, login as auth_login # PERBAIKAN: Import yang terlupa
     
     if request.method == 'GET':
         return render(request, 'users/signup.html')
@@ -347,18 +347,17 @@ def signup_page(request):
             })
         
         try:
-            # Create user (signals.py will automatically create UserProfile and UserSettings)
+            # Create user
             user = User.objects.create_user(
                 username=username,
                 email=email,
                 password=password
             )
             
-            # Create user profile
-            profile = UserProfile.objects.create(
-                user=user,
-                company='Pertamina'
-            )
+            # PERBAIKAN: Gunakan get_or_create untuk mencegah bentrok dengan signals.py
+            profile, created = UserProfile.objects.get_or_create(user=user)
+            profile.company = 'Pertamina'
+            profile.save()
             
             # Auto-login user
             user = authenticate(username=username, password=password)

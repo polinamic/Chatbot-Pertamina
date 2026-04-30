@@ -63,8 +63,9 @@ def dashboard_home(request):
     documents_pending = 0
     
     # Top Conversations (Most Messages)
+    # --- PERBAIKAN DI SINI ---
     top_conversations = Conversation.objects.annotate(
-        message_count=Count('message_set')
+        message_count=Count('messages') 
     ).order_by('-message_count')[:5]
     
     # Recent Conversations
@@ -116,7 +117,7 @@ def conversations_management(request):
     """Manajemen conversations dengan monitoring detail"""
     
     conversations = Conversation.objects.select_related('user').annotate(
-        message_count=Count('message_set')
+        message_count=Count('message')
     ).order_by('-created_at')
     
     # Filter & Search
@@ -150,7 +151,7 @@ def chat_detail(request, conversation_id):
     """View detail conversation dengan semua messages"""
     
     conversation = get_object_or_404(Conversation, id=conversation_id)
-    messages = conversation.message_set.all().order_by('created_at')
+    messages = conversation.message.all().order_by('created_at')
     
     context = {
         'conversation': conversation,
@@ -168,7 +169,8 @@ def users_management(request):
     
     users = User.objects.annotate(
         conversation_count=Count('conversations'),
-        message_count=Count('conversations__message_set')
+        # PASTIKAN MENGGUNAKAN 'messages' (PAKAI HURUF 'S' DI BELAKANG)
+        message_count=Count('conversations__messages')
     ).order_by('-date_joined')
     
     # Filter
@@ -324,7 +326,7 @@ def chat_monitoring(request):
     """Real-time Chat Monitoring"""
     
     conversations = Conversation.objects.select_related('user').annotate(
-        message_count=Count('message_set')
+        message_count=Count('message')
     ).order_by('-updated_at')[:50]
     
     stats = {

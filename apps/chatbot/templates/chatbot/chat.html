@@ -42,9 +42,9 @@
             <div style="padding: 0.75rem; font-size: 0.875rem; color: var(--gray-600); cursor: pointer; border-radius: 0.5rem; transition: all 0.2s; display: flex; align-items: center; gap: 0.5rem;" onmouseover="this.style.backgroundColor='var(--gray-100)'" onmouseout="this.style.backgroundColor='transparent'">
                 <i class="bi bi-gear"></i> Pengaturan
             </div>
-            <div style="padding: 0.75rem; font-size: 0.875rem; color: var(--gray-600); cursor: pointer; border-radius: 0.5rem; transition: all 0.2s; color: var(--error); display: flex; align-items: center; gap: 0.5rem;" onmouseover="this.style.backgroundColor='var(--gray-100)'" onmouseout="this.style.backgroundColor='transparent'">
+            <a href="{% url 'users:logout' %}" style="text-decoration: none; padding: 0.75rem; font-size: 0.875rem; cursor: pointer; border-radius: 0.5rem; transition: all 0.2s; color: var(--error); display: flex; align-items: center; gap: 0.5rem;" onmouseover="this.style.backgroundColor='var(--gray-100)'" onmouseout="this.style.backgroundColor='transparent'">
                 <i class="bi bi-box-arrow-right"></i> Keluar
-            </div>
+            </a>
         </div>
     </div>
     
@@ -197,113 +197,18 @@
             chatHistoryContainer.appendChild(div);
         });
 
-    // =====================================
-    // SELECT CHAT (LOAD CONVERSATION)
-    // =====================================
-    async function selectChat(element) {
-        // Tidak bisa klik jika bot sedang thinking
-        if(isBotThinking) return;
-        
-        // Tandai item yang dipilih
-        document.querySelectorAll('.chat-item').forEach(el => {
-            el.classList.remove('active');
-        });
-        element.classList.add('active');
-        
-        // Get conversation ID
-        const conversationId = element.getAttribute('data-id');
-        if (!conversationId) return;
-        
-        console.log('Loading conversation:', conversationId);
-        
-        // Clear previous messages
-        messagesContainer.innerHTML = `
-            <div class="chat-empty">
-                <div class="chat-empty-icon"><i class="bi bi-hourglass-split"></i></div>
-                <h3>Loading...</h3>
-                <p>Memuat percakapan Anda...</p>
-            </div>
-        `;
-        
-        try {
-            // Fetch messages dari endpoint
-            const response = await fetch(`/api/v1/rag/conversation/${conversationId}/messages/`, {
-                method: 'GET',
-                headers: {
-                    'Content-Type': 'application/json',
-                    'X-CSRFToken': getCookie('csrftoken')
-                }
-            });
-            
-            if (!response.ok) {
-                throw new Error(`HTTP ${response.status}`);
-            }
-            
-            const data = await response.json();
-            
-            if (!data.success) {
-                throw new Error(data.error || 'Failed to load conversation');
-            }
-            
-            // Clear messages container
-            messagesContainer.innerHTML = '';
-            
-            // Display all messages
-            const messages = data.messages;
-            if (messages.length === 0) {
-                messagesContainer.innerHTML = `
-                    <div class="chat-empty">
-                        <div class="chat-empty-icon"><i class="bi bi-chat-left"></i></div>
-                        <h3>Percakapan Kosong</h3>
-                        <p>Belum ada pesan dalam percakapan ini.</p>
-                    </div>
-                `;
-            } else {
-                messages.forEach(msg => {
-                    if (msg.role === 'user') {
-                        addUserMessage(msg.content);
-                    } else {
-                        addBotMessage(msg.content);
-                    }
-                });
-            }
-            
-            // Scroll ke bawah
-            messagesContainer.scrollTop = messagesContainer.scrollHeight;
-            
-            // Set session ID untuk conversation ini
-            // Format: conversation_<conversation_id>
-            sessionId = "conversation_" + conversationId;
-            sessionStorage.setItem('chatSessionId', sessionId);
-            
-            console.log('Conversation loaded successfully');
-            
-        } catch(error) {
-            console.error('Error loading conversation:', error);
-            messagesContainer.innerHTML = `
-                <div class="chat-empty">
-                    <div class="chat-empty-icon"><i class="bi bi-exclamation-triangle"></i></div>
-                    <h3>Gagal Memuat</h3>
-                    <p>Terjadi kesalahan saat memuat percakapan: ${error.message}</p>
-                </div>
-            `;
-        }
+        // BUG FIX 1 & 4: Tutup fungsi displayChatHistory() di sini.
+        // Sebelumnya penutup `}` ini tidak ada → selectChat() duplikat & kode bebas
+        // masuk ke scope forEach callback → SyntaxError di seluruh script.
+        // Definisi selectChat() yang benar sudah ada di bawah (fungsi level atas).
     }
 
-    // PERBAIKAN 2: Manajemen Session ID untuk Stateful RAG (Eskalasi 3x)
+    // BUG FIX 2: sessionId dipindah ke scope top-level (keluar dari displayChatHistory).
     let sessionId = sessionStorage.getItem('chatSessionId');
     if (!sessionId) {
         sessionId = "session_" + Math.random().toString(36).substr(2, 9);
         sessionStorage.setItem('chatSessionId', sessionId);
-        // Auto-select first conversation and load its messages
-        if (history.length > 0) {
-            currentConversationId = history[0].id;
-            sessionStorage.setItem('currentConversationId', currentConversationId);
-            loadConversationMessages(currentConversationId);
-        }
     }
-
-    // Session ID no longer needed - using database conversation IDs instead
 
     // =====================================
     // AUTO RESIZE TEXTAREA
@@ -466,11 +371,50 @@
     }
 
     // =====================================
-    // CLEAR CHAT
+    // CLEAR CHAT (DELETE DARI DATABASE)
     // =====================================
-    function clearChat(){
-        if(confirm("Yakin ingin menghapus chat ini?")){
-            startNewChat()
+    async function clearChat(){
+        if (!currentConversationId) {
+            alert("Tidak ada percakapan yang aktif untuk dihapus.");
+            return;
+        }
+
+        if(confirm("Yakin ingin menghapus percakapan ini dari riwayat?")){
+            try {
+                // Mengirim request DELETE ke backend Django
+                const response = await fetch(`${CONVERSATIONS_ENDPOINT}${currentConversationId}/`, {
+                    method: 'DELETE',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'X-CSRFToken': getCookie('csrftoken')
+                    }
+                });
+
+                if (response.ok || response.status === 204) {
+                    // Jika berhasil dihapus dari database, bersihkan layar
+                    messagesContainer.innerHTML = `
+                        <div class="chat-empty">
+                            <div class="chat-empty-icon"><i class="bi bi-robot"></i></div>
+                            <h3>SITI AI Assistant</h3>
+                            <p>Chat telah berhasil dihapus.<br>Ketik pesan di bawah untuk memulai percakapan baru.</p>
+                        </div>
+                    `;
+                    input.value = "";
+                    input.style.height = "auto";
+                    
+                    // Hapus ID yang tersimpan di session
+                    currentConversationId = null;
+                    sessionStorage.removeItem('currentConversationId');
+                    
+                    // Refresh riwayat di sidebar agar chat yang dihapus hilang
+                    loadChatHistory();
+                } else {
+                    alert("Gagal menghapus chat. Status: " + response.status);
+                }
+            } catch (error) {
+                console.error('Error deleting conversation:', error);
+                alert("Terjadi kesalahan saat menghubungi server untuk menghapus chat.");
+            }
         }
     }
 
@@ -645,13 +589,14 @@
                     "Content-Type": "application/json",
                     "X-CSRFToken": getCookie("csrftoken")
                 },
-                // PERBAIKAN 3: Menyisipkan Session ID
-                // PERBAIKAN 6: Tambahkan user_id untuk menyimpan conversation
+                // BUG FIX 3: Menggabungkan dua `body: JSON.stringify()` yang duplikat.
+                // Sebelumnya ada dua key `body:` dalam satu object literal dan
+                // baris pertama tidak ditutup `})` → SyntaxError "Unexpected identifier 'body'".
+                // Perbaikan: gunakan satu body dengan semua field yang dibutuhkan.
                 body: JSON.stringify({
                     query: message,
                     session_id: sessionId,
-                    user_id: currentUserId
-                body: JSON.stringify({
+                    user_id: currentUserId,
                     content: message
                 })
             });

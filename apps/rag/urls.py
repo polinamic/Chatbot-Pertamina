@@ -2,8 +2,8 @@ from django.urls import path, include
 from django.views.generic import RedirectView
 from rest_framework.routers import DefaultRouter
 
-# Semua view diimport dari apps.rag.views
-from .views import DocumentViewSet, upload_knowledge, siti_chat, get_chat_history, get_conversation_messages
+# --- PERBAIKAN 1: Tambahkan send_message ke dalam import ---
+from .views import DocumentViewSet, upload_knowledge, siti_chat, get_chat_history, get_conversation_messages, send_message
 
 app_name = 'rag'
 
@@ -29,4 +29,7 @@ urlpatterns = [
     
     # GET CONVERSATION MESSAGES ENDPOINT
     path('conversation/<int:conversation_id>/messages/', get_conversation_messages, name='get_conversation_messages'),
+    
+    # --- PERBAIKAN 2: Tambahkan path untuk send_message ---
+    path('conversations/<int:conversation_id>/send_message/', send_message, name='send_message'),
 ]
