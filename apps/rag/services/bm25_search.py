@@ -88,6 +88,7 @@ class BM25Search:
         
         try:
             tokens = self._tokenize(query)
+            logger.debug("bm25_search_tokens", extra={"query": query[:50], "tokens": tokens, "num_tokens": len(tokens)})
             scores = self.bm25.get_scores(tokens)
             
             # Top-k results
@@ -105,8 +106,14 @@ class BM25Search:
                         "id": doc.get("id"),
                         "score": float(score),
                         "content": doc.get("content"),
-                        "category": doc.get("category")
+                        "category": doc.get("category"),
+                        "doc_type": doc.get("doc_type")
                     })
+            
+            logger.debug("bm25_search_results", extra={
+                "results_count": len(results),
+                "scores": [round(r["score"], 3) for r in results[:5]]
+            })
             
             return results
         except Exception as e:
@@ -131,7 +138,12 @@ class BM25Search:
         # Filter: min length 2, skip stopwords
         stopwords = {
             'dan', 'atau', 'yang', 'di', 'ke', 'dari', 'jika', 'jangan',
-            'a', 'an', 'the', 'is', 'are', 'in', 'on', 'at', 'of', 'for'
+            'a', 'an', 'the', 'is', 'are', 'in', 'on', 'at', 'of', 'for',
+            'untuk', 'dengan', 'dalam', 'pada', 'oleh', 'sebagai', 'bagi', 'kepada',
+            'dari', 'ke', 'di', 'dengan', 'oleh', 'pada', 'dalam', 'tentang', 'seperti',
+            'sebagai', 'bagi', 'kepada', 'adalah', 'telah', 'akan', 'sudah', 'belum',
+            'lagi', 'masih', 'juga', 'saja', 'hanya', 'bahwa', 'karena', 'oleh',
+            'sebelum', 'sesudah', 'saat', 'ketika', 'dimana', 'bagaimana', 'mengapa'
         }
         
         tokens = [t for t in tokens if len(t) >= 2 and t not in stopwords]
@@ -187,6 +199,11 @@ def hybrid_search(
         sem_score = semantic_scores.get(doc_id, 0) * semantic_weight
         bm25_score = bm25_scores.get(doc_id, 0) * bm25_weight
         combined_scores[doc_id] = sem_score + bm25_score
+    
+    # If all scores are near zero, no relevant results
+    if not combined_scores or max(combined_scores.values()) < 0.001:
+        logger.debug("hybrid_search_no_relevant_results", extra={"max_score": max(combined_scores.values()) if combined_scores else 0})
+        return []
     
     # Top-k hasil
     ranked = sorted(

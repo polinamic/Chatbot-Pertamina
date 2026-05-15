@@ -47,15 +47,29 @@
     
     <div class="stat-card">
         <div class="stat-card-header">
-            <span class="stat-card-title">Eskalasi Links</span>
-            <div class="stat-card-icon" style="background-color: rgba(245, 158, 11, 0.1); color: var(--warning);">
-                <i class="bi bi-link-45deg"></i>
+            <span class="stat-card-title">Order Links</span>
+            <div class="stat-card-icon" style="background-color: rgba(59, 130, 246, 0.1); color: var(--info, #3b82f6);">
+                <i class="bi bi-bag-plus"></i>
             </div>
         </div>
-        <div class="stat-card-value">{{ stats.escalation }}</div>
+        <div class="stat-card-value">{{ stats.order_link }}</div>
         <div class="stat-card-change">
             <i class="bi bi-info-circle"></i>
-            <span>Direct link ke portal tiket</span>
+            <span>Permintaan pengadaan item baru</span>
+        </div>
+    </div>
+    
+    <div class="stat-card">
+        <div class="stat-card-header">
+            <span class="stat-card-title">Incident Links</span>
+            <div class="stat-card-icon" style="background-color: rgba(245, 158, 11, 0.1); color: var(--warning);">
+                <i class="bi bi-exclamation-circle"></i>
+            </div>
+        </div>
+        <div class="stat-card-value">{{ stats.incident_link }}</div>
+        <div class="stat-card-change">
+            <i class="bi bi-alert-triangle"></i>
+            <span>Laporan error/kerusakan</span>
         </div>
     </div>
 </div>
@@ -85,8 +99,10 @@
                     <tr>
                         <td>
                             <div style="display: flex; align-items: center; gap: 0.5rem;">
-                                {% if doc.doc_type == 'ESCALATION' %}
-                                    <i class="bi bi-link-45deg" style="color: var(--warning); font-size: 1.25rem;"></i>
+                                {% if doc.doc_type == 'INCIDENT_LINK' %}
+                                    <i class="bi bi-exclamation-circle" style="color: var(--warning); font-size: 1.25rem;"></i>
+                                {% elif doc.doc_type == 'ORDER_LINK' %}
+                                    <i class="bi bi-bag-plus" style="color: #3b82f6; font-size: 1.25rem;"></i>
                                 {% else %}
                                     <i class="bi bi-wrench" style="color: var(--success); font-size: 1.25rem;"></i>
                                 {% endif %}
@@ -94,8 +110,10 @@
                             </div>
                         </td>
                         <td>
-                            {% if doc.doc_type == 'ESCALATION' %}
-                                <span class="badge" style="background-color: rgba(245, 158, 11, 0.2); color: #b45309;">🔗 Eskalasi</span>
+                            {% if doc.doc_type == 'INCIDENT_LINK' %}
+                                <span class="badge" style="background-color: rgba(245, 158, 11, 0.2); color: #b45309;">⚠️ Incident</span>
+                            {% elif doc.doc_type == 'ORDER_LINK' %}
+                                <span class="badge" style="background-color: rgba(59, 130, 246, 0.2); color: #1e40af;">📦 Order</span>
                             {% else %}
                                 <span class="badge" style="background-color: rgba(16, 185, 129, 0.2); color: #047857;">🔧 Troubleshoot</span>
                             {% endif %}
@@ -188,12 +206,13 @@
                 <label for="docType" style="font-weight: 600; margin-bottom: 0.5rem; display: block;">📋 Tipe Knowledge Base:</label>
                 <select id="docType" style="width: 100%; padding: 0.75rem; border-radius: 0.5rem; border: 1px solid var(--border-light); background-color: var(--bg-light); color: inherit;">
                     <option value="TROUBLESHOOT">🔧 Langkah Troubleshooting (Solusi Mandiri)</option>
-                    <option value="ESCALATION">🔗 Panduan Direct Link (Eskalasi ke Tim IT)</option>
+                    <option value="ORDER_LINK">📦 Link Pemesanan/Pengadaan Item IT Baru (SERVICE_ORDER)</option>
+                    <option value="INCIDENT_LINK">⚠️ Link Pelaporan Error/Kerusakan (INCIDENT_LINK)</option>
                 </select>
                 <p class="format-hint" style="margin-top: 0.5rem; font-size: 0.85rem; color: var(--gray-500);">
                     <strong>Format yang Diterima:</strong>
                     <br>• <strong>Troubleshoot:</strong> KATEGORI: [nama] dengan langkah-langkah
-                    <br>• <strong>Direct Link:</strong> NAMA FORM: | TRIGGER KEYWORD: | PANDUAN TIKET: | Link:
+                    <br>• <strong>Order Link & Incident Link:</strong> NAMA FORM: | TRIGGER KEYWORD: | PANDUAN TIKET: | Link:
                 </p>
             </div>
 
@@ -227,19 +246,33 @@ Langkah Perbaikan:
 2. Ketik 'ncpa.cpl' lalu Enter
 ...</pre>
                     </div>
-                    <div>
-                        <strong style="color: var(--warning);">✓ Format Direct Link (Baru):</strong>
+                    <div style="margin-bottom: 1rem;">
+                        <strong style="color: #3b82f6;">✓ Format Order Link (Pengadaan Item):</strong>
                         <pre style="background: var(--bg-white); padding: 0.75rem; border-radius: 0.25rem; overflow-x: auto; margin: 0.5rem 0;">---
-NAMA FORM: Acces Control Device
-TRIGGER KEYWORD: access, control, acs, pintu
-PANDUAN TIKET: Untuk menghubungi tim IT silahkan klik link dibawah ini.
+NAMA FORM: Handset (Perangkat Mobile Perusahaan)
+TRIGGER KEYWORD: handphone, hp, mobile, perangkat, order handset
+PANDUAN TIKET: Untuk memesan handset baru, silahkan klik link dibawah
 Link: https://myssc.pertamina.com/dwp/app/#/itemprofile/101
 
 ---
-NAMA FORM: Email Configuration
-TRIGGER KEYWORD: email, outlook, setup
-PANDUAN TIKET: Untuk mengkonfigurasi email, silahkan kunjungi portal.
+NAMA FORM: Desktop (PC, Laptop, Peripheral)
+TRIGGER KEYWORD: laptop baru, pc, pesan laptop, komputer baru
+PANDUAN TIKET: Untuk mengajukan pengadaan perangkat baru
 Link: https://myssc.pertamina.com/dwp/app/#/itemprofile/102</pre>
+                    </div>
+                    <div>
+                        <strong style="color: var(--warning);">✓ Format Incident Link (Error/Kerusakan):</strong>
+                        <pre style="background: var(--bg-white); padding: 0.75rem; border-radius: 0.25rem; overflow-x: auto; margin: 0.5rem 0;">---
+NAMA FORM: Incident (Gangguan Aplikasi & Sistem)
+TRIGGER KEYWORD: error, crash, tidak bisa, aplikasi tidak berfungsi, sistem down
+PANDUAN TIKET: Untuk melaporkan gangguan sistem, silahkan klik link dibawah
+Link: https://myssc.pertamina.com/dwp/app/#/itemprofile/200
+
+---
+NAMA FORM: Email & Collaboration Tools Details
+TRIGGER KEYWORD: email error, outlook tidak bisa, teams error, mailbox
+PANDUAN TIKET: Untuk melaporkan masalah email, silahkan buat tiket
+Link: https://myssc.pertamina.com/dwp/app/#/itemprofile/201</pre>
                     </div>
                 </div>
             </div>

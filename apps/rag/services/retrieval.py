@@ -97,6 +97,13 @@ def retrieve_context(question, vector_store, embedding_service, doc_type=None, t
         search_k = top_k * 5 
         semantic_results = vector_store.search(embedding_service.embed_text(question), search_k)
         
+        logger.debug("retrieval_semantic", extra={
+            "question": question[:50],
+            "search_k": search_k,
+            "results_count": len(semantic_results),
+            "scores": [round(r["score"], 3) for r in semantic_results[:5]]
+        })
+        
         if not semantic_results:
             logger.info("retrieval_no_results", extra={"phase": "semantic_search"})
             return []
@@ -109,6 +116,11 @@ def retrieve_context(question, vector_store, embedding_service, doc_type=None, t
         bm25_results = []
         if _bm25_index:
             bm25_results = _bm25_index.search(question, top_k=search_k)
+        
+        logger.debug("retrieval_bm25", extra={
+            "results_count": len(bm25_results),
+            "scores": [round(r["score"], 3) for r in bm25_results[:5]]
+        })
         
         # Step 3 & 4: Metadata-aware filtering + hybrid ranking
         filtered_semantic = []
@@ -147,6 +159,13 @@ def retrieve_context(question, vector_store, embedding_service, doc_type=None, t
             )
         else:
             hybrid_results = sorted(filtered_semantic, key=lambda x: x["score"], reverse=True)[:search_k]
+        
+        logger.debug("retrieval_hybrid", extra={
+            "semantic_count": len(filtered_semantic),
+            "bm25_count": len(filter_bm25),
+            "hybrid_count": len(hybrid_results),
+            "scores": [round(r.get("combined_score", r.get("score", 0)), 3) for r in hybrid_results[:5]]
+        })
 
         # ==========================================================
         # Step 5: CROSS-ENCODER RE-RANKING (Obat Anti-Frankenstein)
@@ -166,9 +185,13 @@ def retrieve_context(question, vector_store, embedding_service, doc_type=None, t
             # Urutkan ulang berdasarkan skor Re-Ranker yang paling tinggi
             hybrid_results = sorted(hybrid_results, key=lambda x: x["rerank_score"], reverse=True)
             
-            # (Opsional) Filter: Buang dokumen yang skor rerank-nya terlalu rendah/negatif
-            # Ini mencegah dokumen "Webcam" masuk ke pertanyaan "Internet"
-            hybrid_results = [doc for doc in hybrid_results if doc["rerank_score"] > -2.0]
+            logger.debug("retrieval_rerank", extra={
+                "count": len(hybrid_results),
+                "scores": [round(doc["rerank_score"], 3) for doc in hybrid_results[:5]]
+            })
+            
+            # Filter: Buang dokumen yang skor rerank-nya <= 0 (tidak relevan)
+            hybrid_results = [doc for doc in hybrid_results if doc["rerank_score"] > 0.0]
             
             used_method = "hybrid_reranked"
         else:
@@ -185,6 +208,12 @@ def retrieve_context(question, vector_store, embedding_service, doc_type=None, t
                 "category": r.get("category"),
                 "retrieval_method": used_method
             })
+        
+        logger.debug("retrieval_final", extra={
+            "results_count": len(final_results),
+            "scores": [round(r["score"], 3) for r in final_results],
+            "method": used_method
+        })
         
         elapsed_ms = int((time.time() - timer_start) * 1000)
         logger.info("retrieval_complete", extra={

@@ -1,0 +1,383 @@
+---
+type: TROUBLESHOOT
+title: Kartu akses atau ID Card tidak bisa digunakan untuk membuka pintu
+keywords: kartu akses, id card, pintu, reader, access control, tap kartu, chip, magnetik, akses ruangan, IT helpdesk
+category: IT_PROBLEM
+---
+## Deskripsi Masalah
+Pengguna mengalami kendala di mana kartu akses atau ID Card tidak bisa digunakan untuk membuka pintu ruangan pada mesin Access Control.
+
+## Langkah Solusi
+1. Pastikan kartu ID Anda tidak bengkok, patah, atau tergores parah pada bagian chip/magnetiknya.
+2. Tap kartu Anda pada reader pintu lain; jika berhasil, masalah ada pada reader pintu tersebut.
+3. Bersihkan permukaan kartu dan tap kembali dengan posisi menempel sempurna selama 2 detik.
+4. Jika muncul indikator lampu merah pada reader, kemungkinan akses Anda ke ruangan tersebut belum terdaftar atau kedaluwarsa.
+5. Hubungi IT Helpdesk atau buat tiket untuk pengecekan akses dan sinkronisasi ulang sistem pintu.
+
+---
+type: TROUBLESHOOT
+title: Tidak bisa mengakses folder sharing (File Sharing) atau portal internal
+keywords: folder sharing, file sharing, portal internal, jaringan internal, VPN, access denied, token autentikasi, Windows, grup akses, IT helpdesk
+category: IT_PROBLEM
+---
+## Deskripsi Masalah
+Pengguna mengalami kendala tidak bisa mengakses direktori folder sharing (File Sharing) jaringan atau tidak dapat membuka portal internal perusahaan.
+
+## Langkah Solusi
+1. Pastikan Anda sudah terhubung ke jaringan internal kantor (kabel LAN) atau VPN jika bekerja dari luar.
+2. Restart laptop Anda untuk memperbarui token autentikasi profil Windows Anda.
+3. Cek kembali alamat atau link folder sharing yang Anda tuju, pastikan tidak ada salah ketik.
+4. Tanyakan kepada atasan atau pemilik folder apakah Anda sudah diundang (di-invite) ke dalam grup akses tersebut.
+5. Jika akses masih ditolak (Access Denied), buat tiket untuk permintaan penambahan Access Management.
+
+---
+type: TROUBLESHOOT
+title: Cara mengajukan pengiriman broadcast email atau video display SAP
+keywords: broadcast email, video display, SAP, pengiriman, tiket IT, mailing list, attachment, approval, videotron, IT helpdesk
+category: IT_PROBLEM
+---
+## Deskripsi Masalah
+Pengguna membutuhkan panduan prosedur untuk mengajukan pengiriman broadcast email atau penayangan video display melalui sistem SAP.
+
+## Langkah Solusi
+1. Siapkan materi broadcast (teks, gambar, atau video) yang sudah disetujui oleh atasan atau departemen terkait.
+2. Pastikan ukuran file attachment tidak melebihi batas maksimal standar email perusahaan (biasanya 5MB - 10MB).
+3. Tentukan target audiens atau mailing list yang akan menerima broadcast tersebut.
+4. Pastikan format video yang dikirim sesuai dengan standar resolusi display videotron/TV kantor.
+5. Buat tiket ke IT Helpdesk pada kategori Broadcast Email untuk penjadwalan dan eksekusi pengiriman.
+
+---
+type: TROUBLESHOOT
+title: Kamera CCTV di area saya mati atau tidak bisa diakses rekamannya
+keywords: CCTV, kamera mati, rekaman, DVR, NVR, video loss, kabel jaringan, IT helpdesk, titik CCTV
+category: IT_PROBLEM
+---
+## Deskripsi Masalah
+Pengguna melaporkan bahwa kamera CCTV di area tertentu mati total atau rekamannya tidak dapat diakses kembali.
+
+## Langkah Solusi
+1. Periksa apakah ada pemadaman listrik lokal di area titik kamera CCTV tersebut berada.
+2. Jika Anda memiliki akses ke monitor DVR/NVR, cek apakah muncul status "Video Loss" atau layar hitam.
+3. Pastikan kabel jaringan (LAN) yang terhubung ke kamera tidak terputus atau kendor.
+4. Catat nomor seri atau lokasi pasti titik CCTV yang bermasalah tersebut (misal: CCTV Lobi Utama Lantai 2).
+5. Buat tiket ke IT Helpdesk untuk pengecekan fisik kamera dan penarikan rekaman (jika memiliki otorisasi).
+
+---
+type: TROUBLESHOOT
+title: Akun terkunci (locked) atau lupa password untuk login laptop dan aplikasi
+keywords: akun terkunci, lupa password, laptop, login, caps lock, VPN, SSPR, reset password, IT helpdesk
+category: IT_PROBLEM
+---
+## Deskripsi Masalah
+Pengguna tidak dapat masuk ke laptop atau aplikasi perusahaan karena akun terkunci (locked) atau lupa password login.
+
+## Langkah Solusi
+1. Tunggu sekitar 15 menit jika akun terkunci akibat salah memasukkan password lebih dari 3 kali.
+2. Pastikan tombol Caps Lock tidak menyala dan bahasa keyboard pada setting Windows adalah US English.
+3. Jika menggunakan laptop domain di luar kantor, pastikan Anda terhubung ke VPN terlebih dahulu sebelum mereset.
+4. Coba login menggunakan fitur Self-Service Password Reset (SSPR) jika Anda sudah pernah mendaftarkan email alternatif atau nomor HP.
+5. Buat tiket atau hubungi IT Support untuk bantuan force unlock dan reset password manual.
+
+---
+type: TROUBLESHOOT
+title: Komputer desktop atau laptop lambat, hang, atau muncul blue screen
+keywords: komputer lambat, laptop hang, blue screen, hard reset, task manager, disk penuh, USB, IT helpdesk
+category: IT_PROBLEM
+---
+## Deskripsi Masalah
+Pengguna mengalami masalah performa pada komputer desktop atau laptop, seperti berjalan sangat lambat, hang (tidak merespon), atau sering menampilkan blue screen.
+
+## Langkah Solusi
+1. Tekan tombol power tahan 10 detik untuk mematikan paksa (Hard Reset) jika layar freeze total, lalu nyalakan kembali.
+2. Buka Task Manager (Ctrl+Shift+Esc), tutup aplikasi berat yang menggunakan memori atau CPU 100%.
+3. Pastikan ruang penyimpanan (Local Disk C:) tidak penuh (sisakan minimal 10% dari total kapasitas).
+4. Cabut semua perangkat USB eksternal (flashdisk, harddisk, dongle) lalu restart komputer.
+5. Jika sering terjadi Blue Screen, buat tiket ke IT Helpdesk untuk pengecekan OS Windows dan perbaikan hardware.
+
+---
+type: TROUBLESHOOT
+title: Email Outlook tidak bisa mengirim/menerima pesan atau Disconnected
+keywords: email, outlook, disconnected, working offline, outbox, webmail, O365, IT helpdesk
+category: IT_PROBLEM
+---
+## Deskripsi Masalah
+Pengguna mengalami masalah pada aplikasi Microsoft Outlook, seperti tidak bisa mengirim atau menerima email, atau status koneksi menunjukkan "Disconnected".
+
+## Langkah Solusi
+1. Periksa koneksi internet Anda, pastikan bisa digunakan untuk membuka website umum (misal: Google).
+2. Lihat status di pojok kanan bawah Outlook; jika "Working Offline", klik tab Send/Receive lalu matikan tombol Work Offline.
+3. Cek ukuran Outbox; jika ada email menyangkut dengan attachment sangat besar, hapus email tersebut.
+4. Restart aplikasi Microsoft Outlook, atau coba akses email Anda melalui versi Webmail/Browser (O365 Web).
+5. Jika status tetap Disconnected atau error berlanjut, buat tiket ke IT Helpdesk untuk perbaikan profile email.
+
+---
+type: TROUBLESHOOT
+title: Aplikasi SAP gagal dibuka atau tidak memiliki akses ke T-Code tertentu/LSMW
+keywords: SAP, T-Code, LSMW, aplikasi gagal dibuka, error otorisasi, koneksi jaringan, approval, IT helpdesk
+category: IT_PROBLEM
+---
+## Deskripsi Masalah
+Pengguna mengalami kendala saat membuka aplikasi SAP atau tidak memiliki otorisasi untuk mengakses transaksi (T-Code) tertentu seperti LSMW.
+
+## Langkah Solusi
+1. Pastikan koneksi jaringan stabil, karena SAP sangat sensitif terhadap jaringan yang terputus (RTO).
+2. Restart aplikasi SAP Logon, pastikan Anda memilih koneksi server yang benar di daftar sistem.
+3. Cek notifikasi error yang muncul di bagian bawah layar SAP (misal: "You are not authorized to use transaction LSMW").
+4. Mintalah persetujuan (approval) tertulis dari atasan Anda untuk penambahan akses T-Code tersebut.
+5. Buat tiket ke IT Helpdesk dengan melampirkan screenshot error dan bukti approval otorisasi.
+
+---
+type: TROUBLESHOOT
+title: Handphone atau Tablet fasilitas kantor mengalami kerusakan atau tidak menyala
+keywords: handphone, tablet, fasilitas kantor, kerusakan, tidak menyala, force reboot, baterai, IT helpdesk
+category: IT_PROBLEM
+---
+## Deskripsi Masalah
+Pengguna melaporkan bahwa perangkat handphone atau tablet milik kantor mengalami kerusakan, tidak mau menyala, atau tidak berfungsi sebagaimana mestinya.
+
+## Langkah Solusi
+1. Lakukan pengisian daya (charging) menggunakan kabel dan adaptor original selama minimal 30 menit.
+2. Tekan dan tahan tombol Power bersamaan dengan tombol Volume Down selama 15 detik untuk memaksakan restart (Force Reboot).
+3. Jika perangkat menyala tetapi aplikasi perusahaan tidak berfungsi, cek ketersediaan koneksi internet seluler/Wi-Fi.
+4. Jika perangkat adalah tipe Explosion Proof, dilarang keras membuka casing atau baterai sendiri di area lapangan.
+5. Buat tiket pengembalian atau perbaikan ke IT Helpdesk jika kerusakan bersifat fisik (layar pecah, baterai kembung).
+
+---
+type: TROUBLESHOOT
+title: Sistem aplikasi seperti absensi fingerprint, SAP, atau PI Osisoft error (Incident)
+keywords: sistem error, absensi, fingerprint, SAP, PI Osisoft, maintenance, cache, error 500, connection timeout, IT helpdesk
+category: IT_PROBLEM
+---
+## Deskripsi Masalah
+Pengguna menghadapi insiden di mana sistem aplikasi penting seperti mesin absensi fingerprint, SAP, atau PI Osisoft mengalami error dan tidak dapat digunakan.
+
+## Langkah Solusi
+1. Cek pengumuman dari grup IT apakah sedang ada jadwal maintenance (pemeliharaan) server aplikasi tersebut.
+2. Clear cache pada browser Anda jika mengakses aplikasi berbasis web, lalu coba login kembali.
+3. Catat pesan error spesifik yang muncul di layar (misal: "Connection Timeout" atau "Database Error 500").
+4. Coba minta rekan kerja di sebelah Anda untuk mengakses aplikasi yang sama guna memastikan apakah ini masalah sistem global atau lokal.
+5. Buat tiket Insiden ke IT Helpdesk dengan menyertakan screenshot error lengkap.
+
+---
+type: TROUBLESHOOT
+title: Membutuhkan perlengkapan IT tambahan seperti Flashdisk, Tinta Printer, atau Baterai
+keywords: perlengkapan IT, flashdisk, tinta printer, baterai, IT supplies, persetujuan, tiket, IT helpdesk
+category: IT_PROBLEM
+---
+## Deskripsi Masalah
+Pengguna memerlukan perlengkapan IT tambahan seperti flashdisk, tinta/toner printer, atau baterai untuk keperluan operasional kantor.
+
+## Langkah Solusi
+1. Pastikan permintaan perlengkapan IT ini ditujukan khusus untuk kebutuhan operasional kantor, bukan pribadi.
+2. Cek stok tinta atau toner di printer; pastikan sudah benar-benar kosong atau hasil cetakan pudar sebelum meminta yang baru.
+3. Dapatkan persetujuan (approval) dari Manager atau Atasan langsung Anda jika meminta barang yang bernilai tinggi.
+4. Simpan barang yang sudah rusak (seperti mouse mati atau baterai habis) karena IT biasanya meminta barang tersebut untuk ditukar (trade-in).
+5. Buat tiket permintaan IT Supplies melalui portal agar proses pengadaan dapat dicatat.
+
+---
+type: TROUBLESHOOT
+title: Jaringan kabel LAN internet di meja mati atau bertanda seru kuning
+keywords: jaringan LAN, kabel LAN, internet mati, tanda seru kuning, unidentified network, IP address, IT helpdesk
+category: IT_PROBLEM
+---
+## Deskripsi Masalah
+Pengguna tidak dapat terhubung ke internet melalui kabel LAN di meja kerja; muncul notifikasi "Unidentified Network" atau ikon jaringan bertanda seru kuning.
+
+## Langkah Solusi
+1. Cabut kabel LAN dari laptop Anda dan tancapkan kembali hingga terdengar bunyi "klik".
+2. Pastikan ujung kabel LAN yang terhubung ke wall-socket (colokan di dinding) atau switch tidak kendor.
+3. Restart laptop Anda untuk memperbarui IP Address dari jaringan.
+4. Matikan koneksi Wi-Fi sementara waktu agar laptop fokus membaca jaringan dari kabel LAN.
+5. Jika status tetap "Unidentified Network", buat tiket ke IT Helpdesk untuk pengecekan port switch dan kabel fisik.
+
+---
+type: TROUBLESHOOT
+title: Proses pendaftaran dan persiapan fasilitas IT untuk pekerja/mitra baru
+keywords: pekerja baru, mitra baru, fasilitas IT, pendaftaran, akses SAP, PC/laptop, IT helpdesk
+category: IT_PROBLEM
+---
+## Deskripsi Masalah
+Pengguna membutuhkan panduan lengkap mengenai prosedur pendaftaran dan penyiapan fasilitas IT bagi karyawan atau mitra kerja yang baru bergabung.
+
+## Langkah Solusi
+1. Kumpulkan data diri lengkap pekerja baru beserta departemen, jabatan, dan tanggal mulai bekerja (Join Date).
+2. Tentukan kebutuhan akses spesifik (misal: perlu akses SAP, Email khusus, PC/Laptop, dan ekstensi telepon).
+3. Pastikan atasan langsung (Manager) sudah menyetujui seluruh permintaan fasilitas IT tersebut.
+4. Ajukan permintaan maksimal 7 hari kerja sebelum pekerja baru mulai masuk kantor agar perangkat dapat disiapkan.
+5. Buat tiket di form Layanan Pekerja Baru pada portal IT agar semua checklist persiapan terdata otomatis.
+
+---
+type: TROUBLESHOOT
+title: Proyektor, layar TV, atau Mic/Sound System di ruang meeting tidak menyala
+keywords: proyektor, layar TV, microphone, sound system, ruang meeting, tidak menyala, HDMI, VGA, Windows+P, IT helpdesk
+category: IT_PROBLEM
+---
+## Deskripsi Masalah
+Pengguna mengalami kendala pada perangkat multimedia di ruang rapat, seperti proyektor, layar TV, atau sistem suara (mic/speaker) yang tidak mau menyala atau mengeluarkan output.
+
+## Langkah Solusi
+1. Pastikan kabel power proyektor/TV sudah tertancap ke stop kontak dan lampu indikator perangkat menyala merah/standby.
+2. Tekan tombol Power pada remote atau unit. Jika menggunakan kabel HDMI/VGA, cabut dan pasang kembali ke laptop.
+3. Tekan tombol kombinasi Windows + P di laptop Anda, lalu pilih mode "Duplicate" atau "Extend".
+4. Untuk Sound System, pastikan volume pada amplifier tidak di-mute, kabel Mic terhubung kuat, dan baterai Mic Wireless masih ada.
+5. Jika tidak ada gambar/suara yang keluar sama sekali, segera buat tiket atau hubungi IT Helpdesk untuk bantuan ruang rapat.
+
+---
+type: TROUBLESHOOT
+title: Kartu ID tidak bisa digunakan untuk tap print di mesin fotokopi/MPS
+keywords: tap print, kartu ID, mesin fotokopi, MPS, printer, unregistered, kuota print, IT helpdesk
+category: IT_PROBLEM
+---
+## Deskripsi Masalah
+Pengguna tidak dapat melakukan tap print menggunakan kartu identitas pada mesin fotokopi atau Multi-Purpose Solution (MPS).
+
+## Langkah Solusi
+1. Pastikan saldo kuota print Anda belum habis (jika departemen menerapkan limit kuota bulanan).
+2. Lap atau bersihkan permukaan kartu ID Anda lalu tap ulang tepat di logo RFID mesin MPS dengan perlahan.
+3. Jika muncul notifikasi "User Unregistered", artinya kartu ID baru Anda belum terdaftar di database server printer.
+4. Jika mesin MPS mengalami paper jam atau error mekanik, ini bukan masalah kartu Anda.
+5. Buat tiket ke IT Helpdesk pada form Otorisasi MPS dengan menyertakan Nomor PIN (NIP) dan ID kartu Anda untuk sinkronisasi.
+
+---
+type: TROUBLESHOOT
+title: Printer tidak bisa mencetak dokumen (Offline) terutama dari sistem SAP/ERP
+keywords: printer offline, mencetak, SAP, ERP, spooler, dokumen, devices and printers, IT helpdesk
+category: IT_PROBLEM
+---
+## Deskripsi Masalah
+Pengguna tidak berhasil mencetak dokumen, terutama dari aplikasi SAP atau sistem ERP lainnya, dengan indikasi printer berstatus "Offline".
+
+## Langkah Solusi
+1. Pastikan mesin printer dalam keadaan menyala (On) dan tidak ada lampu indikator error (kertas habis/kertas nyangkut).
+2. Jika terhubung via Wi-Fi/Jaringan, pastikan kabel LAN printer terpasang dengan baik.
+3. Restart mesin printer, lalu restart juga aplikasi SAP Logon di komputer Anda.
+4. Buka Devices and Printers di Windows, pastikan printer tersebut tidak di-set sebagai "Use Printer Offline".
+5. Jika dokumen dari Word bisa di-print tetapi dari SAP gagal, buat tiket ke IT Helpdesk karena spooler SAP perlu di-restart.
+
+---
+type: TROUBLESHOOT
+title: Radio komunikasi Handy Talky (HT) suara tidak terdengar, mati, atau tidak bisa transmit
+keywords: handy talky, HT, radio, komunikasi, suara tidak terdengar, transmit, baterai, frekuensi, IT helpdesk
+category: IT_PROBLEM
+---
+## Deskripsi Masalah
+Pengguna menghadapi masalah pada alat komunikasi radio Handy Talky (HT), seperti suara tidak keluar, perangkat mati total, atau tidak bisa melakukan transmisi panggilan.
+
+## Langkah Solusi
+1. Putar kenop volume searah jarum jam untuk memastikan perangkat menyala dan volume cukup besar.
+2. Pastikan frekuensi atau channel radio Anda sudah disamakan dengan rekan kerja lainnya.
+3. Cek indikator baterai; jika berkedip merah atau bunyi beep saat menekan tombol bicara (PTT), baterai harus segera di-charge.
+4. Lepas baterai dari body radio, bersihkan konektor emasnya dengan kain kering, lalu pasang kembali dengan kencang.
+5. Jika masalah berlanjut (suara kresek-kresek / tidak bisa memanggil), buat tiket ke IT Helpdesk untuk perbaikan unit.
+
+---
+type: TROUBLESHOOT
+title: Membutuhkan ganti kartu SIM Corporate yang hilang, rusak, atau aktivasi roaming
+keywords: SIM card, corporate, hilang, rusak, roaming, aktivasi, provider, IT helpdesk
+category: IT_PROBLEM
+---
+## Deskripsi Masalah
+Pengguna memerlukan layanan penggantian kartu SIM korporat yang hilang atau rusak, atau ingin mengajukan aktivasi layanan roaming internasional.
+
+## Langkah Solusi
+1. Jika HP hilang, segera laporkan ke atasan dan pihak provider agar nomor Corporate Anda langsung diblokir sementara.
+2. Jika kartu SIM rusak (tidak ada sinyal), coba pasang kartu SIM ke HP lain untuk memastikan kerusakannya.
+3. Untuk aktivasi paket Roaming Internasional, ajukan permintaan minimal 3 hari sebelum tanggal keberangkatan Anda.
+4. Pastikan Anda melampirkan persetujuan atasan untuk penggantian kartu atau penambahan paket biaya.
+5. Buat tiket melalui portal IT agar proses administrasi penggantian fisik SIM Card dapat dilacak.
+
+---
+type: TROUBLESHOOT
+title: Membutuhkan instalasi software baru (AutoCAD, Adobe, dsb) atau aplikasi tidak bisa dibuka
+keywords: instalasi software, AutoCAD, Adobe, lisensi, software baru, aplikasi tidak bisa dibuka, harddisk, IT helpdesk
+category: IT_PROBLEM
+---
+## Deskripsi Masalah
+Pengguna memerlukan bantuan untuk instalasi software baru berlisensi seperti AutoCAD atau Adobe, atau mengalami masalah saat membuka aplikasi yang sudah terpasang.
+
+## Langkah Solusi
+1. Restart laptop Anda terlebih dahulu untuk memastikan tidak ada proses background instalasi yang tersangkut.
+2. Pastikan kapasitas Harddisk (Local Disk C) masih cukup untuk menampung aplikasi baru tersebut.
+3. Dilarang keras mengunduh software bajakan (crack) dari internet; seluruh instalasi harus menggunakan lisensi resmi perusahaan.
+4. Siapkan approval dari Manager Anda jika software yang diminta merupakan software berbayar khusus (seperti SPSS atau AutoCAD).
+5. Buat tiket ke IT Helpdesk untuk meminta bantuan tim IT meremote PC Anda dan melakukan instalasi berlisensi (membutuhkan password Admin).
+
+---
+type: TROUBLESHOOT
+title: Telepon meja (IP Phone/Analog) mati, tidak ada nada sambung, atau kresek-kresek
+keywords: telepon meja, IP phone, analog, mati, tidak ada nada sambung, kresek, PABX, IT helpdesk
+category: IT_PROBLEM
+---
+## Deskripsi Masalah
+Pengguna mengalami gangguan pada telepon meja kantor, seperti perangkat mati total, tidak ada nada sambung, atau kualitas suara buruk (kresek-kresek).
+
+## Langkah Solusi
+1. Pastikan kabel telepon (RJ-11 atau kabel LAN RJ-45) menancap kuat pada colokan dinding dan di bagian bawah pesawat telepon.
+2. Angkat gagang telepon; jika terdengar suara kresek, cabut kabel spiral gagang telepon lalu pasang kembali.
+3. Jika layar IP Phone mati, cabut kabel jaringan dari dinding, tunggu 10 detik, lalu tancapkan kembali (Power over Ethernet).
+4. Coba hubungi nomor ekstensi Anda menggunakan HP; pastikan apakah nada panggil masuk tetapi telepon tidak berdering.
+5. Jika tetap tidak ada nada sambung, buat tiket ke IT Helpdesk untuk pengecekan rute kabel PABX di ruang server.
+
+---
+type: TROUBLESHOOT
+title: Email penuh (Mailbox Full) sehingga tidak bisa mengirim atau menerima email
+keywords: email penuh, mailbox full, outlook, kuota email, arsip, attachment besar, IT helpdesk
+category: IT_PROBLEM
+---
+## Deskripsi Masalah
+Pengguna tidak bisa mengirim atau menerima email baru karena kapasitas penyimpanan mailbox (Mailbox Full) sudah mencapai batas maksimal.
+
+## Langkah Solusi
+1. Buka Outlook, urutkan email berdasarkan ukuran (Size), lalu hapus email lama yang memiliki attachment sangat besar.
+2. Jangan lupa untuk mengosongkan folder "Deleted Items" dan "Junk Email" untuk membebaskan ruang server.
+3. Gunakan fitur "Online Archive" atau "AutoArchive" di Outlook untuk memindahkan email lama (lebih dari 1 tahun) ke arsip.
+4. Pastikan persetujuan dari atasan sudah Anda miliki karena penambahan kuota email (Upgrade License) memerlukan biaya IT.
+5. Jika sudah dibersihkan namun ruang tetap tidak cukup untuk pekerjaan, buat tiket pengajuan penambahan kuota Mailbox.
+
+---
+type: TROUBLESHOOT
+title: Membutuhkan perpanjangan akses User ID ERP (SAP) / Non-ERP atau penyesuaian otorisasi
+keywords: perpanjangan akses, user ID, SAP, ERP, non-ERP, otorisasi, expired, formulir akses, IT helpdesk
+category: IT_PROBLEM
+---
+## Deskripsi Masalah
+Pengguna membutuhkan perpanjangan masa aktif User ID untuk sistem ERP seperti SAP atau aplikasi non-ERP, atau memerlukan penyesuaian hak akses karena perubahan peran.
+
+## Langkah Solusi
+1. Pastikan apakah akun Anda sudah kedaluwarsa (expired) akibat tidak login dalam waktu yang sangat lama.
+2. Jika Anda berpindah departemen/mutasi, hak akses lama Anda biasanya dicabut dan membutuhkan pendaftaran otorisasi baru.
+3. Download dan isi formulir pengajuan akses SAP (jika ada) sesuai dengan role pekerjaan baru Anda.
+4. Minta persetujuan (approval) secara sistem dari Manager atau VP terkait.
+5. Buat tiket ke IT Helpdesk dan lampirkan bukti approval agar tim administrator SAP dapat membuka kembali akses Anda.
+
+---
+type: TROUBLESHOOT
+title: Kamera, Mic, atau koneksi saat rapat Video Conference (Zoom/Teams) bermasalah
+keywords: video conference, Zoom, Teams, kamera, microphone, koneksi putus-putus, speaker, IT helpdesk
+category: IT_PROBLEM
+---
+## Deskripsi Masalah
+Pengguna mengalami masalah selama rapat video conference, seperti kamera atau mikrofon tidak berfungsi, serta koneksi yang tidak stabil di platform Zoom atau Microsoft Teams.
+
+## Langkah Solusi
+1. Keluar (Leave) dari ruang meeting (Zoom/Teams), tutup aplikasi sepenuhnya dari Taskbar, lalu bergabung kembali.
+2. Buka menu Setting (Audio & Video) pada aplikasi meeting, pastikan Anda memilih perangkat Speaker dan Microphone yang benar (bukan sistem default).
+3. Jika video putus-putus, matikan kamera Anda atau pindah ke koneksi Wi-Fi 5GHz / kabel LAN yang lebih stabil.
+4. Pastikan privacy shutter (penutup kamera fisik) di laptop Anda sudah digeser menjadi terbuka.
+5. Jika Anda menggunakan alat Video Conference di ruang rapat (seperti Polycom/Logitech) dan tidak bisa digunakan, segera hubungi IT Helpdesk untuk bantuan di tempat.
+
+---
+type: TROUBLESHOOT
+title: Laptop tidak bisa connect ke Wi-Fi kantor atau tamu (Guest Wi-Fi) tidak bisa login
+keywords: Wi-Fi, laptop, connect, kantor, guest Wi-Fi, tamu, WPA2-Enterprise, SSID, access point, IT helpdesk
+category: IT_PROBLEM
+---
+## Deskripsi Masalah
+Pengguna tidak dapat menghubungkan laptop ke jaringan Wi-Fi korporat atau akses Guest Wi-Fi untuk tamu gagal menampilkan halaman login.
+
+## Langkah Solusi
+1. Pastikan fitur Wi-Fi di laptop menyala (mode pesawat dalam keadaan mati).
+2. Lupakan jaringan (Forget Network) pada SSID yang bermasalah, lalu coba sambungkan ulang.
+3. Untuk karyawan internal, pastikan Anda memasukkan Username dan Password sesuai akun domain saat menggunakan koneksi WPA2-Enterprise.
+4. Untuk tamu (Guest Wi-Fi), jika halaman login tidak muncul otomatis, buka browser dan ketik alamat `http://neverssl.com` untuk memancing portal keluar.
+5. Jika masalah persisten atau tertulis "Can't connect to this network", buat tiket ke IT Helpdesk untuk pengecekan Access Point di ruangan Anda.

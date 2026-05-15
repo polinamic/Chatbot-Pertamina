@@ -17,7 +17,7 @@ from apps.core.models import ActivityLog # Document dihapus dari import core
 from apps.rag.models import Document, DocumentChunk
 
 # Import ingestion service untuk chunking yang lebih baik
-from apps.rag.services.ingestion_service import category_aware_chunking, ingest_document
+from apps.rag.services.ingestion_service import markdown_aware_chunking, ingest_document
 
 # Optional import - will skip embedding if not available
 try:

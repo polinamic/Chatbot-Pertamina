@@ -29,3 +29,9 @@ class EmbeddingService:
     @staticmethod
     def from_bytes(binary_data: bytes) -> np.ndarray:
         return np.frombuffer(binary_data, dtype=np.float32)
+
+
+# Standalone function for ingestion
+def generate_embedding(text: str) -> np.ndarray:
+    service = EmbeddingService()
+    return service.embed_text(text)

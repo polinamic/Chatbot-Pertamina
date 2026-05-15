@@ -260,6 +260,7 @@
 <div class="signup-container">
     <!-- Form Section -->
     <div class="signup-form-section">
+        
         <div class="form-wrapper">
             <div class="signup-header">
                 <h1>Daftar</h1>
@@ -331,6 +332,7 @@
                 <button type="submit" class="submit-btn">Daftar Sekarang</button>
             </form>
 
+
             {% if messages %}
             <div class="messages-container mt-4">
                 {% for message in messages %}
@@ -342,9 +344,9 @@
             </div>
         {% endif %}
 
-        <div class="divider">
-            <span>atau daftar dengan</span>
-        </div>
+            <div class="login-footer mt-4 text-center  text-gray-600 text-sm">
+                Sudah punya akun? <a href="{% url 'users:login' %}">Masuk di sini</a>
+            </div>
     </div>
 
     <!-- Image Section -->
@@ -368,6 +370,7 @@
             </div>
         </div>
     </div>
+    
 </div>
 {% endblock %}
 

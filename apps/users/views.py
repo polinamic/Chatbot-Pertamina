@@ -439,10 +439,11 @@ def logout_page(request):
 def profile_page(request):
     """
     Display and edit user profile
-    ✅ PROTECTED: Requires authentication
+    PROTECTED: Requires authentication
     """
     from django.shortcuts import render, redirect
     from apps.users.decorators import login_required_redirect
+    from django.contrib import messages  # <-- Import tambahan untuk sistem notifikasi
     
     @login_required_redirect
     def _profile_page(request):
@@ -478,19 +479,18 @@ def profile_page(request):
                     user_id=str(user.id)
                 )
                 
-                return render(request, 'users/profile.html', {
-                    'user': user,
-                    'profile': profile,
-                    'success': '✅ Profil berhasil diperbarui!'
-                })
+                # ---> PERBAIKAN PRG PATTERN DI SINI <---
+                messages.success(request, '✅ Profil berhasil diperbarui!')
+                return redirect('users:profile') # Alihkan halaman, bukan dirender
+                
             except Exception as e:
                 logger.error(f"Profile update error: {str(e)}", exc_info=True)
-                return render(request, 'users/profile.html', {
-                    'user': user,
-                    'profile': user.profile,
-                    'error': f'Error: {str(e)}'
-                })
+                
+                # ---> PERBAIKAN PRG PATTERN DI SINI <---
+                messages.error(request, f'Error: {str(e)}')
+                return redirect('users:profile') # Alihkan halaman, bukan dirender
         
+        # Render normal untuk method GET
         return render(request, 'users/profile.html', {
             'user': user,
             'profile': user.profile,

@@ -5,10 +5,33 @@
 
 {% block extra_css %}
 <style>
+    /* MENGATASI MASALAH SCROLL */
+    .settings-wrapper {
+        height: 100%; /* Memenuhi sisa ruang dari flexbox di body */
+        overflow-y: auto;
+        width: 100%;
+        padding-bottom: 2rem;
+    }
+
     .settings-container {
-        max-width: 900px;
+        max-width: 700px; /* Dipersempit agar lebih proporsional */
         margin: 2rem auto;
         padding: 0 1rem;
+    }
+
+    /* Scrollbar Styling agar cantik */
+    .settings-wrapper::-webkit-scrollbar {
+        width: 8px;
+    }
+    .settings-wrapper::-webkit-scrollbar-track {
+        background: transparent;
+    }
+    .settings-wrapper::-webkit-scrollbar-thumb {
+        background: var(--gray-300);
+        border-radius: 4px;
+    }
+    body.dark-mode .settings-wrapper::-webkit-scrollbar-thumb {
+        background: var(--gray-600);
     }
 
     .settings-header {
@@ -53,110 +76,59 @@
         gap: 0.75rem;
     }
 
-    .form-group {
-        margin-bottom: 2rem;
+    .theme-options {
+        display: flex;
+        gap: 1rem;
+        flex-wrap: wrap;
     }
 
-    .form-group:last-child {
-        margin-bottom: 0;
-    }
-
-    .form-group label {
-        display: block;
-        margin-bottom: 0.5rem;
-        font-weight: 600;
-        color: var(--text-light);
-    }
-
-    body.dark-mode .form-group label {
-        color: var(--text-dark);
-    }
-
-    .form-group p {
-        color: var(--gray-600);
-        font-size: 0.875rem;
-        margin: 0.25rem 0 0 0;
-    }
-
-    body.dark-mode .form-group p {
-        color: var(--gray-400);
-    }
-
-    .form-group select,
-    .form-group input[type="number"] {
-        width: 100%;
-        max-width: 300px;
-        padding: 0.75rem;
-        border: 1px solid var(--border-light);
+    .theme-card {
+        flex: 1;
+        min-width: 150px;
+        padding: 1.5rem;
+        border: 2px solid var(--border-light);
         border-radius: 0.5rem;
-        font-size: 0.95rem;
+        text-align: center;
+        cursor: pointer;
+        transition: all 0.2s ease;
         background-color: var(--bg-light);
         color: var(--text-light);
     }
 
-    body.dark-mode .form-group select,
-    body.dark-mode .form-group input[type="number"] {
-        background-color: var(--gray-900);
+    body.dark-mode .theme-card {
+        background-color: var(--gray-800);
         border-color: var(--border-dark);
         color: var(--text-dark);
     }
 
-    .form-group select:focus,
-    .form-group input[type="number"]:focus {
-        outline: none;
+    .theme-card:hover {
         border-color: var(--primary);
+        background-color: rgba(196, 30, 58, 0.05);
+    }
+    
+    body.dark-mode .theme-card:hover {
+        background-color: rgba(196, 30, 58, 0.2);
     }
 
-    .checkbox-group {
-        display: flex;
-        align-items: center;
-        gap: 0.75rem;
-        padding: 1rem;
-        background-color: var(--gray-50);
-        border-radius: 0.5rem;
-        margin-bottom: 1rem;
+    .theme-card.active {
+        border-color: var(--primary);
+        background-color: rgba(196, 30, 58, 0.1);
+        font-weight: bold;
+    }
+    
+    body.dark-mode .theme-card.active {
+        background-color: rgba(196, 30, 58, 0.3);
     }
 
-    body.dark-mode .checkbox-group {
-        background-color: var(--gray-800);
-    }
-
-    .checkbox-group input[type="checkbox"] {
-        width: 20px;
-        height: 20px;
-        cursor: pointer;
-    }
-
-    .checkbox-group label {
-        margin: 0;
-        cursor: pointer;
-        flex: 1;
-        display: flex;
-        flex-direction: column;
-        gap: 0.25rem;
-    }
-
-    .checkbox-group label strong {
+    .theme-card-icon {
+        font-size: 2rem;
+        margin-bottom: 0.5rem;
         display: block;
-        font-weight: 600;
     }
 
-    .checkbox-group label small {
-        color: var(--gray-600);
-        font-size: 0.875rem;
-    }
-
-    body.dark-mode .checkbox-group label small {
-        color: var(--gray-400);
-    }
-
-    .btn-group {
-        display: flex;
-        gap: 1rem;
-        margin-top: 2rem;
-    }
-
-    .btn {
+    .btn-secondary {
+        background-color: var(--gray-300);
+        color: var(--text-light);
         padding: 0.75rem 2rem;
         border: none;
         border-radius: 0.5rem;
@@ -164,21 +136,8 @@
         cursor: pointer;
         transition: all 0.3s ease;
         font-size: 1rem;
-    }
-
-    .btn-primary {
-        background-color: var(--primary);
-        color: white;
-    }
-
-    .btn-primary:hover {
-        background-color: var(--primary-dark);
-        transform: translateY(-2px);
-    }
-
-    .btn-secondary {
-        background-color: var(--gray-300);
-        color: var(--text-light);
+        text-decoration: none;
+        display: inline-block;
     }
 
     .btn-secondary:hover {
@@ -193,161 +152,83 @@
     body.dark-mode .btn-secondary:hover {
         background-color: var(--gray-600);
     }
-
-    .alert {
-        padding: 1rem;
-        border-radius: 0.5rem;
-        margin-bottom: 1.5rem;
-    }
-
-    .alert-success {
-        background-color: #d4edda;
-        border: 1px solid #c3e6cb;
-        color: #155724;
-    }
-
-    .alert-error {
-        background-color: #f8d7da;
-        border: 1px solid #f5c6cb;
-        color: #721c24;
-    }
-
-    .settings-grid {
-        display: grid;
-        grid-template-columns: 1fr 1fr;
-        gap: 2rem;
-    }
-
-    @media (max-width: 768px) {
-        .settings-grid {
-            grid-template-columns: 1fr;
-        }
-    }
 </style>
 {% endblock %}
 
 {% block content %}
-<div class="settings-container">
-    <!-- Header -->
-    <div class="settings-header">
-        <h1>⚙️ Pengaturan</h1>
-        <p>Kelola preferensi dan pengaturan akun Anda</p>
-    </div>
-
-    <!-- Messages -->
-    {% if success %}
-    <div class="alert alert-success">{{ success }}</div>
-    {% endif %}
-    
-    {% if error %}
-    <div class="alert alert-error">{{ error }}</div>
-    {% endif %}
-
-    <form method="POST" action="{% url 'users:settings' %}">
-        {% csrf_token %}
+<div class="settings-wrapper">
+    <div class="settings-container">
+        <!-- Header -->
+        <div class="settings-header">
+            <h1>⚙️ Pengaturan</h1>
+            <p>Kelola preferensi antarmuka lokal Anda</p>
+        </div>
 
         <!-- Appearance Settings -->
         <div class="settings-section">
-            <h2>🎨 Penampilan</h2>
+            <h2>🎨 Tema Aplikasi</h2>
+            <p style="margin-bottom: 1.5rem; color: var(--gray-600);">Pilih tema yang paling nyaman untuk mata Anda. Perubahan akan langsung diterapkan.</p>
 
-            <div class="form-group">
-                <label for="theme">Tema</label>
-                <select id="theme" name="theme">
-                    <option value="light" {% if settings.theme == 'light' %}selected{% endif %}>☀️ Light Mode</option>
-                    <option value="dark" {% if settings.theme == 'dark' %}selected{% endif %}>🌙 Dark Mode</option>
-                    <option value="auto" {% if settings.theme == 'auto' %}selected{% endif %}>⚙️ Auto (Sistem)</option>
-                </select>
-                <p>Pilih tema antarmuka yang Anda sukai</p>
-            </div>
-
-            <div class="form-group">
-                <label for="language">Bahasa</label>
-                <select id="language" name="language">
-                    <option value="id" {% if settings.language == 'id' %}selected{% endif %}>🇮🇩 Bahasa Indonesia</option>
-                    <option value="en" {% if settings.language == 'en' %}selected{% endif %}>🇬🇧 English</option>
-                </select>
-                <p>Pilih bahasa yang digunakan di aplikasi</p>
-            </div>
-        </div>
-
-        <!-- Chat Settings -->
-        <div class="settings-section">
-            <h2>💬 Pengaturan Chat</h2>
-
-            <div class="form-group">
-                <label for="chatbot_response_timeout">Timeout Respons (detik)</label>
-                <input type="number" id="chatbot_response_timeout" name="chatbot_response_timeout" 
-                       value="{{ settings.chatbot_response_timeout }}" min="10" max="120" step="5">
-                <p>Waktu maksimal menunggu respons chatbot (10-120 detik)</p>
-            </div>
-
-            <div class="form-group">
-                <div class="checkbox-group">
-                    <input type="checkbox" id="enable_notifications" name="enable_notifications" 
-                           {% if settings.enable_notifications %}checked{% endif %}>
-                    <label for="enable_notifications">
-                        <strong>Aktifkan Notifikasi</strong>
-                        <small>Terima notifikasi chat ketika ada respons baru</small>
-                    </label>
+            <div class="theme-options">
+                <div class="theme-card" id="theme-light" onclick="setThemeDirectly('light')">
+                    <span class="theme-card-icon">☀️</span>
+                    Mode Terang
                 </div>
-            </div>
-
-            <div class="form-group">
-                <div class="checkbox-group">
-                    <input type="checkbox" id="enable_history_logging" name="enable_history_logging" 
-                           {% if settings.enable_history_logging %}checked{% endif %}>
-                    <label for="enable_history_logging">
-                        <strong>Simpan Riwayat Chat</strong>
-                        <small>Simpan percakapan Anda untuk referensi nantinya</small>
-                    </label>
+                <div class="theme-card" id="theme-dark" onclick="setThemeDirectly('dark')">
+                    <span class="theme-card-icon">🌙</span>
+                    Mode Gelap
                 </div>
             </div>
         </div>
 
-        <!-- Privacy Settings -->
-        <div class="settings-section">
-            <h2>🔒 Privasi & Keamanan</h2>
-
-            <div class="form-group">
-                <div class="checkbox-group">
-                    <input type="checkbox" id="is_profile_public" name="is_profile_public" 
-                           {% if settings.is_profile_public %}checked{% endif %}>
-                    <label for="is_profile_public">
-                        <strong>Buat Profil Publik</strong>
-                        <small>Izinkan pengguna lain melihat profil Anda</small>
-                    </label>
-                </div>
-            </div>
-
-            <div class="form-group">
-                <div class="checkbox-group">
-                    <input type="checkbox" id="receive_email_updates" name="receive_email_updates" 
-                           {% if settings.receive_email_updates %}checked{% endif %}>
-                    <label for="receive_email_updates">
-                        <strong>Terima Update Email</strong>
-                        <small>Dapatkan update dan pengumuman terbaru via email</small>
-                    </label>
-                </div>
-            </div>
+        <!-- Tombol Kembali -->
+        <div style="margin-top: 2rem;">
+            <a href="{% url 'chatbot:chat' %}" class="btn-secondary">← Kembali ke Chat</a>
         </div>
 
-        <!-- Save Button -->
-        <div class="settings-section" style="border: 2px solid var(--primary); background-color: rgba(196, 30, 58, 0.05);">
-            <p><strong>💾 Catatan:</strong> Semua perubahan akan disimpan ke database akun Anda secara otomatis.</p>
-            <div class="btn-group">
-                <button type="submit" class="btn btn-primary">💾 Simpan Pengaturan</button>
-                <a href="{% url 'chatbot:chat' %}" class="btn btn-secondary" style="text-decoration: none;">← Kembali</a>
-            </div>
+        <!-- Additional Links -->
+        <div style="margin-top: 2rem; text-align: center; border-top: 1px solid var(--border-light); padding-top: 2rem;">
+            <p style="color: var(--gray-600);">
+                <a href="{% url 'users:profile' %}" style="color: var(--primary); text-decoration: none; font-weight: 600;">👤 Edit Profil</a>
+                &nbsp; | &nbsp;
+                <a href="{% url 'users:logout' %}" onclick="return confirm('Yakin ingin logout?')" style="color: var(--error); text-decoration: none; font-weight: 600;">🚪 Logout</a>
+            </p>
         </div>
-    </form>
-
-    <!-- Additional Links -->
-    <div style="margin-top: 2rem; text-align: center;">
-        <p style="color: var(--gray-600);">
-            <a href="{% url 'users:profile' %}" style="color: var(--primary); text-decoration: none; font-weight: 600;">👤 Edit Profil</a>
-            &nbsp; | &nbsp;
-            <a href="{% url 'users:logout' %}" onclick="return confirm('Yakin ingin logout?')" style="color: var(--error); text-decoration: none; font-weight: 600;">🚪 Logout</a>
-        </p>
     </div>
 </div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+    // Fungsi untuk mengubah tema secara instan via klik tombol
+    function setThemeDirectly(theme) {
+        // Hapus kelas aktif dari semua kartu
+        document.getElementById('theme-light').classList.remove('active');
+        document.getElementById('theme-dark').classList.remove('active');
+        
+        // Tambahkan kelas aktif ke kartu yang dipilih
+        document.getElementById('theme-' + theme).classList.add('active');
+
+        // Terapkan ke body
+        if (theme === 'dark') {
+            document.body.classList.add('dark-mode');
+            localStorage.setItem('theme', 'dark');
+            // Jika ada toggle switch di navbar (base.html), sinkronkan
+            const toggle = document.getElementById('theme-toggle');
+            if (toggle) toggle.checked = true;
+        } else {
+            document.body.classList.remove('dark-mode');
+            localStorage.setItem('theme', 'light');
+            // Jika ada toggle switch di navbar (base.html), sinkronkan
+            const toggle = document.getElementById('theme-toggle');
+            if (toggle) toggle.checked = false;
+        }
+    }
+
+    // Saat halaman dimuat, periksa tema apa yang sedang aktif di localStorage
+    document.addEventListener('DOMContentLoaded', () => {
+        const savedTheme = localStorage.getItem('theme') || 'light';
+        document.getElementById('theme-' + savedTheme).classList.add('active');
+    });
+</script>
 {% endblock %}

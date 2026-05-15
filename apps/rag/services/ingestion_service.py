@@ -51,127 +51,66 @@ logger = logging.getLogger(__name__)
 # Turunkan ke 800 jika model embedding punya context limit ketat.
 MAX_CHUNK_SIZE = 1500
 
-# Prefix yang diulang saat 1 entri KB harus dipecah jadi beberapa chunk.
-# Ini menjaga konteks kategori tetap ada di setiap sub-chunk.
-CATEGORY_DELIMITER = "KATEGORI:"
-
-
-def category_aware_chunking(content: str) -> list[str]:
+def markdown_aware_chunking(content: str) -> list[str]:
     """
-    PERBAIKAN UTAMA: Split berdasarkan delimiter 'KATEGORI:' bukan '\n\n'.
+    Chunking untuk format Markdown dengan YAML frontmatter.
 
-    Setiap entri KB (1 KATEGORI) dijaga utuh dalam satu chunk.
-    Jika ada entri yang terlalu panjang (> MAX_CHUNK_SIZE),
-    pecah lagi dengan header kategori diulang di setiap sub-chunk.
-
-    Returns:
-        List of chunks, masing-masing mengandung header KATEGORI: yang lengkap.
-    """
-    # Normalize line endings to \n for consistent processing
-    content = content.replace('\r\n', '\n')
-    
-    chunks = []
-
-    # Split berdasarkan 'KATEGORI:' — setiap elemen adalah 1 entri KB
-    raw_sections = content.split(CATEGORY_DELIMITER)
-
-    for section in raw_sections:
-        section = section.strip()
-        if not section:
-            continue
-
-        # Rekonstruksi teks lengkap dengan header
-        full_text = f"{CATEGORY_DELIMITER} {section}"
-
-        if len(full_text) <= MAX_CHUNK_SIZE:
-            # Entri KB muat dalam 1 chunk — simpan utuh
-            chunks.append(full_text)
-        else:
-            # Entri KB terlalu panjang — pecah tapi pertahankan header
-            # Ambil baris pertama sebagai header (KATEGORI: NAMA_KATEGORI)
-            lines = full_text.split("\n")
-            header = lines[0]  # Contoh: "KATEGORI: JARINGAN_WIFI_LIMITED_ACCESS"
-
-            # Gabungkan kembali teks tanpa header untuk dipecah
-            body = "\n".join(lines[1:])
-
-            # Pecah body per MAX_CHUNK_SIZE, prefix header di setiap bagian
-            for i in range(0, len(body), MAX_CHUNK_SIZE):
-                sub_body = body[i:i + MAX_CHUNK_SIZE].strip()
-                if sub_body:
-                    # Header diulang agar setiap sub-chunk tetap punya konteks kategori
-                    sub_chunk = f"{header}\n{sub_body}"
-                    chunks.append(sub_chunk)
-
-            logger.warning(
-                "KB entry too long, split into sub-chunks",
-                extra={
-                    "category": header,
-                    "original_len": len(full_text),
-                    "sub_chunks": len([i for i in range(0, len(body), MAX_CHUNK_SIZE)]),
-                }
-            )
-
-    return chunks
-
-
-def escalation_aware_chunking(content: str) -> list[str]:
-    """
-    Chunking untuk ESCALATION format dengan delimiter "---" dan "NAMA FORM:".
-    
-    Format:
-    ---
-    NAMA FORM: Form Name
-    TRIGGER KEYWORD: keywords
-    PANDUAN TIKET: guidance text
-    Link: url
-    
-    Setiap entry = 1 chunk (sudah singkat, tidak perlu dipecah lebih lagi)
+    Split berdasarkan positive lookahead YAML frontmatter boundary.
+    Gunakan regex: re.split(r'(?m)^(?=---\s*\ntype:)', content)
+    untuk memisahkan entry yang dimulai dengan ---\n type:.
     """
     import re
-    
+
     chunks = []
-    
-    # Normalize line endings to \n for consistent regex matching
-    content = content.replace('\r\n', '\n')
-    
-    # Robust regex untuk match format dengan --- delimiter
-    form_pattern = re.compile(
-        r'---\n'  # Mandatory delimiter
-        r'NAMA FORM:\s*([^\n]+)\n'
-        r'TRIGGER KEYWORD:\s*([^\n]+)\n'
-        r'PANDUAN TIKET:\s*([^\n]+)\n'
-        r'Link:\s*([^\n]+)',
-        re.MULTILINE
-    )
-    
-    forms = list(form_pattern.finditer(content))
-    logger.info(f"Found {len(forms)} ESCALATION forms in content")
-    
-    for form_match in forms:
-        nama_form = form_match.group(1).strip()
-        trigger_keywords = form_match.group(2).strip()
-        panduan_tiket = form_match.group(3).strip()
-        link = form_match.group(4).strip()
-        
-        # Reconstruct full text untuk chunk
-        full_text = f"""NAMA FORM: {nama_form}
-TRIGGER KEYWORD: {trigger_keywords}
-PANDUAN TIKET: {panduan_tiket}
-Link: {link}"""
-        
-        chunks.append(full_text)
-    
-    logger.info(f"Escalation chunking created {len(chunks)} chunks")
+    content = content.replace('\r\n', '\n').strip()
+    raw_entries = re.split(r'(?m)^(?=---\s*$)', content)
+
+    for entry in raw_entries:
+        entry = entry.strip()
+        if not entry:
+            continue
+
+        if len(entry) <= MAX_CHUNK_SIZE:
+            chunks.append(entry)
+            continue
+
+        lines = entry.split('\n')
+        frontmatter_end = 0
+        for i, line in enumerate(lines):
+            if line.strip() == '' and i > 0:
+                frontmatter_end = i
+                break
+
+        frontmatter = '\n'.join(lines[:frontmatter_end])
+        body = '\n'.join(lines[frontmatter_end:]) if frontmatter_end < len(lines) else ''
+
+        if not frontmatter:
+            frontmatter = entry
+            body = ''
+
+        for i in range(0, len(body), MAX_CHUNK_SIZE):
+            sub_body = body[i:i + MAX_CHUNK_SIZE].strip()
+            if sub_body:
+                chunks.append(f"{frontmatter}\n\n{sub_body}")
+
+        logger.warning(
+            "KB entry too long, split into sub-chunks",
+            extra={
+                'original_len': len(entry),
+                'sub_chunks': len([i for i in range(0, len(body), MAX_CHUNK_SIZE)]),
+            }
+        )
+
+    logger.info(f"Markdown aware chunking created {len(chunks)} chunks")
     return chunks
 
 
-def ingest_document(document):
+def ingest_document(document, vector_store=None, embedding_service=None):
     """
     Proses dokumen: delete chunk lama → chunking → embedding → simpan.
 
     Perubahan dari versi lama:
-    - Gunakan category_aware_chunking() bukan smart_chunking()
+    - Gunakan markdown_aware_chunking() bukan smart_chunking()
     - Singleton-friendly: terima embedding_service dari luar (opsional)
     """
 
@@ -188,17 +127,12 @@ def ingest_document(document):
             "Document has no content, skipping ingestion",
             extra={"document_id": document.id}
         )
-        return
+        return False
 
-    embedding_service = EmbeddingService()
+    embedding_service = embedding_service or EmbeddingService()
 
-    # Choose chunking strategy based on document type
-    if document.doc_type == 'ESCALATION':
-        # Use ESCALATION format chunking (NAMA FORM: with --- delimiter)
-        chunks = escalation_aware_chunking(document.content)
-    else:
-        # Default to KATEGORI/TROUBLESHOOT format chunking
-        chunks = category_aware_chunking(document.content)
+    # Semua dokumen sekarang diproses melalui Markdown-aware chunking
+    chunks = markdown_aware_chunking(document.content)
     
     # Extract metadata dari chunks untuk monitoring
     chunk_metadata = []
@@ -255,3 +189,5 @@ def ingest_document(document):
             "chunks_total": len(chunks),
         }
     )
+
+    return True

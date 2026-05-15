@@ -5,6 +5,27 @@
 
 {% block extra_css %}
 <style>
+    .profile-wrapper {
+        height: calc(100vh - 75px); 
+        overflow-y: auto;
+        width: 100%;
+        padding-bottom: 2rem;
+    }
+
+    /* Scrollbar Styling agar cantik */
+    .profile-wrapper::-webkit-scrollbar {
+        width: 8px;
+    }
+    .profile-wrapper::-webkit-scrollbar-track {
+        background: transparent;
+    }
+    .profile-wrapper::-webkit-scrollbar-thumb {
+        background: var(--gray-300);
+        border-radius: 4px;
+    }
+    body.dark-mode .profile-wrapper::-webkit-scrollbar-thumb {
+        background: var(--gray-600);
+    }
     .profile-container {
         max-width: 900px;
         margin: 2rem auto;
@@ -221,131 +242,133 @@
 {% endblock %}
 
 {% block content %}
-<div class="profile-container">
-    <!-- Messages -->
-    {% if success %}
-    <div class="alert alert-success">{{ success }}</div>
-    {% endif %}
-    
-    {% if error %}
-    <div class="alert alert-error">{{ error }}</div>
-    {% endif %}
+<div class="profile-wrapper">
+    <div class="profile-container">
+        <!-- Messages dari Django PRG Pattern -->
+        {% if messages %}
+            {% for message in messages %}
+                <div class="alert alert-{% if message.tags == 'error' %}error{% else %}{{ message.tags }}{% endif %}">
+                    {{ message }}
+                </div>
+            {% endfor %}
+        {% endif %}
 
-    <!-- Profile Header -->
-    <div class="profile-header">
-        <div class="profile-avatar">
-            <i class="bi bi-person-circle"></i>
+        <!-- Profile Header -->
+        <div class="profile-header">
+            <div class="profile-avatar">
+                <i class="bi bi-person-circle"></i>
+            </div>
+            <div class="profile-info">
+                <h1>{{ user.get_full_name|default:user.username }}</h1>
+                <p><strong>Email:</strong> {{ user.email }}</p>
+                <p><strong>Username:</strong> {{ user.username }}</p>
+                <p><strong>Member sejak:</strong> {{ user.date_joined|date:"d M Y" }}</p>
+            </div>
         </div>
-        <div class="profile-info">
-            <h1>{{ user.get_full_name|default:user.username }}</h1>
-            <p><strong>Email:</strong> {{ user.email }}</p>
-            <p><strong>Username:</strong> {{ user.username }}</p>
-            <p><strong>Member sejak:</strong> {{ user.date_joined|date:"d M Y" }}</p>
-        </div>
-    </div>
 
-    <!-- Profile Edit Form -->
-    <div class="profile-content">
-        <!-- Personal Information -->
-        <div class="profile-card">
-            <h2><i class="bi bi-person"></i> Informasi Pribadi</h2>
-            <form method="POST" action="{% url 'users:profile' %}">
-                {% csrf_token %}
+        <!-- Profile Edit Form -->
+        <div class="profile-content">
+            <!-- Personal Information -->
+            <div class="profile-card">
+                <h2><i class="bi bi-person"></i> Informasi Pribadi</h2>
+                <form method="POST" action="{% url 'users:profile' %}">
+                    {% csrf_token %}
 
-                <div class="form-row">
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label for="first_name">Nama Depan</label>
+                            <input type="text" id="first_name" name="first_name" 
+                                value="{{ user.first_name }}" placeholder="Nama depan Anda">
+                        </div>
+                        <div class="form-group">
+                            <label for="last_name">Nama Belakang</label>
+                            <input type="text" id="last_name" name="last_name" 
+                                value="{{ user.last_name }}" placeholder="Nama belakang Anda">
+                        </div>
+                    </div>
+
                     <div class="form-group">
-                        <label for="first_name">Nama Depan</label>
-                        <input type="text" id="first_name" name="first_name" 
-                               value="{{ user.first_name }}" placeholder="Nama depan Anda">
+                        <label for="email">Email (Read-Only)</label>
+                        <div class="email-display">{{ user.email }}</div>
+                        <small style="color: var(--gray-600);">Email tidak dapat diubah</small>
                     </div>
+
                     <div class="form-group">
-                        <label for="last_name">Nama Belakang</label>
-                        <input type="text" id="last_name" name="last_name" 
-                               value="{{ user.last_name }}" placeholder="Nama belakang Anda">
+                        <label for="phone">Nomor Telepon</label>
+                        <input type="tel" id="phone" name="phone" 
+                            value="{{ profile.phone }}" placeholder="+62...")
                     </div>
-                </div>
 
-                <div class="form-group">
-                    <label for="email">Email (Read-Only)</label>
-                    <div class="email-display">{{ user.email }}</div>
-                    <small style="color: var(--gray-600);">Email tidak dapat diubah</small>
-                </div>
+                    <div class="form-group">
+                        <label for="bio">Biografi</label>
+                        <textarea id="bio" name="bio" rows="3" 
+                                placeholder="Ceritakan tentang Anda...">{{ profile.bio }}</textarea>
+                    </div>
 
-                <div class="form-group">
-                    <label for="phone">Nomor Telepon</label>
-                    <input type="tel" id="phone" name="phone" 
-                           value="{{ profile.phone }}" placeholder="+62...")
-                </div>
+                    <button type="submit" class="btn btn-primary">💾 Simpan Perubahan</button>
+                </form>
+            </div>
 
-                <div class="form-group">
-                    <label for="bio">Biografi</label>
-                    <textarea id="bio" name="bio" rows="3" 
-                              placeholder="Ceritakan tentang Anda...">{{ profile.bio }}</textarea>
-                </div>
+            <!-- Organization Information -->
+            <div class="profile-card">
+                <h2><i class="bi bi-building"></i> Informasi Organisasi</h2>
+                <form method="POST" action="{% url 'users:profile' %}">
+                    {% csrf_token %}
 
-                <button type="submit" class="btn btn-primary">💾 Simpan Perubahan</button>
-            </form>
+                    <div class="form-group">
+                        <label for="company">Perusahaan</label>
+                        <input type="text" id="company" name="company" 
+                            value="{{ profile.company }}" placeholder="Contoh: Pertamina">
+                    </div>
+
+                    <div class="form-group">
+                        <label for="department">Departemen</label>
+                        <select id="department" name="department">
+                            <option value="IT" {% if profile.department == 'IT' %}selected{% endif %}>IT Support</option>
+                            <option value="HR" {% if profile.department == 'HR' %}selected{% endif %}>Human Resources</option>
+                            <option value="OPS" {% if profile.department == 'OPS' %}selected{% endif %}>Operations</option>
+                            <option value="FIN" {% if profile.department == 'FIN' %}selected{% endif %}>Finance</option>
+                            <option value="OTHER" {% if profile.department == 'OTHER' %}selected{% endif %}>Other</option>
+                        </select>
+                    </div>
+
+                    <div class="form-group">
+                        <label>Tipe Role</label>
+                        <div class="email-display" style="padding: 0.75rem;">
+                            {% if profile.role == 'A' %}
+                                👨‍💼 Administrator
+                            {% elif profile.role == 'S' %}
+                                🎧 Support Staff
+                            {% elif profile.role == 'M' %}
+                                👔 Manager
+                            {% else %}
+                                👤 User Biasa
+                            {% endif %}
+                        </div>
+                        <small style="color: var(--gray-600);">Role tidak dapat diubah</small>
+                    </div>
+
+                    <div class="form-group">
+                        <label>Verifikasi Status</label>
+                        <div class="email-display" style="padding: 0.75rem;">
+                            {% if profile.is_verified %}
+                                ✅ Terverifikasi
+                            {% else %}
+                                ⏳ Menunggu Verifikasi
+                            {% endif %}
+                        </div>
+                    </div>
+
+                    <button type="submit" class="btn btn-primary">💾 Simpan Perubahan</button>
+                </form>
+            </div>
         </div>
 
-        <!-- Organization Information -->
-        <div class="profile-card">
-            <h2><i class="bi bi-building"></i> Informasi Organisasi</h2>
-            <form method="POST" action="{% url 'users:profile' %}">
-                {% csrf_token %}
-
-                <div class="form-group">
-                    <label for="company">Perusahaan</label>
-                    <input type="text" id="company" name="company" 
-                           value="{{ profile.company }}" placeholder="Contoh: Pertamina">
-                </div>
-
-                <div class="form-group">
-                    <label for="department">Departemen</label>
-                    <select id="department" name="department">
-                        <option value="IT" {% if profile.department == 'IT' %}selected{% endif %}>IT Support</option>
-                        <option value="HR" {% if profile.department == 'HR' %}selected{% endif %}>Human Resources</option>
-                        <option value="OPS" {% if profile.department == 'OPS' %}selected{% endif %}>Operations</option>
-                        <option value="FIN" {% if profile.department == 'FIN' %}selected{% endif %}>Finance</option>
-                        <option value="OTHER" {% if profile.department == 'OTHER' %}selected{% endif %}>Other</option>
-                    </select>
-                </div>
-
-                <div class="form-group">
-                    <label>Tipe Role</label>
-                    <div class="email-display" style="padding: 0.75rem;">
-                        {% if profile.role == 'A' %}
-                            👨‍💼 Administrator
-                        {% elif profile.role == 'S' %}
-                            🎧 Support Staff
-                        {% elif profile.role == 'M' %}
-                            👔 Manager
-                        {% else %}
-                            👤 User Biasa
-                        {% endif %}
-                    </div>
-                    <small style="color: var(--gray-600);">Role tidak dapat diubah</small>
-                </div>
-
-                <div class="form-group">
-                    <label>Verifikasi Status</label>
-                    <div class="email-display" style="padding: 0.75rem;">
-                        {% if profile.is_verified %}
-                            ✅ Terverifikasi
-                        {% else %}
-                            ⏳ Menunggu Verifikasi
-                        {% endif %}
-                    </div>
-                </div>
-
-                <button type="submit" class="btn btn-primary">💾 Simpan Perubahan</button>
-            </form>
+        <!-- Quick Links -->
+        <div style="margin-top: 2rem; text-align: center;">
+            <a href="{% url 'users:settings' %}" class="btn btn-secondary" style="display: inline-block; padding: 0.75rem 2rem;">⚙️ Pengaturan</a>
+            <a href="{% url 'chatbot:chat' %}" class="btn btn-secondary" style="display: inline-block; padding: 0.75rem 2rem;">💬 Kembali ke Chat</a>
         </div>
-    </div>
-
-    <!-- Quick Links -->
-    <div style="margin-top: 2rem; text-align: center;">
-        <a href="{% url 'users:settings' %}" class="btn btn-secondary" style="display: inline-block; padding: 0.75rem 2rem;">⚙️ Pengaturan</a>
-        <a href="{% url 'chatbot:chat' %}" class="btn btn-secondary" style="display: inline-block; padding: 0.75rem 2rem;">💬 Kembali ke Chat</a>
     </div>
 </div>
 {% endblock %}

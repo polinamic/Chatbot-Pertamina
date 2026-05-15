@@ -5,8 +5,9 @@ import uuid
 class Document(models.Model):
     # === TAMBAHAN BARU: Pilihan tipe dokumen untuk pemisahan RAG ===
     DOC_TYPES = (
-        ('TROUBLESHOOT', 'Troubleshooting Umum'),
-        ('ESCALATION', 'Panduan UI Eskalasi'),
+        ('TROUBLESHOOT', 'Langkah Troubleshooting (Solusi Mandiri)'),
+        ('ORDER_LINK', 'Link Pemesanan/Pengadaan Item IT Baru'),
+        ('INCIDENT_LINK', 'Link Pelaporan Error/Kerusakan'),
     )
 
     # --- KEBUTUHAN RAG (Struktur Asli Anda) ---

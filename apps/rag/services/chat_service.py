@@ -21,10 +21,22 @@ Fitur utama:
   - rewrite_query_for_rag: contextual query rewriting untuk follow-up
   - get_context_for_session: session-level RAG caching, cegah cross-topic drift
   - failed_steps tracking: ingat langkah yang sudah gagal, tidak mengulang
-  - Hardcoded DISCLAIMER: 100% muncul saat SOP tidak ditemukan
+  - Hardcoded DISCLAIMER: 100% muncul saat SOP tidak ditemukan (turn pertama)
   - _process_chat router: pisah sync/stream agar tidak ada campur yield+return
   - Konfirmasi Sudah/Belum: turn ke-2 menawarkan konfirmasi penyelesaian;
-    jika "Belum" → langsung arahkan ke form Incident (link hardcoded)
+    jika "Belum" → langsung arahkan ke form Incident via escalation_guide DB
+
+Perubahan v2 (Refactor):
+  - HAPUS TOTAL: CATEGORY_FORMS dictionary (hardcode legacy)
+  - HAPUS TOTAL: detect_problem_category(), get_ticket_process() (dead code)
+  - HAPUS TOTAL: ROUTING_TEMPLATE_WITH_GUIDE / NO_GUIDE (tidak terpakai)
+  - FIX escalation_guide: ekstraksi NAMA FORM & Link kini via Regex,
+    menangani URL multi-baris / path terpotong secara utuh
+  - FIX _is_valid_link: base URL pendek (tanpa path ≥ 8 char) = INVALID
+  - FIX SERVICE_ORDER: query di-refine via _refine_service_order_query()
+    sebelum masuk vector search agar keyword item dipertahankan
+  - FIX fallback routing di get_llm_response: attempts>=1 → escalation_guide
+    langsung (tanpa hardcode kategori)
 """
 
 import os
@@ -37,6 +49,7 @@ from typing import List, Dict, Optional, Generator, Tuple
 
 import numpy as np
 
+from apps.rag.models import DocumentChunk
 from apps.rag.services.retrieval import retrieve_context
 import ollama
 
@@ -254,10 +267,10 @@ class OutOfScopeSemanticsDetector:
                 "tips fashion dan pakaian panduan beauty makeup skincare relationship "
                 "health fitness olahraga pertandingan bola zodiak cuaca ramalan"
             ),
-            "physical_damage": (
-                "laptop lecet baret jatuh pecah layar retak body penyok "
-                "cara membersihkan keyboard dari debu kotor cuci poles gosok"
-            ),
+            # "physical_damage": (
+            #     "laptop lecet baret jatuh pecah layar retak body penyok "
+            #     "cara membersihkan keyboard dari debu kotor cuci poles gosok"
+            # ),
         }
 
         anchors = {}
@@ -581,19 +594,24 @@ _IT_PROBLEM_PATTERNS = re.compile(
 #   "order cctv"      → SERVICE_ORDER
 #   "pasang wifi"     → SERVICE_ORDER  (bukan: "wifi tidak bisa konek" → IT_PROBLEM)
 #   "pengadaan laptop"→ SERVICE_ORDER
+#   "peminjaman notebook" → SERVICE_ORDER (PERBAIKAN: tambah pattern ini)
+#   "pesenin HT baru" → SERVICE_ORDER  (colloquial "pesan")
 #
 # KRITIS: Pola ini harus dicek SEBELUM _IT_PROBLEM_PATTERNS agar kata seperti
 # "pasang" atau "install" pada konteks pengadaan tidak jatuh ke IT_PROBLEM.
 _SERVICE_ORDER_PATTERNS = re.compile(
     r'(?:'
-    # "pesan X" / "order X" — pemesanan item dengan/tanpa kata depan
-    r'(?:mau\s+|ingin\s+|minta\s+|butuh\s+|perlu\s+)?(?:pesan|order)\s+\w+'
+    # "pesan X" / "pesenin X" / "order X" — pemesanan item dengan/tanpa kata depan
+    # Catches: pesan, pesenin, pesen, order, pinjam, peminjaman, dll
+    r'(?:mau\s+|ingin\s+|minta\s+|butuh\s+|perlu\s+|tolong\s+)?(?:pesen|pesan|order|pinjam|peminjaman)\w*\s+\w+'
+    # "baru" keyword di tengah atau akhir kalimat menunjukkan pengadaan item baru
+    r'|\b(?:HT|handset|handy.?talky|laptop|notebook|tablet|printer|monitor|mouse|keyboard|headset|webcam|cctv|kamera|proyektor|switch|router|server|harddisk|ssd|memori|keyboard|perangkat)\b.*\bBARU\b'
     # "pasang X" — pemasangan fisik perangkat/layanan IT
     r'|pasang\s+(?:wifi|wi-fi|cctv|kamera|jaringan|telepon|printer|proyektor|internet|vpn|lan|switch|access\s*point)'
     # "pengadaan X" — permintaan pengadaan resmi
     r'|\bpengadaan\b'
     # "ajukan/pengajuan perangkat/layanan" — formulir pengajuan
-    r'|\b(?:ajukan|pengajuan)\s+(?:perangkat|layanan|akses|hardware|software|laptop|komputer|printer|cctv|handset)'
+    r'|\b(?:ajukan|pengajuan)\s+(?:perangkat|layanan|akses|hardware|software|laptop|komputer|printer|cctv|handset|HT)'
     r')',
     re.IGNORECASE,
 )
@@ -615,6 +633,8 @@ _INTENT_SYSTEM_PROMPT = (
     "=== CRITICAL RULES ===\n"
     "1. Masalah TEKNIS/MALFUNCTION perangkat IT = IT_PROBLEM (keyboard tidak berfungsi)\n"
     "2. PEMESANAN/PENGADAAN perangkat atau layanan IT = SERVICE_ORDER\n"
+    "   Keywords: pesan, pesenin, order, pinjam, peminjaman, pengadaan, pasang, ajukan, minta\n"
+    "   + New items: HT baru, laptop baru, printer baru, notebook baru, tablet baru\n"
     "   (Contoh: pesan printer, order cctv, pasang wifi, pengadaan laptop)\n"
     "3. Pertanyaan EDUKASI tentang teknologi (tanpa masalah) = OUT_OF_SCOPE\n"
     "4. KERUSAKAN FISIK atau PEMBERSIHAN perangkat = OUT_OF_SCOPE\n"
@@ -628,7 +648,12 @@ _INTENT_SYSTEM_PROMPT = (
     "  2. 'order cctv baru'                            → SERVICE_ORDER\n"
     "  3. 'pasang wifi di ruang meeting'               → SERVICE_ORDER\n"
     "  4. 'minta pengadaan laptop baru'                → SERVICE_ORDER\n"
-    "  5. 'bisa tolong pasang access point di sini'    → SERVICE_ORDER\n\n"
+    "  5. 'bisa tolong pasang access point di sini'    → SERVICE_ORDER\n"
+    "  6. 'tolong dong pesenin HT baru'                → SERVICE_ORDER (colloquial: pesenin=pesan)\n"
+    "  7. 'mau order notebook baru dong'               → SERVICE_ORDER\n"
+    "  8. 'butuh tablet baru untuk tim'                → SERVICE_ORDER\n"
+    "  9. 'pengajuan printer untuk kantor cabang'      → SERVICE_ORDER\n"
+    "  10. 'minta handset baru donk'                   → SERVICE_ORDER\n\n"
     "CONTOH OUT_OF_SCOPE (BUKAN masalah IT)::\n"
     "  1. 'siapa pencipta wifi'                        → OUT_OF_SCOPE (sejarah/edukasi)\n"
     "  2. 'berikan jokes tentang wifi'                 → OUT_OF_SCOPE (hiburan)\n"
@@ -952,831 +977,317 @@ def needs_clarification(question: str, history: List[Dict]) -> Optional[str]:
 
 
 # =====================================================
-# ESCALATION GUIDE
+# ESCALATION GUIDE (REWRITTEN - DATABASE DRIVEN)
 # =====================================================
+# NOTE: get_ticket_process() DELETED - replaced by escalation_guide()
+# ===== DELETED: _is_valid_link() and _extract_form_info() =====
+# These were helper functions for old category-based escalation routing
+# New dynamic approach handles validation within escalation_guide()
 
-def get_ticket_process(category: str) -> str:
+
+CATEGORY_FORMS = {  # DEPRECATED — dihapus, hanya placeholder agar tidak NameError jika ada referensi sisa
+    # Seluruh dictionary ini dikosongkan. Routing sepenuhnya dilakukan oleh
+    # Vector Store / RAG via escalation_guide(). Tidak ada hardcode kategori di sini.
+
+}
+
+
+
+# =====================================================
+# SERVICE ORDER QUERY PREPROCESSOR (FIX 4)
+# =====================================================
+# Kata kunci item/perangkat IT yang relevan untuk SERVICE_ORDER.
+# Pattern ini digunakan oleh _refine_service_order_query() untuk
+# mengekstrak entitas barang dari query mentah user sebelum
+# dilempar ke vector search. Tanpa ini, kata kerja noise seperti
+# "saya ingin melakukan peminjaman untuk mitra kerja" mendominasi
+# embedding sehingga vector search salah memilih form.
+_SERVICE_ITEM_KEYWORDS = re.compile(
+    r'\b(laptop|notebook|komputer|pc|desktop|printer|monitor|keyboard|mouse|'
+    r'scanner|proyektor|cctv|kamera|wifi|wi[\-]fi|lan|switch|router|'
+    r'access\s*point|telepon|telephone|handset|handphone|hp\s+kantor|tablet|'
+    r'ups|server|storage|toner|flashdisk|flash\s*disk|harddisk|ssd|ram|'
+    r'headset|webcam|sim\s*card|simcard|software|lisensi|license|vpn|'
+    r'akses|access|id\s+user|user\s+id|email|mailbox|radio|handy\s*talky|ht)\b',
+    re.IGNORECASE,
+)
+
+
+def _refine_service_order_query(question: str) -> str:
     """
-    Dapatkan informasi cara membuat tiket melalui portal IT Support.
-    Jika tidak ada detil kategori, gunakan alur umum.
+    Preprocessing query SERVICE_ORDER sebelum masuk ke escalation_guide.
+
+    Masalah (root cause bug "IT Supplies" untuk "peminjaman notebook"):
+    Query mentah "saya ingin melakukan peminjaman notebook untuk mitra kerja"
+    mengandung noise kata kerja tinggi. Embedding-nya didominasi semantik
+    "melakukan peminjaman untuk mitra kerja" bukan "notebook/laptop".
+    Vector search lalu return form "IT Supplies" (toner, flashdisk, aksesoris)
+    karena embedding-nya lebih dekat ke semantik generic "permintaan barang".
+
+    Solusi: Ekstrak kata kunci item IT yang eksplisit → buat query bersih
+    dengan format "<action> <item>" sehingga vector search fokus ke entitas
+    barangnya, bukan kata kerjanya.
+
+    Contoh:
+      Input : "saya ingin melakukan peminjaman notebook untuk mitra kerja"
+      Output: "peminjaman laptop notebook"
+
+      Input : "tolong pasang wifi di ruang meeting lantai 3"
+      Output: "pasang wifi"
+
+      Input : "pengadaan komputer baru untuk tim saya"
+      Output: "pengadaan komputer"
     """
-    ticket_processes = {
-        "access_control": (
-            "1. Masuk ke portal IT Support.\n"
-            "2. Klik menu \"Akses & Keamanan\".\n"
-            "3. Pilih sub-menu \"Manajemen User ID\".\n"
-            "4. Klik \"User ID ERP & Non ERP\".\n"
-            "5. Pilih jenis permintaan: [Buat User Baru] / [Tambah Role/Otorisasi] / [Cabut Akses] / [Perpanjangan] / [Pengalihan Akses].\n"
-            "6. Isi detail lengkap: nama user, sistem (SAP/Non-ERP apa), role yang diminta, dan periode akses.\n"
-            "7. Lampirkan persetujuan atasan langsung dan dokumen pendukung (SK, surat tugas).\n"
-            "8. Klik \"Ajukan Permintaan User ID\".\n"
-            "CATATAN KHUSUS: Setiap permintaan otorisasi SAP Production WAJIB memiliki approval dari atasan minimal setingkat Supervisor dan fungsi SAP Functional Lead terkait. Proses verifikasi keamanan memakan waktu 3-5 hari kerja untuk SAP Production."
-        ),
-        "vpn_access": (
-            "1. Masuk ke portal IT Support.\n"
-            "2. Klik menu \"Jaringan & Konektivitas\".\n"
-            "3. Pilih sub-menu \"VPN / Remote Access\".\n"
-            "4. Pilih jenis permintaan: [Aktivasi VPN] / [Reset VPN] / [Perubahan Akses].\n"
-            "5. Isi detail lengkap: username, lokasi, perangkat, dan masalah yang terjadi.\n"
-            "6. Lampirkan dokumen pendukung jika diperlukan.\n"
-            "7. Klik \"Ajukan Permintaan VPN\".\n"
-            "CATATAN KHUSUS: Pastikan Anda menyertakan error message lengkap dan status koneksi saat ini."
-        ),
-        "hardware": (
-            "1. Masuk ke portal IT Support.\n"
-            "2. Klik menu \"Perangkat Keras & Infrastruktur\".\n"
-            "3. Pilih sub-menu \"Permintaan Perbaikan / Penggantian Perangkat\".\n"
-            "4. Pilih jenis permintaan sesuai keluhan: [Kerusakan Perangkat] / [Tidak Menyala] / [Ganti Aksesoris].\n"
-            "5. Isi detail lengkap: model perangkat, nomor asset, gejala masalah, dan langkah yang sudah dicoba.\n"
-            "6. Lampirkan foto kerusakan atau tangkapan layar jika tersedia.\n"
-            "7. Klik \"Ajukan Permintaan Perbaikan\".\n"
-            "CATATAN KHUSUS: Sebutkan apakah perangkat dalam masa garansi atau sudah pernah direparasi sebelumnya."
-        ),
-        "software": (
-            "1. Masuk ke portal IT Support.\n"
-            "2. Klik menu \"Aplikasi & Software\".\n"
-            "3. Pilih sub-menu \"Permintaan Dukungan Aplikasi\".\n"
-            "4. Pilih jenis masalah: [Error Aplikasi] / [Instalasi] / [Lisensi / Akses].\n"
-            "5. Isi detail lengkap: nama aplikasi, versi, error message, dan langkah yang sudah dicoba.\n"
-            "6. Lampirkan screenshot error jika ada.\n"
-            "7. Klik \"Ajukan Permintaan Software\".\n"
-            "CATATAN KHUSUS: Sertakan informasi sistem operasi dan apakah masalah terjadi pada SAP atau aplikasi Non-ERP."
-        ),
-        "network": (
-            "1. Masuk ke portal IT Support.\n"
-            "2. Klik menu \"Jaringan & Konektivitas\".\n"
-            "3. Pilih sub-menu \"Permintaan Layanan Jaringan\".\n"
-            "4. Pilih jenis permintaan: [Gangguan Koneksi] / [Permintaan Akses Jaringan] / [Perubahan Konfigurasi].\n"
-            "5. Isi detail lengkap: lokasi, tipe koneksi (WiFi/LAN), perangkat, dan gejala.\n"
-            "6. Lampirkan hasil diagnosa awal jika tersedia (misal: ipconfig, screenshot error).\n"
-            "7. Klik \"Ajukan Permintaan Jaringan\".\n"
-            "CATATAN KHUSUS: Pastikan menyebutkan apakah masalah terjadi hanya pada satu perangkat atau banyak perangkat."
-        ),
-        "email": (
-            "1. Masuk ke portal IT Support.\n"
-            "2. Klik menu \"Email & Kolaborasi\".\n"
-            "3. Pilih sub-menu \"Permintaan Dukungan Email\".\n"
-            "4. Pilih jenis permintaan: [Tidak Bisa Login] / [Tidak Bisa Kirim/Terima] / [Pengaturan Email].\n"
-            "5. Isi detail lengkap: alamat email, error message, dan jenis perangkat yang digunakan.\n"
-            "6. Lampirkan screenshot error jika ada.\n"
-            "7. Klik \"Ajukan Permintaan Email\".\n"
-            "CATATAN KHUSUS: Sertakan apakah masalah terjadi pada webmail, desktop client, atau mobile."
-        ),
-        "printer": (
-            "1. Masuk ke portal IT Support.\n"
-            "2. Klik menu \"Perangkat Keras & Infrastruktur\".\n"
-            "3. Pilih sub-menu \"Dukungan Printer\".\n"
-            "4. Pilih jenis permintaan: [Printer Tidak Terdeteksi] / [Hasil Cetak Buruk] / [Antrian Macet].\n"
-            "5. Isi detail lengkap: model printer, lokasi, dan gejala.\n"
-            "6. Lampirkan screenshot atau foto masalah jika tersedia.\n"
-            "7. Klik \"Ajukan Permintaan Printer\".\n"
-            "CATATAN KHUSUS: Sebutkan apakah printer terhubung via jaringan atau USB."
-        ),
-        "security": (
-            "1. Masuk ke portal IT Support.\n"
-            "2. Klik menu \"Keamanan & Akses\".\n"
-            "3. Pilih sub-menu \"Insiden Keamanan / Permintaan Akses\".\n"
-            "4. Pilih jenis permintaan: [Insiden Keamanan] / [Penguncian Akun] / [Permintaan Akses Khusus].\n"
-            "5. Isi detail lengkap: deskripsi insiden, dampak, dan langkah yang sudah diambil.\n"
-            "6. Lampirkan bukti atau screenshot jika ada.\n"
-            "7. Klik \"Ajukan Permintaan Keamanan\".\n"
-            "CATATAN KHUSUS: Untuk masalah SAP Production, pastikan menyebutkan approval Supervisor dan SAP Functional Lead."
-        ),
-        "database": (
-            "1. Masuk ke portal IT Support.\n"
-            "2. Klik menu \"Database & Infrastruktur\".\n"
-            "3. Pilih sub-menu \"Permintaan Dukungan Database\".\n"
-            "4. Pilih jenis permintaan: [Gangguan Database] / [Akses Database] / [Query Error].\n"
-            "5. Isi detail lengkap: nama database, error message, waktu kejadian, dan sistem.\n"
-            "6. Lampirkan log atau screenshot jika tersedia.\n"
-            "7. Klik \"Ajukan Permintaan Database\".\n"
-            "CATATAN KHUSUS: Sebutkan apakah masalah terjadi di environment Production atau Non-Production."
-        ),
-        "general_it": (
-            "1. Masuk ke portal IT Support.\n"
-            "2. Klik menu \"Permintaan Umum IT\".\n"
-            "3. Pilih kategori masalah paling sesuai.\n"
-            "4. Isi detail lengkap: deskripsi masalah, perangkat, dan langkah yang sudah dicoba.\n"
-            "5. Lampirkan dokumen pendukung jika diperlukan.\n"
-            "6. Klik \"Ajukan Permintaan\".\n"
-            "CATATAN KHUSUS: Pastikan Anda menjelaskan masalah dengan jelas agar tiket dapat diarahkan ke tim yang tepat."
+    item_matches = _SERVICE_ITEM_KEYWORDS.findall(question)
+
+    if not item_matches:
+        # Tidak ada keyword item spesifik → kembalikan query original
+        logger.debug("service_order_no_item_keyword", extra={"question": question[:80]})
+        return question
+
+    # Deduplicate, preserve order, lowercase
+    seen: set = set()
+    unique_items = []
+    for m in item_matches:
+        key = m.lower().strip()
+        if key not in seen:
+            seen.add(key)
+            unique_items.append(key)
+
+    # Normalise sinonim yang paling umum agar vector lebih presisi
+    _SYNONYM_MAP = {"notebook": "laptop", "komputer": "komputer desktop", "hp kantor": "handset"}
+    unique_items = [_SYNONYM_MAP.get(i, i) for i in unique_items]
+
+    # Tentukan action intent dari query
+    if re.search(r'\b(pinjam|peminjaman|meminjam)\b', question, re.IGNORECASE):
+        action = "peminjaman"
+    elif re.search(r'\b(pengadaan|pesan|order|memesan|minta)\b', question, re.IGNORECASE):
+        action = "pengadaan"
+    elif re.search(r'\b(pasang|pemasangan|instalasi|install)\b', question, re.IGNORECASE):
+        action = "pemasangan"
+    elif re.search(r'\b(ajukan|pengajuan)\b', question, re.IGNORECASE):
+        action = "pengajuan"
+    else:
+        action = "permintaan"
+
+    refined = f"{action} {' '.join(unique_items)}"
+
+    logger.info("service_order_query_refined", extra={
+        "original" : question[:80],
+        "refined"  : refined,
+        "items"    : unique_items,
+        "action"   : action,
+    })
+    return refined
+
+
+def escalation_guide(query_issue: str, vector_store, embedding_service, doc_type: str = "ORDER_LINK") -> str:
+    """
+    Database-driven escalation guide menggunakan Vector + BM25 search.
+
+    TIDAK ADA HARDCODE DICTIONARY. Semua routing dinamis dari database.
+
+    Args:
+        query_issue   : Query/deskripsi masalah user (sebaiknya sudah di-refine)
+        vector_store  : Vector store untuk semantic search
+        embedding_service: Embedding service untuk encoding vektor
+        doc_type      : Tipe dokumen ('ORDER_LINK' atau 'INCIDENT_LINK')
+
+    Returns:
+        String berisi NAMA FORM dan Link jika ditemukan, atau pesan fallback.
+
+    Ekstraksi NAMA FORM dan Link menggunakan Regex (FIX 2):
+    - Tidak lagi split() berbasis posisi karakter → rapuh terhadap format bervariasi.
+    - Regex menangkap seluruh URL secara utuh, termasuk path, hash (#), query (?),
+      meskipun URL terpotong baris baru di dalam chunk database.
+    """
+    try:
+        logger.info("escalation_guide_request", extra={
+            "query"   : query_issue[:80],
+            "doc_type": doc_type,
+        })
+
+        if doc_type == "INCIDENT_LINK":
+            # Bypass semantic search for incident escalation and load the incident doc directly.
+            chunk = DocumentChunk.objects.filter(content__contains='type: INCIDENT_LINK').first()
+            results = []
+
+            if chunk and chunk.content:
+                results.append({
+                    "content": chunk.content,
+                    "score": 0,
+                })
+        else:
+            results = retrieve_context(
+                query_issue, vector_store, embedding_service,
+                doc_type=doc_type, top_k=3,
+            )
+
+        # Iterate over all results to find first valid link
+        for candidate_idx, result in enumerate(results):
+            if not result.get("content"):
+                continue
+
+            content = result["content"]
+            score   = result.get("score") or 0
+
+            # If the retrieved chunk contains multiple YAML-style sections,
+            # prefer the first matching block for the requested doc_type.
+            block_pattern = rf'(?ms)^---\s*type:\s*{re.escape(doc_type)}\b.*?(?=^---\s*type:|\Z)'
+            block_match = re.search(block_pattern, content, re.MULTILINE | re.IGNORECASE)
+            block_content = block_match.group(0) if block_match else content
+
+            # ── FIX 2: Ekstraksi NAMA FORM (title) via Regex ─────────────────────────
+            # Pattern mencari baris yang diawali dengan "title: "
+            form_match = re.search(
+                r'^title:\s*(.+?)(?:\n|$)',
+                block_content,
+                re.MULTILINE | re.IGNORECASE,
+            )
+            form_name = form_match.group(1).strip() if form_match else None
+
+            # ── FIX 2: Ekstraksi Link (url) via Regex (URL-safe, multi-line) ───────
+            content_normalized = re.sub(r'\n\s*(?=[/#?&])', '', block_content)
+
+            # Pattern mencari baris yang diawali dengan "url: "
+            link_match = re.search(
+                r'^url:\s*(https?://\S+)',
+                content_normalized,
+                re.MULTILINE | re.IGNORECASE,
+            )
+            link = link_match.group(1).rstrip('.,;)') if link_match else None
+
+            logger.debug("escalation_guide_candidate", extra={
+                "candidate_idx": candidate_idx,
+                "form_name": form_name,
+                "link"     : (link or "")[:120],
+                "score"    : round(score, 3),
+                "doc_type" : doc_type,
+            })
+
+            if form_name:
+                fallback_link = "https://myssc.pertamina.com/dwp/app/"
+                if link and _is_valid_link(link):
+                    logger.info("escalation_guide_valid_found", extra={
+                        "form_name": form_name,
+                        "link"     : link,
+                        "score"    : round(score, 3),
+                        "candidate_idx": candidate_idx,
+                        "doc_type" : doc_type,
+                    })
+                    return (
+                        f"Untuk menangani hal ini, silakan buat tiket melalui link berikut:\n\n"
+                        f"📋 **NAMA FORM:** {form_name}\n\n"
+                        f"🔗 **Link:** {link}"
+                    )
+
+                logger.warning("escalation_guide_invalid_link", extra={
+                    "form_name": form_name,
+                    "link"     : (link or "none"),
+                    "doc_type" : doc_type,
+                    "score"    : score,
+                    "candidate_idx": candidate_idx,
+                })
+                return (
+                    f"Untuk menangani hal ini, silakan buat tiket melalui link berikut:\n\n"
+                    f"📋 **NAMA FORM:** {form_name}\n\n"
+                    f"🔗 **Link:** {fallback_link}"
+                )
+
+        # ── Fallback: tidak ada hasil valid dari semua kandidat ──────────────────────────────────────────
+        logger.info("escalation_guide_no_valid_match", extra={
+            "query"   : query_issue[:60],
+            "doc_type": doc_type,
+            "candidates_tried": len(results),
+        })
+        return (
+            "Panduan spesifik untuk permintaan ini belum tersedia di database.\n\n"
+            "Silakan kunjungi Portal IT Support untuk membuat tiket secara manual.\n\n"
+            "Tim IT kami siap membantu Anda selanjutnya!"
         )
-    }
-    return ticket_processes.get(category, ticket_processes["general_it"])
+
+    except Exception as e:
+        logger.error("escalation_guide_error", extra={
+            "error"   : str(e),
+            "doc_type": doc_type,
+        })
+        return (
+            "Terjadi kesalahan saat mengambil panduan eskalasi.\n\n"
+            "Silakan hubungi IT Support melalui Portal IT Support."
+        )
 
 
 def _is_valid_link(link: str) -> bool:
     """
-    Check if link is valid URL (not placeholder).
-    Invalid patterns: [LINK_BELUM_TERSEDIA_DI_CSV], [LINK_BELUM_TERSEDIA], etc
+    Validasi bahwa link adalah URL spesifik yang benar-benar mengarah ke form.
+
+    FIX 3 — Perketat validasi:
+    Base URL yang pendek/tanpa path spesifik dianggap TIDAK VALID agar sistem
+    tidak menampilkan link yang tidak berguna kepada user.
+
+    VALID   : https://myssc.pertamina.com/dwp/app/#/catalog-form/preview-form/75
+    INVALID : https://myssc.pertamina.com/          ← hanya base URL, path < 4 char
+    INVALID : https://myssc.pertamina.com/dwp/      ← path terlalu pendek/generik
+    INVALID : [LINK_BELUM_TERSEDIA]                 ← placeholder
     """
+    from urllib.parse import urlparse
+
     if not link:
         return False
-    
+
     link_lower = link.lower()
-    
-    # Check for placeholder patterns
-    invalid_patterns = [
-        '[link_belum_tersedia',
-        'not available',
-        'tbd',
-        'null',
-        'n/a',
-    ]
-    
-    for pattern in invalid_patterns:
-        if pattern in link_lower:
-            return False
-    
-    # Check if it's a real URL (contains http, https, or #/)
-    if link.startswith('http') or link.startswith('https') or '/#' in link:
-        return True
-    
-    return False
 
-
-def _extract_form_info(escalation_content: str) -> tuple:
-    """
-    Extract NAMA FORM and Link dari ESCALATION chunk content.
-    Return: (form_name, link) atau (None, None) jika link tidak valid
-    
-    Safeguard: Reject placeholder links seperti [LINK_BELUM_TERSEDIA_DI_CSV]
-    """
-    form_name = None
-    link = None
-    
-    for line in escalation_content.split('\n'):
-        if 'NAMA FORM:' in line:
-            form_name = line.split('NAMA FORM:')[1].strip()
-        elif 'Link:' in line:
-            link = line.split('Link:')[1].strip()
-    
-    # SAFEGUARD: Tolak link yang placeholder atau tidak valid
-    if not _is_valid_link(link):
-        return form_name, None
-    
-    return form_name, link
-
-
-# =====================================================
-# PHASE 1: CATEGORY-AWARE FORM MAPPING
-# =====================================================
-# Smart Hybrid mapping: kategori masalah → form-form yang sesuai
-# Digunakan untuk filter SEBELUM keyword matching (80% improvement)
-# =====================================================
-# CATEGORY_FORMS — Perbaikan Lengkap
-#
-# ROOT CAUSE bug "handphone mati → Incident":
-# 1. Nama form typo/tidak cocok dengan NAMA FORM di KB
-#    (misal: "Dekstop" bukan "Desktop (PC, Laptop, Peripheral)")
-#    → form_name.lower() == cat_form.lower() TIDAK PERNAH match
-#    → filtered_chunks selalu kosong
-#    → fallback ke semantic search → dapat "Incident"
-#
-# 2. 15 dari 43 form tidak ada di CATEGORY_FORMS sama sekali
-#    → form seperti "Handset", "SIM Card", "SAP Locking" tidak bisa ditemukan
-#
-# SOLUSI: Semua 43 NAMA FORM ditulis PERSIS sama dengan di KB UI
-# (copy-paste dari file knowledge_base_ui.txt) agar string match 100%.
-#
-# Matching di _find_escalation_by_keywords menggunakan:
-#   form_name.lower() == cat_form.lower()
-# sehingga nama harus identik karakter per karakter.
-# =====================================================
-CATEGORY_FORMS = {
-    # Kartu akses fisik, badge, pintu, fingerprint area
-    "access_control": [
-        "Acces Control Device",
-        "Access Management End User Details",
-        "User ID ERP & Non ERP",
-        "Change, Reset, Unlock Password Details",
-        "Hak Akses Admin - VRA",
-        "Object Key Access (SAP)",
-    ],
-    # Persetujuan jabatan sementara, cuti, delegasi
-    "approval": [
-        "Approval Change (PJS, Cuti, etc)",
-        "User ID ERP & Non ERP",
-    ],
-    # Perangkat audio: speaker, mic, sound system
-    "audio": [
-        "Multimedia and Sound System",
-        "Video Conference atau Audio Conference",
-        "Telephone (Telepon Kantor / PABX)",
-        "Handset (Perangkat Mobile Perusahaan)",
-        "Radio Handy Talky (HT & Radio Komunikasi)",
-    ],
-    # Broadcast: email massal, wallpaper, videotron
-    "broadcast": [
-        "Broadcast Email & Message System SAP-Persero",
-        "Email & Collaboration Tools Details",
-    ],
-    # CCTV, rekaman, surveillance
-    "cctv": [
-        "CCTV",
-    ],
-    # Data center, server room, UPS, cooling
-    "datacenter": [
-        "Fasilitas Data Center",
-        "Database Storage",
-        "Server atau Virtual Desktop (VDI)",
-    ],
-    # Database, storage server
-    "database": [
-        "Database Storage",
-        "Fasilitas Data Center",
-    ],
-    # Developer: SAP key, object key, LSMW
-    "developer": [
-        "Developer Key",
-        "Object Key Access (SAP)",
-        "ERP Front Page & LSMW Access",
-        "Pengembangan Aplikasi",
-        "SAP Locking Process",
-        "SAP Runtime Dialogue Extension",
-        "SAPBATCH Locking Process",
-    ],
-    # Email: Outlook, mailbox, Teams, SharePoint
-    "email": [
-        "Email & Collaboration Tools Details",
-        "Broadcast Email & Message System SAP-Persero",
-        "Upgrade Quota Online Mailbox dan/atau Online Archive",
-        "Access Management End User Details",
-    ],
-    # Keluar karyawan, offboarding, pengembalian perangkat
-    "exit": [
-        "Exit Clearance Details",
-    ],
-    # Firewall, port, network security
-    "firewall": [
-        "Modifikasi Akses Port (Firewall)",
-    ],
-    # Geomatika, GIS, geodesi, peta
-    "geomatika": [
-        "Geomatika",
-    ],
-    # Handphone, tablet, smartphone perusahaan
-    "handset": [
-        "Handset (Perangkat Mobile Perusahaan)",
-        "SIM Card Corporate",
-        "SIM Card Support",
-    ],
-    # PC, laptop, keyboard, mouse, perangkat keras
-    "hardware": [
-        "Desktop (PC, Laptop, Peripheral)",
-        "Server atau Virtual Desktop (VDI)",
-        "Handset (Perangkat Mobile Perusahaan)",
-        "IT Supplies",
-        "Customer Service (On-Site Support)",
-    ],
-    # Laporan gangguan aplikasi & sistem
-    "incident": [
-        "Incident (Gangguan Aplikasi & Sistem)",
-        "IT Helpdesk Query (FAQ & Panduan)",
-    ],
-    # IT Supplies: toner, flashdisk, baterai, aksesoris
-    "supplies": [
-        "IT Supplies",
-        "Otorisasi MPS (Printer Kartu ID)",
-    ],
-    # Jaringan, LAN, internet, WiFi, koneksi
-    "network": [
-        "Wifi Access",
-        "Jaringan BIZ (Koneksi Jaringan Lokal)",
-        "Modifikasi Akses Port (Firewall)",
-    ],
-    # Onboarding karyawan baru, konsultan, auditor
-    "onboarding": [
-        "Layanan Pekerja Baru, Konsultan, Auditor dan Mitra Kerja",
-        "User ID ERP & Non ERP",
-        "Desktop (PC, Laptop, Peripheral)",
-    ],
-    # Cetak: printer fisik, toner, driver
-    "printer": [
-        "Desktop (PC, Laptop, Peripheral)",
-        "IT Supplies",
-        "Otorisasi MPS (Printer Kartu ID)",
-        "Printer ERP (Printer Terintegrasi SAP)",
-    ],
-    # Printer SAP, spool, cetak dari ERP
-    "printer_sap": [
-        "Printer ERP (Printer Terintegrasi SAP)",
-        "Incident (Gangguan Aplikasi & Sistem)",
-    ],
-    # Proyek RIG, pengeboran, paket IT lengkap
-    "rig": [
-        "Package Service New RIG",
-    ],
-    # SAP: transaksi, batch job, locking, runtime
-    "sap": [
-        "SAP Locking Process",
-        "SAP Runtime Dialogue Extension",
-        "SAPBATCH Locking Process",
-        "ERP Front Page & LSMW Access",
-        "Developer Key",
-        "Object Key Access (SAP)",
-        "Incident (Gangguan Aplikasi & Sistem)",
-    ],
-    # Keamanan: CCTV, exit clearance, approval
-    "security": [
-        "Exit Clearance Details",
-        "CCTV",
-        "Approval Change (PJS, Cuti, etc)",
-        "Hak Akses Admin - VRA",
-    ],
-    # Server, VDI, Citrix, virtual machine
-    "server": [
-        "Server atau Virtual Desktop (VDI)",
-        "Fasilitas Data Center",
-        "Database Storage",
-    ],
-    # SIM Card perusahaan, nomor dinas, roaming
-    "simcard": [
-        "SIM Card Corporate",
-        "SIM Card Support",
-        "Handset (Perangkat Mobile Perusahaan)",
-    ],
-    # Software, instalasi, lisensi, aplikasi umum
-    "software": [
-        "Software (Instalasi & Lisensi)",
-        "Pengembangan Aplikasi",
-        "ERP Front Page & LSMW Access",
-        "Incident (Gangguan Aplikasi & Sistem)",
-        "Desktop (PC, Laptop, Peripheral)",
-    ],
-    # Telepon kantor, PABX, ekstensi
-    "telephone": [
-        "Telephone (Telepon Kantor / PABX)",
-        "Multimedia and Sound System",
-    ],
-    # Kunjungan teknisi on-site
-    "onsite": [
-        "Customer Service (On-Site Support)",
-    ],
-    # Video conference, Zoom, Teams meeting, Webex
-    "video": [
-        "Video Conference atau Audio Conference",
-        "Multimedia and Sound System",
-    ],
-    # Multimedia: proyektor, HDMI, layar, ruang rapat
-    "multimedia": [
-        "Multimedia and Sound System",
-        "Video Conference atau Audio Conference",
-    ],
-    # Radio, HT, Handy Talky, komunikasi lapangan
-    "radio": [
-        "Radio Handy Talky (HT & Radio Komunikasi)",
-    ],
-    # VPN, remote access
-    "vpn_access": [
-        "Access Management End User Details",
-        "Modifikasi Akses Port (Firewall)",
-        "Jaringan BIZ (Koneksi Jaringan Lokal)",
-    ],
-    # Pengembangan aplikasi, change request, fitur baru
-    "development": [
-        "Pengembangan Aplikasi",
-        "Developer Key",
-        "Object Key Access (SAP)",
-    ],
-    # Souvenir, merchandise IT
-    "souvenir": [
-        "Souvenir IT",
-    ],
-    # Mailbox penuh, upgrade kuota email
-    "mailbox": [
-        "Upgrade Quota Online Mailbox dan/atau Online Archive",
-        "Email & Collaboration Tools Details",
-    ],
-    # Fallback umum — semua form yang paling sering dipakai
-    "general_it": [
-        "Incident (Gangguan Aplikasi & Sistem)",
-        "IT Helpdesk Query (FAQ & Panduan)",
-        "Customer Service (On-Site Support)",
-        "Desktop (PC, Laptop, Peripheral)",
-        "IT Supplies",
-    ],
-}
-
-
-def escalation_guide(query_issue: str, vector_store, embedding_service) -> str:
-    """
-    Cari panduan eskalasi dari database dan return dengan format simpel.
-
-    Format output yang diinginkan:
-    FORM: [Nama Form]
-    Link: [URL]
-    
-    Strategi Smart Hybrid (PHASE 1 + 2):
-    1. Deteksi kategori dari query
-    2. Filter forms berdasarkan kategori (PHASE 1: kategori-aware filtering)
-    3. Keyword matching dalam kategori yang terfilter (PHASE 2: scoped search)
-    4. Jika tidak ada, semantic search fallback
-    5. Jika ada di database: tampilkan form + link SAJA
-    """
-    try:
-        category = detect_problem_category(query_issue.lower())
-        
-        # PHASE 1 + 2: SMART HYBRID — kategori-aware keyword matching
-        # Dapatkan forms yang sesuai dengan kategori yang terdeteksi
-        category_forms = CATEGORY_FORMS.get(category, [])
-        
-        if category_forms:
-            # Keyword matching DALAM forms yang sesuai kategori saja
-            results = _find_escalation_by_keywords(query_issue, category_forms=category_forms)
-            
-            if results:
-                logger.info("escalation_guide_found_keyword_match", extra={
-                    "category": category,
-                    "category_forms_count": len(category_forms),
-                    "method": "category_aware_keyword",
-                })
-                form_name, link = _extract_form_info(results)
-                if form_name and link:
-                    # Form+Link valid, return immediately
-                    return f"Untuk masalah ini, silakan gunakan form berikut:\n\nFORM: {form_name}\nLink: {link}"
-                elif form_name and not link:
-                    # Form found but link invalid/placeholder - continue to fallback
-                    logger.warning("escalation_guide_form_invalid_link", extra={
-                        "form_name": form_name,
-                        "category": category,
-                        "note": "Link not valid or is placeholder"
-                    })
-                else:
-                    # Fallback jika extract gagal
-                    return f"Panduan eskalasi:\n{results[:200]}"
-        
-        # STRATEGI 2: Semantic search dengan threshold sangat rendah (fallback)
-        results = retrieve_context(
-            query_issue, vector_store, embedding_service,
-            doc_type="ESCALATION", top_k=1,
-        )
-
-        if results:
-            logger.info("escalation_guide_found_semantic", extra={
-                "category": category,
-                "score": results[0].get("score"),
-                "method": "semantic_fallback",
-            })
-            form_name, link = _extract_form_info(results[0]["content"])
-            if form_name and link:
-                # Form+Link valid, return immediately
-                return f"Untuk masalah ini, silakan gunakan form berikut:\n\nFORM: {form_name}\nLink: {link}"
-            elif form_name and not link:
-                # Form found but link invalid/placeholder
-                logger.warning("escalation_guide_form_invalid_link_semantic", extra={
-                    "form_name": form_name,
-                    "category": category,
-                    "method": "semantic",
-                    "note": "Link not valid or is placeholder"
-                })
-        
-        # STRATEGI 3: Tidak ada hasil, beri tahu user untuk membuat tiket manual
-        logger.info("escalation_guide_not_found", extra={
-            "category": category,
-            "query": query_issue[:60],
-        })
-        return f"Panduan spesifik belum ditemukan. Silakan buat tiket di portal IT Support pada kategori: {category}"
-
-    except Exception as e:
-        logger.error("escalation_guide_error", extra={"error": str(e)})
-        return "Terjadi kesalahan saat mengambil panduan eskalasi. Silakan gunakan portal IT Support untuk membuat tiket."
-
-
-def _find_escalation_by_keywords(query: str, category_forms: List[str] = None) -> str:
-    """
-    Find ESCALATION form by matching query keywords dengan TRIGGER_KEYWORD field.
-    
-    PHASE 1 + 2: SMART HYBRID enhancement
-    - Jika category_forms disediakan: FILTER forms hanya ke kategori yang sesuai
-    - Lalu lakukan keyword matching dalam forms yang terfilter saja
-    - Ini mengurangi false positives drastis (80% improvement)
-    
-    Improvement: Prioritize forms yang nama-nya relevan dengan query keywords
-    (e.g., "Multimedia and Sound System" untuk audio query)
-    
-    Args:
-        query: User query string
-        category_forms: Optional list of form names to filter by (from CATEGORY_FORMS mapping)
-    
-    Returns: Content of matching ESCALATION form, atau empty string jika tidak ada match
-    """
-    from apps.rag.models import DocumentChunk
-    import re
-    
-    query_lower = query.lower()
-    # Split query into keywords
-    keywords = re.findall(r'\b\w+\b', query_lower)
-    
-    if not keywords:
-        return ""
-    
-    # Get all ESCALATION chunks
-    escalation_chunks = DocumentChunk.objects.select_related('document').filter(
-        document__doc_type='ESCALATION'
+    # Tolak placeholder eksplisit
+    _PLACEHOLDERS = (
+        '[link_belum_tersedia', '[belum', 'not available',
+        'tbd', 'null', 'n/a', 'belum tersedia',
     )
-    
-    # PHASE 1: Filter by category if provided
-    if category_forms:
-        filtered_chunks = []
-        form_name_map = {}  # map form_name → chunk for faster lookup
-        
-        for chunk in escalation_chunks:
-            content = chunk.content
-            # Extract form name from NAMA FORM: line
-            form_name = ""
-            if 'NAMA FORM:' in content:
-                lines = content.split('\n')
-                for line in lines:
-                    if 'NAMA FORM:' in line:
-                        form_name = line.replace('NAMA FORM:', '').strip()
-                        break
-            
-            # Check if this form is in our category — partial match agar robust
-            # Misal: "Desktop (PC, Laptop, Peripheral)" cocok dengan "Desktop"
-            if form_name and any(
-                cat_form.lower() in form_name.lower() or form_name.lower() in cat_form.lower()
-                for cat_form in category_forms
-            ):
-                filtered_chunks.append(chunk)
-                form_name_map[chunk.id] = form_name
-        
-        escalation_chunks = filtered_chunks
-        logger.debug("keyword_match_category_filter", extra={
-            "category_forms_count": len(category_forms),
-            "filtered_chunks_count": len(escalation_chunks),
-            "form_names": [form_name_map.get(c.id, "unknown") for c in escalation_chunks[:5]]
+    if any(p in link_lower for p in _PLACEHOLDERS):
+        return False
+
+    # Parse URL dan periksa komponen
+    try:
+        parsed = urlparse(link)
+    except Exception:
+        return False
+
+    # Harus scheme http/https dan netloc ada
+    if parsed.scheme not in ('http', 'https') or not parsed.netloc:
+        return False
+
+    # ── INTI FIX 3: path harus spesifik ─────────────────────────────────────
+    # Gabungkan path + fragment (#...) + query (?...) sebagai "specificness measure".
+    # Base URL "https://myssc.pertamina.com/" → path='/', fragment='', query='' → total=1
+    # URL form "https://myssc.pertamina.com/dwp/app/#/.../75" → total >> 8
+    path_total = (
+        len(parsed.path.rstrip('/'))      # path tanpa trailing slash
+        + len(parsed.fragment)            # bagian setelah #
+        + len(parsed.query)               # bagian setelah ?
+    )
+    MIN_PATH_LENGTH = 8  # "/dwp/app" = 8 karakter → threshold aman
+    if path_total < MIN_PATH_LENGTH:
+        logger.debug("invalid_link_too_short", extra={
+            "link"       : link[:120],
+            "path_total" : path_total,
+            "threshold"  : MIN_PATH_LENGTH,
         })
-    
-    best_match = None
-    best_score = 0
-    best_form_name = ""
-    
-    # PHASE 2: Keyword matching within filtered forms
-    for chunk in escalation_chunks:
-        content = chunk.content
-        content_lower = content.lower()
-        
-        # Extract form name for better scoring
-        form_name = ""
-        if 'NAMA FORM:' in content:
-            lines = content.split('\n')
-            for line in lines:
-                if 'NAMA FORM:' in line:
-                    form_name = line.replace('NAMA FORM:', '').strip()
-                    break
-        
-        # Count how many query keywords appear in this chunk
-        keyword_matches = sum(1 for kw in keywords if kw in content_lower)
-        
-        # Prioritize chunks that mention keywords
-        if keyword_matches > 0:
-            # Base score: ratio of matched keywords
-            score = keyword_matches / len(keywords)
-            
-            # BONUS: If form name contains important keywords, boost the score
-            # This helps "Multimedia and Sound System" beat "Handset" for audio queries
-            for kw in keywords:
-                if kw in form_name.lower():
-                    score += 0.2  # Bonus for keyword in form name
-            
-            if score > best_score:
-                best_score = score
-                best_match = content
-                best_form_name = form_name
-    
-    return best_match if best_match else ""
+        return False
+
+    return True
 
 
 
-def detect_problem_category(query: str) -> str:
-    """
-    Deteksi kategori masalah dari query user.
-
-    PERBAIKAN LENGKAP:
-    - Tambah semua kategori yang sebelumnya tidak ada (handset, simcard, sap, rig, dll)
-    - Urutan cek: dari PALING SPESIFIK ke PALING UMUM
-    - Cek spesifik dulu agar tidak false-match ke kategori lebih luas
-    - Setiap kategori mapping ke CATEGORY_FORMS yang nama formnya PERSIS sama dengan KB
-    """
-    q = query.lower()
-
-    # ── PALING SPESIFIK — cek dulu ──────────────────────────
-
-    # Handset / HP / tablet perusahaan
-    if any(w in q for w in ['handphone', 'hp perusahaan', 'hp kantor', 'tablet perusahaan',
-                             'smartphone kantor', 'ponsel', 'mobile device', 'perangkat mobile',
-                             'handset', 'hp rusak', 'ganti hp']):
-        return "handset"
-
-    # SIM Card corporate / nomor dinas
-    if any(w in q for w in ['sim card', 'simcard', 'kartu sim', 'nomor dinas', 'nomor corporate',
-                             'roaming', 'pulsa', 'migrasi nomor', 'paket data']):
-        return "simcard"
-
-    # Kartu akses fisik / pintu / badge (BUKAN akses sistem)
-    if any(w in q for w in ['kartu akses', 'id card pintu', 'pintu masuk', 'access control',
-                             'kartu id pintu', 'badge', 'rfid', 'fingerprint akses',
-                             'kontrol pintu', 'kunci elektronik', 'turnstile',
-                             'akses pintu', 'pintu ruangan', 'pintu kantor', 'pintu tidak']):
-        return "access_control"
-
-    # VPN / remote access
-    if any(w in q for w in ['vpn', 'remote access', 'akses jarak jauh', 'tunnel']):
-        return "vpn_access"
-
-    # SAP spesifik: locking, batch, runtime, object key
-    if any(w in q for w in ['sap lock', 'sap locking', 'batch job', 'background job', 'sapbatch',
-                             'runtime sap', 'sap runtime', 'session timeout sap', 'object key sap',
-                             'kunci sap', 'record locked sap', 'sap batch']):
-        return "sap"
-
-    # Developer: developer key, object key
-    if any(w in q for w in ['developer key', 'object key', 'kunci developer', 'dev key',
-                             'sap developer', 'kunci objek sap']):
-        return "developer"
-
-    # Radio / HT / Handy Talky
-    if any(w in q for w in ['radio', 'handy talky', 'ht', 'walkie talkie', 'repeater',
-                             'frekuensi radio', 'rts', 'trunking']):
-        return "radio"
-
-    # CCTV / kamera pengawas
-    if any(w in q for w in ['cctv', 'kamera cctv', 'rekaman cctv', 'footage', 'dvr', 'nvr',
-                             'surveillance', 'kamera pengawas']):
-        return "cctv"
-
-    # Data center / server room / UPS / cooling
-    if any(w in q for w in ['data center', 'server room', 'ruang server', 'ups', 'colocation',
-                             'genset', 'pendingin server', 'rak server', 'pdu']):
-        return "datacenter"
-
-    # RIG / pengeboran
-    if any(w in q for w in ['rig', 'pengeboran', 'drilling', 'vsat', 'pabx rig']):
-        return "rig"
-
-    # Geomatika / GIS
-    if any(w in q for w in ['geomatika', 'gis', 'geodesi', 'peta', 'shapefile',
-                             'data spasial', 'topografi', 'ggrp']):
-        return "geomatika"
-
-    # Exit clearance / resign / pensiun
-    if any(w in q for w in ['resign', 'pensiun', 'keluar', 'offboarding', 'exit clearance',
-                             'nonaktif akun', 'terminate', 'pengembalian perangkat']):
-        return "exit"
-
-    # Approval PJS / cuti / delegasi
-    if any(w in q for w in ['pjs', 'pejabat sementara', 'delegasi akses', 'jabatan sementara',
-                             'approval change', 'acting', 'pendelegasian']):
-        return "approval"
-
-    # Onboarding / karyawan baru
-    if any(w in q for w in ['karyawan baru', 'pekerja baru', 'onboarding', 'new employee',
-                             'konsultan baru', 'mitra baru', 'auditor baru', 'akun baru karyawan']):
-        return "onboarding"
-
-    # Souvenir / merchandise IT
-    if any(w in q for w in ['souvenir', 'merchandise', 'plakat', 'kenang-kenangan', 'hadiah it']):
-        return "souvenir"
-
-    # Kunjungan teknisi on-site
-    if any(w in q for w in ['onsite', 'on-site', 'kunjungan teknisi', 'teknisi datang',
-                             'dispatch teknisi', 'datang ke meja', 'install langsung']):
-        return "onsite"
-
-    # Firewall / port / network security rule
-    if any(w in q for w in ['firewall', 'buka port', 'whitelist ip', 'blokir port',
-                             'port blocked', 'connection refused', 'firewall rule']):
-        return "firewall"
-
-    # Upgrade mailbox / kuota email penuh
-    if any(w in q for w in ['mailbox penuh', 'kuota email', 'quota mailbox', 'inbox full',
-                             'storage email habis', 'upgrade kuota', 'tambah kuota email',
-                             'archive email']):
-        return "mailbox"
-
-    # Broadcast / email massal / wallpaper / videotron
-    if any(w in q for w in ['broadcast', 'email blast', 'wallpaper desktop', 'videotron',
-                             'pesan massal', 'running text', 'display board', 'layar pengumuman']):
-        return "broadcast"
-
-    # Pengembangan aplikasi / change request / fitur baru
-    if any(w in q for w in ['pengembangan aplikasi', 'buat aplikasi', 'fitur baru',
-                             'change request', 'custom report', 'modul baru', 'enhancement']):
-        return "development"
-
-    # IT Supplies: toner, flashdisk, baterai
-    if any(w in q for w in ['toner', 'tinta printer', 'cartridge', 'flashdisk', 'it supplies',
-                             'consumable', 'kertas printer', 'baterai perangkat']):
-        return "supplies"
-
-    # Server / VDI / Citrix / virtual machine
-    if any(w in q for w in ['server down', 'vdi', 'virtual desktop', 'citrix', 'thin client',
-                             'virtual machine', 'vm', 'rdp', 'remote desktop']):
-        return "server"
-
-    # ── CUKUP UMUM — cek setelah yang spesifik ──────────────
-
-    # Audio: speaker, mic, suara
-    if any(w in q for w in ['suara', 'audio', 'speaker', 'microphone', 'mic', 'sound',
-                             'tidak ada suara', 'mikrofon']):
-        return "audio"
-
-    # Video conference: Zoom, Teams meeting, Webex
-    if any(w in q for w in ['zoom', 'webex', 'teams meeting', 'video conference', 'video call',
-                             'rapat virtual', 'conference call']):
-        return "video"
-
-    # Multimedia: proyektor, HDMI, layar, ruang rapat
-    if any(w in q for w in ['proyektor', 'projector', 'hdmi', 'vga', 'layar presentasi',
-                             'multimedia', 'ruang rapat', 'audio visual']):
-        return "multimedia"
-
-    # SAP umum: akses, login, front page
-    if any(w in q for w in ['sap', 'erp', 'lsmw', 'sap gui', 'logon sap']):
-        return "sap"
-
-    # Jaringan / internet / WiFi / koneksi
-    if any(w in q for w in ['internet', 'wifi', 'wi-fi', 'jaringan', 'network',
-                             'koneksi', 'konek', 'lan', 'kabel lan']):
-        return "network"
-
-    # Email umum
-    if any(w in q for w in ['email', 'outlook', 'mailbox', 'sharepoint', 'onedrive',
-                             'teams', 'skype']):
-        return "email"
-
-    # Telepon kantor / PABX / ekstensi
-    if any(w in q for w in ['telepon', 'telephone', 'ekstensi', 'extension', 'pabx',
-                             'ip phone', 'voip', 'intercom']):
-        return "telephone"
-
-    # Printer fisik
-    if any(w in q for w in ['printer', 'cetak', 'print', 'toner', 'cartridge']):
-        return "printer"
-
-    # SAP printer / cetak dari SAP
-    if any(w in q for w in ['cetak dari sap', 'spool sap', 'printer sap', 'printer erp']):
-        return "printer_sap"
-
-    # Laptop / PC / hardware fisik
-    if any(w in q for w in ['laptop', 'komputer', 'pc', 'hardware', 'keyboard', 'mouse',
-                             'layar', 'baterai laptop', 'hard disk', 'ram']):
-        return "hardware"
-
-    # Software / instalasi / lisensi
-    if any(w in q for w in ['aplikasi', 'software', 'program', 'install', 'lisensi',
-                             'license', 'ms office', 'adobe', 'autocad']):
-        return "software"
-
-    # Password / akun / user ID
-    if any(w in q for w in ['password', 'akun', 'user id', 'terkunci', 'locked',
-                             'reset', 'lupa password', 'login gagal']):
-        return "access_control"
-
-    # Database
-    if any(w in q for w in ['database', 'basis data', 'storage', 'disk penuh']):
-        return "database"
-
-    # Keamanan umum
-    if any(w in q for w in ['keamanan', 'security', 'hak akses admin', 'admin rights']):
-        return "security"
-
-    return "general_it"
 
 
-def get_contact_info(category: str) -> str:
-    """Informasi kontak berdasarkan kategori"""
-    contacts = {
-        "access_control": "ext. 1234 atau email: access@pertamina.com",
-        "vpn_access": "ext. 5678 atau portal VPN: vpn.pertamina.com",
-        "hardware": "ext. 9012 atau email: hardware@pertamina.com",
-        "software": "ext. 3456 atau email: software@pertamina.com",
-        "network": "ext. 7890 atau email: network@pertamina.com",
-        "email": "ext. 1111 atau email: email@pertamina.com",
-        "printer": "ext. 2222 atau email: printer@pertamina.com",
-        "security": "ext. 3333 atau email: security@pertamina.com",
-        "database": "ext. 4444 atau email: database@pertamina.com",
-        "general_it": "ext. 0000 atau portal helpdesk: helpdesk.pertamina.com"
-    }
-    return contacts.get(category, "ext. 0000 atau portal helpdesk: helpdesk.pertamina.com")
+# ===== DELETED: detect_problem_category() =====
+# This large if-else chain categorized queries into hardcoded categories
+# New system uses pure vector/BM25 search filtered by doc_type parameter
+# No category detection needed - routing handled by intent detection instead
 
 
-def get_required_info(category: str) -> str:
-    """Informasi yang dibutuhkan untuk eskalasi"""
-    info_mapping = {
-        "access_control": "nomor kartu akses, lokasi, waktu kejadian",
-        "vpn_access": "username, error message, sistem operasi",
-        "hardware": "model perangkat, gejala kerusakan, nomor asset",
-        "software": "nama aplikasi, versi, error message, langkah yang sudah dicoba",
-        "network": "lokasi, kecepatan koneksi, perangkat yang digunakan",
-        "email": "alamat email, jenis masalah (kirim/terima), error message",
-        "printer": "model printer, jenis masalah, nomor printer",
-        "security": "jenis insiden, dampak, langkah yang sudah diambil",
-        "database": "nama database, error message, waktu kejadian",
-        "general_it": "deskripsi masalah lengkap, langkah yang sudah dicoba"
-    }
-    return info_mapping.get(category, "deskripsi masalah lengkap dan langkah yang sudah dicoba")
+# ===== DELETED: get_contact_info() and get_required_info() =====
+# These static functions returned hardcoded contact info per category
+# New system gets all info directly from database records via escalation_guide()
 
 
 def detect_confirmation(text: str) -> Optional[bool]:
@@ -1932,46 +1443,46 @@ def get_llm_response(
         })
         return answer
     else:
-        # ========================================================================
-        # PERBAIKAN: RULE-BASED FALLBACK ROUTING
-        # 
-        # HANYA AKTIF jika user sudah coba troubleshooting dan gagal (attempts >= 1)
-        # Turn pertama HARUS berikan troubleshooting steps, bukan langsung routing
-        # ========================================================================
-        question_clean = question.strip()
-        detected_category = detect_problem_category(question_clean)
-        
-        # Deteksi session attempts dari parameter (jika ada)
-        current_attempt = 0
-        if session and "attempts" in session:
-            current_attempt = session["attempts"]
-        
-        # RULE-BASED ROUTING HANYA untuk attempt >= 1 (user sudah coba sebelumnya)
-        if current_attempt >= 1 and detected_category != "general_it":
-            ticket_process = get_ticket_process(detected_category)
-            routing_answer = f"{ROUTING_TEMPLATE_NO_GUIDE.format(ticket_process=ticket_process)}"
-            
-            logger.info("rule_based_routing_applied", extra={
-                "category": detected_category,
+        # ======================================================================
+        # FALLBACK ROUTING (CLEANED UP — FIX 1)
+        #
+        # Tidak ada SOP ditemukan di RAG untuk pertanyaan ini.
+        # - Turn 0 (attempts == 0): Berikan troubleshooting umum via LLM + DISCLAIMER.
+        #   User perlu diberi kesempatan mencoba dulu sebelum dieskalasi.
+        # - Turn 1+ (attempts >= 1): User sudah mencoba tapi gagal → langsung
+        #   arahkan ke form Incident via escalation_guide (tanpa hardcode kategori).
+        #
+        # detect_problem_category() dan get_ticket_process() DIHAPUS.
+        # Tidak ada lagi if-else hardcode kategori di sini.
+        # ======================================================================
+        current_attempt = session.get("attempts", 0) if session else 0
+
+        if current_attempt >= 1:
+            # User sudah mencoba sebelumnya → eskalasikan ke service/repair form via DB
+            incident_guide = escalation_guide(
+                question, vector_store, embedding_service, doc_type="ORDER_LINK"
+            )
+            logger.info("fallback_routing_escalation", extra={
+                "attempt"   : current_attempt,
                 "elapsed_ms": int((time.time()-t0)*1000),
-                "attempt": current_attempt,
-                "question_preview": question_clean[:80]
             })
-            return routing_answer
-        
-        # ATTEMPT 0 atau GENERAL CATEGORY: Fallback ke LLM troubleshooting
-        # Berikan langkah-langkah penyelesaian, bukan langsung routing
+            return (
+                "Langkah-langkah sebelumnya tampaknya belum berhasil menyelesaikan masalah Anda. "
+                "Berikut panduan untuk membuat tiket resmi ke tim IT:\n\n"
+                f"{incident_guide}"
+            )
+
+        # Turn pertama, tidak ada SOP → LLM fallback dengan DISCLAIMER
         llm_answer = generate_llm(
             [{"role": "system", "content": _FALLBACK_SYSTEM_PROMPT}]
             + history + [{"role": "user", "content": question}],
             config_name="fallback_general",
         )
         logger.info("llm_response_ok", extra={
-            "type": "fallback", "elapsed_ms": int((time.time()-t0)*1000),
-            "category_detected": detected_category,
-            "attempt": current_attempt
+            "type"      : "fallback",
+            "elapsed_ms": int((time.time()-t0)*1000),
+            "attempt"   : current_attempt,
         })
-        # DISCLAIMER ditambahkan untuk generic troubleshooting
         return DISCLAIMER + llm_answer
 
 
@@ -2011,12 +1522,26 @@ def get_llm_response_stream(
             config_name="sop_strict",
         )
     else:
-        yield DISCLAIMER
-        yield from generate_llm_stream(
-            [{"role": "system", "content": _FALLBACK_SYSTEM_PROMPT}]
-            + history + [{"role": "user", "content": question}],
-            config_name="fallback_general",
-        )
+        # Streaming fallback — mirror logika sync (FIX 1)
+        current_attempt = session.get("attempts", 0) if session else 0
+
+        if current_attempt >= 1:
+            # User sudah mencoba → eskalasi ke service/repair form
+            incident_guide = escalation_guide(
+                question, vector_store, embedding_service, doc_type="ORDER_LINK"
+            )
+            yield (
+                "Langkah-langkah sebelumnya tampaknya belum berhasil menyelesaikan masalah Anda. "
+                "Berikut panduan untuk membuat tiket resmi ke tim IT:\n\n"
+                f"{incident_guide}"
+            )
+        else:
+            yield DISCLAIMER
+            yield from generate_llm_stream(
+                [{"role": "system", "content": _FALLBACK_SYSTEM_PROMPT}]
+                + history + [{"role": "user", "content": question}],
+                config_name="fallback_general",
+            )
 
 
 # =====================================================
@@ -2113,17 +1638,9 @@ _HAPPY_TO_HELP_REPLY = (
     "jangan ragu untuk menyapa saya kembali. Selamat beraktivitas!"
 )
 
-# Respon jika masalah BELUM selesai setelah troubleshooting (konfirmasi "Belum")
-# Form Incident — hardcoded sesuai ketentuan bisnis, tidak perlu query escalation_guide
-_INCIDENT_ESCALATION_REPLY = (
-    "Mohon maaf langkah-langkah di atas belum berhasil membantu. "
-    "Untuk penanganan lebih lanjut oleh tim teknis, silakan buat tiket "
-    "menggunakan panduan berikut:\n\n"
-    "📋 **NAMA FORM:** Incident\n\n"
-    "📌 **PANDUAN TIKET:** Untuk menghubungi tim IT silahkan klik link "
-    "di bawah ini dan ikuti alur yang ada pada link tersebut.\n\n"
-    "🔗 **Link:** https://myssc.pertamina.com/dwp/app/#/itemprofile/313"
-)
+# NOTE: _INCIDENT_ESCALATION_REPLY DELETED
+# Reason: Now using escalation_guide(doc_type="INCIDENT_LINK") for dynamic responses
+# This ensures all incident handling uses real database links instead of hardcoded URLs
 
 # Respon penolakan non-IT (dari versi sebelumnya)
 _OUT_OF_SCOPE_REPLY = (
@@ -2133,26 +1650,15 @@ _OUT_OF_SCOPE_REPLY = (
 )
 
 
+
 # =====================================================
 # IT SUPPORT TEAM ROUTING
 # =====================================================
+# NOTE: ROUTING_TEMPLATE_WITH_GUIDE dan ROUTING_TEMPLATE_NO_GUIDE dihapus.
+# Keduanya hanya dipakai oleh detect_problem_category/get_ticket_process
+# yang sudah dihapus (dead code). Routing sekarang sepenuhnya via escalation_guide().
+# =====================================================
 
-
-# Template ketika DITEMUKAN panduan di database
-ROUTING_TEMPLATE_WITH_GUIDE = """
-PANDUAN UI:
-{ticket_process}
-"""
-
-# Template ketika TIDAK ADA panduan di database
-ROUTING_TEMPLATE_NO_GUIDE = """
-PANDUAN UI:
-{ticket_process}
-
-CATATAN:
-Saat ini tim IT terkait untuk masalah ini belum ada di database panduan kami.
-Gunakan alur umum portal IT Support dan pilih kategori yang paling mendekati masalah Anda.
-"""
 
 
 # =====================================================
@@ -2212,15 +1718,11 @@ def _handle_escalation_confirmation(
     """
     Proses konfirmasi penyelesaian masalah.
     - True  (Sudah): Tampilkan pesan sukses & reset state.
-    - False (Belum): Arahkan langsung ke form Incident (hardcoded, bukan escalation_guide).
+    - False (Belum): Call escalation_guide() dengan doc_type="INCIDENT_LINK" untuk dynamic response.
     - None  (Ambigu): Kembalikan None agar logic utama memproses sebagai masalah baru.
 
-    Catatan desain:
-    Ketika user menjawab "Belum", sistem TIDAK memanggil escalation_guide() karena
-    konteks troubleshooting sudah mencapai batas bantuan L1. Sebagai gantinya,
-    ditampilkan form Incident yang merupakan jalur eskalasi resmi universal
-    (_INCIDENT_ESCALATION_REPLY — hardcoded agar konsisten dan tidak bergantung
-    pada hasil RAG yang bisa bervariasi).
+    PERUBAHAN BESAR: Sekarang menggunakan escalation_guide(doc_type="INCIDENT_LINK")
+    untuk mendapatkan form dan link dari database, bukan hardcoded string.
     """
     confirmation = detect_confirmation(question)
 
@@ -2236,9 +1738,16 @@ def _handle_escalation_confirmation(
 
     elif confirmation is False:  # User menjawab "Belum/Tidak/Gagal"
         session["awaiting_support_confirmation"] = False
-        # Gunakan _INCIDENT_ESCALATION_REPLY (hardcoded) — konsisten untuk semua kasus troubleshoot
-        # yang belum terselesaikan, sesuai alur Incident resmi perusahaan.
-        answer = _INCIDENT_ESCALATION_REPLY
+        # Use dynamic escalation_guide with ORDER_LINK
+        # This retrieves actual form and link from the database for service/repair requests
+        preamble = "Mohon maaf langkah-langkah di atas belum berhasil membantu.\n\n"
+        incident_guide = escalation_guide(
+            session.get("last_it_problem") or question, 
+            vector_store, 
+            embedding_service, 
+            doc_type="ORDER_LINK"
+        )
+        answer = preamble + incident_guide
         _update_history(session, question, answer)
         session_manager.save(session_id, session)
         return answer
@@ -2274,16 +1783,28 @@ def _process_chat_sync(
     elif intent == "OUT_OF_SCOPE":
         answer = _OUT_OF_SCOPE_REPLY
     elif intent == "REQUEST_IT_SUPPORT":
-        guide = escalation_guide(session.get("last_it_problem") or question, vector_store, embedding_service)
+        # NEW TOPIC: Clear stale state from previous IT_PROBLEM turns
+        session["last_it_problem"] = ""
+        session["attempts"] = 0
+        session["offered_support"] = False
+        # Use current question, NOT stale last_it_problem from previous turn
+        guide = escalation_guide(question, vector_store, embedding_service, doc_type="ORDER_LINK")
         answer = f"Tentu! Berikut panduan eskalasi ke IT Support:\n\n{guide}"
     elif intent == "SERVICE_ORDER":
+        # NEW TOPIC: Clear stale state from previous IT_PROBLEM turns
+        session["last_it_problem"] = ""
+        session["attempts"] = 0
+        session["offered_support"] = False
         # SERVICE_ORDER: skip alur RAG troubleshoot, langsung cari form pengadaan yang relevan
-        # via escalation_guide. Session attempt tidak di-increment karena ini bukan troubleshoot.
+        # via escalation_guide dengan doc_type="ORDER_LINK".
+        # Pass raw query directly to preserve critical context. Vector/BM25 search handles
+        # full context better than over-simplified refinements (e.g., "request kirim broadcast email
+        # dan pasang video display di videotron" should not be reduced to "pemasangan email").
         logger.info("intent_service_order", extra={"session_id": session_id, "question": question[:80]})
-        guide = escalation_guide(question, vector_store, embedding_service)
+        guide = escalation_guide(question, vector_store, embedding_service, doc_type="ORDER_LINK")
         answer = (
             "Baik! Permintaan Anda terdeteksi sebagai **Service Order** (Pengadaan/Pemasangan). "
-            "Berikut panduan pengajuan form yang perlu Anda isi:\n\n"
+            "Berikut adalah link form yang perlu Anda isi:\n\n"
             f"{guide}"
         )
     else:  # IT_PROBLEM
@@ -2356,22 +1877,29 @@ def _process_chat_stream(
         yield answer
 
     elif intent == "REQUEST_IT_SUPPORT":
+        # NEW TOPIC: Clear stale state from previous IT_PROBLEM turns
+        session["last_it_problem"] = ""
         session["attempts"] = 0
         session["offered_support"] = False
-        guide = escalation_guide(
-            session.get("last_it_problem") or question, vector_store, embedding_service
-        )
+        # Use current question, NOT stale last_it_problem from previous turn
+        guide = escalation_guide(question, vector_store, embedding_service, doc_type="ORDER_LINK")
         answer = f"Tentu! Berikut panduan eskalasi ke IT Support:\n\n{guide}"
         yield answer
 
     elif intent == "SERVICE_ORDER":
+        # NEW TOPIC: Clear stale state from previous IT_PROBLEM turns
+        session["last_it_problem"] = ""
+        session["attempts"] = 0
+        session["offered_support"] = False
         # SERVICE_ORDER: skip alur RAG troubleshoot, langsung cari form pengadaan yang relevan
-        # via escalation_guide. Session attempt tidak di-increment karena ini bukan troubleshoot.
+        # via escalation_guide dengan doc_type="ORDER_LINK".
+        # Pass raw query directly to preserve critical context. Vector/BM25 search handles
+        # full context better than over-simplified refinements.
         logger.info("intent_service_order_stream", extra={"session_id": session_id, "question": question[:80]})
-        guide = escalation_guide(question, vector_store, embedding_service)
+        guide = escalation_guide(question, vector_store, embedding_service, doc_type="ORDER_LINK")
         answer = (
             "Baik! Permintaan Anda terdeteksi sebagai **Service Order** (Pengadaan/Pemasangan). "
-            "Berikut panduan pengajuan form yang perlu Anda isi:\n\n"
+            "Berikut adalah link form yang perlu Anda isi:\n\n"
             f"{guide}"
         )
         yield answer
