@@ -1,7 +1,8 @@
+import os
 import ollama
 
 
-MODEL_NAME = "llama3:8b"
+MODEL_NAME = os.getenv("LLM_MODEL", "qwen2.5:7b")
 
 
 def ask_llm(question):

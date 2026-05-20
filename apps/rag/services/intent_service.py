@@ -1,4 +1,5 @@
 import re
+import os
 import ollama
 
 
@@ -136,6 +137,22 @@ ATURAN PENTING:
   TETAP klasifikasikan sebagai ORDER_LINK.
 - Kehadiran nama barang keras (HT, radio, laptop) BUKAN penentu utama — KATA KERJAlah yang menentukan.
 - Kata "baru" yang merujuk pada unit/perangkat baru = sinyal ORDER_LINK.
+- CONTEXT: You are operating in a corporate IT Helpdesk environment.
+- RULE: If a user states that a physical IT supply, hardware, or consumable
+  (such as 'kertas', 'tinta', 'toner', 'baterai', 'stok') is 'habis' (empty/depleted),
+  'kosong' (empty), or 'rusak' (broken) WITHOUT asking a direct question, you MUST
+  interpret this as an implicit request for procurement/replenishment.
+  Classify these statements strictly as ORDER_LINK if they refer to consumables or
+  replacement stock, or INCIDENT_LINK only if the statement clearly describes a
+  technical failure requiring an immediate fix. NEVER classify them as GENERAL_IT.
+
+EXAMPLES:
+User: 'tolong pesankan laptop baru' -> Intent: ORDER_LINK
+User: 'kertas di ruang meeting habis' -> Intent: ORDER_LINK
+User: 'tinta printer merah kosong nih' -> Intent: ORDER_LINK
+User: 'wifi nggak bisa connect' -> Intent: INCIDENT_LINK
+User: 'selamat pagi' -> Intent: GENERAL_IT
+User: 'stok flashdisk menipis' -> Intent: ORDER_LINK
 
 CONTOH:
 Q: "Pesenin HT baru buat security dong"        → ORDER_LINK
@@ -155,7 +172,7 @@ def _llm_classify(question: str) -> str:
     """Panggil LLM untuk klasifikasi; return label yang sudah di-strip."""
     prompt = _CLASSIFICATION_PROMPT.format(question=question)
     response = ollama.chat(
-        model="llama3:8b",
+        model=os.getenv("LLM_MODEL", "qwen2.5:7b"),
         messages=[{"role": "user", "content": prompt}],
         options={
             "temperature": 0.0,   # Deterministic — tidak butuh kreativitas di sini

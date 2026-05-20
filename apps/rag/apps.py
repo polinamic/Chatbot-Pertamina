@@ -49,4 +49,13 @@ def get_vector_store():
 
 
 def get_embedding_service():
+    if RagConfig._embedding_service is None:
+        # Lazy fallback: jika ready() gagal saat startup, buat instance baru
+        import logging
+        logging.getLogger("chatbot").warning(
+            "get_embedding_service_fallback",
+            extra={"reason": "Singleton is None, creating fresh instance"}
+        )
+        from apps.rag.services.embedding import EmbeddingService
+        RagConfig._embedding_service = EmbeddingService()
     return RagConfig._embedding_service

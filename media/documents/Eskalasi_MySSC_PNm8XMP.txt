@@ -1,0 +1,297 @@
+==============================================================
+GRUP 1: ORDER_LINK (Form Pengadaan / Permintaan)
+==============================================================
+
+---
+NAMA FORM: Acces Control Device
+TRIGGER KEYWORD: access, control, acs, pintu, pasang access control baru, pengadaan acs, minta akses pintu, order kunci elektronik, tambah perangkat pintu, request access control device
+PANDUAN TIKET: Untuk menghubungi tim IT, silakan klik link di bawah ini dan ikuti alur yang tersedia.
+Link: https://myssc.pertamina.com/dwp/app/#/itemprofile/101
+---
+
+---
+NAMA FORM: Access Management End User Details
+TRIGGER KEYWORD: access, akses, internet, working group, wifi, p_6c, vpn, mailing, group, file, sharing, global, member, email, e-mail, sharepoint, ftp, minta akses internet, ajukan vpn baru, request working group, tambah member sharepoint, order akses ftp, pengadaan akses wifi, minta hak akses email
+PANDUAN TIKET: Untuk menghubungi tim IT, silakan klik link di bawah ini dan ikuti alur yang tersedia.
+Link: https://myssc.pertamina.com/dwp/app/#/itemprofile/276
+---
+
+---
+NAMA FORM: Approval Change (PJS, Cuti, etc)
+TRIGGER KEYWORD: approval, pjs, cuti, ajukan perubahan approval, request persetujuan pjs, order perubahan cuti, minta update approval
+PANDUAN TIKET: Untuk menghubungi tim IT, silakan klik link di bawah ini dan ikuti alur yang tersedia.
+Link: https://myssc.pertamina.com/dwp/app/#/itemprofile/604
+---
+
+---
+NAMA FORM: Broadcast Email & Message System SAP-Persero
+TRIGGER KEYWORD: broadcast, email, sap, wallpaper, video display, email blast, wallpaper broadcast, sistem sap, video, videotron, minta broadcast email, order email blast, request kirim wallpaper, ajukan video display, pengadaan videotron broadcast
+PANDUAN TIKET: Untuk menghubungi tim IT, silakan klik link di bawah ini dan ikuti alur yang tersedia.
+Link: https://myssc.pertamina.com/dwp/app/#/itemprofile/201
+---
+
+---
+NAMA FORM: CCTV
+TRIGGER KEYWORD: kamera, cctv, pasang cctv baru, pengadaan kamera cctv, order cctv, tambah titik kamera, request instalasi cctv, minta kamera pengawas
+PANDUAN TIKET: Untuk menghubungi tim IT, silakan klik link di bawah ini dan ikuti alur yang tersedia.
+Link: https://myssc.pertamina.com/dwp/app/#/itemprofile/209
+---
+
+---
+NAMA FORM: Change, Reset, Unlock Password Details
+TRIGGER KEYWORD: user id, erp, non-erp, reset, password, lock, unlock, reset password, change password, email, unlock, user, aplikasi, minta reset password, ajukan unlock akun, order ganti password, request reset user id erp, unlock akun terkunci, minta perubahan password aplikasi
+PANDUAN TIKET: Untuk menghubungi tim IT, silakan klik link di bawah ini dan ikuti alur yang tersedia.
+Link: https://myssc.pertamina.com/dwp/app/#/itemprofile/207
+---
+
+---
+NAMA FORM: Desktop
+TRIGGER KEYWORD: pc, desktop, notebook, laptop, scanner, printer, instalasi, software, backup, data, fax, driver, os, windows, pengadaan laptop baru, order pc desktop, minta notebook baru, request instalasi software, pengadaan scanner, order printer baru, ajukan backup data, minta driver os windows
+PANDUAN TIKET: Untuk menghubungi tim IT, silakan klik link di bawah ini dan ikuti alur yang tersedia.
+Link: https://myssc.pertamina.com/dwp/app/#/itemprofile/206
+---
+
+---
+NAMA FORM: Email & Collaboration Tools Details
+TRIGGER KEYWORD: email, chat, file sharing, sharing, sharepoint, working drive, skype for business, minta akun email baru, order sharepoint, request file sharing, ajukan skype for business, pengadaan working drive, tambah lisensi email, order collaboration tools
+PANDUAN TIKET: Untuk menghubungi tim IT, silakan klik link di bawah ini dan ikuti alur yang tersedia.
+Link: https://myssc.pertamina.com/dwp/app/#/itemprofile/306
+---
+
+---
+NAMA FORM: Handset
+TRIGGER KEYWORD: handphone, tablet, explosion proof, seluler, ponsel, telepon, pengadaan handphone baru, order tablet, minta ponsel explosion proof, request handset seluler, tambah perangkat mobile, ajukan handphone dinas baru
+PANDUAN TIKET: Untuk menghubungi tim IT, silakan klik link di bawah ini dan ikuti alur yang tersedia.
+Link: https://myssc.pertamina.com/dwp/app/#/itemprofile/303
+---
+
+---
+NAMA FORM: IT Supplies
+TRIGGER KEYWORD: tinta, toner, flashdisk, cd, hard disk, record, baterai, battery, kertas, pointer, dvd, it supply, supplies, order tinta printer, minta toner baru, pengadaan flashdisk, request hard disk, tambah stok kertas, ajukan baterai it, order it supplies
+PANDUAN TIKET: Untuk menghubungi tim IT, silakan klik link di bawah ini dan ikuti alur yang tersedia.
+Link: https://myssc.pertamina.com/dwp/app/#/itemprofile/218
+---
+
+---
+NAMA FORM: Jaringan BIZ
+TRIGGER KEYWORD: lan, jaringan, kabel, internet, wifi, koneksi, pasang jaringan baru, pengadaan kabel lan, request koneksi internet baru, order wifi baru, tambah jaringan, ajukan instalasi lan, minta pasang kabel jaringan
+PANDUAN TIKET: Untuk menghubungi tim IT, silakan klik link di bawah ini dan ikuti alur yang tersedia.
+Link: https://myssc.pertamina.com/dwp/app/#/itemprofile/229
+---
+
+---
+NAMA FORM: Layanan Pekerja Baru, Konsultan, Auditor dan Mitra Kerja
+TRIGGER KEYWORD: pekerja baru, konsultan, mitra kerja, auditor, user, telepon, printer, extension, ekstensi, mps, akun, email, file sharing, laptop, notebook, desktop, pc, hire, bps, bpa, pengadaan fasilitas pekerja baru, minta akun email pekerja baru, order laptop konsultan, request perangkat mitra kerja, ajukan fasilitas auditor baru
+PANDUAN TIKET: Untuk menghubungi tim IT, silakan klik link di bawah ini dan ikuti alur yang tersedia.
+Link: https://myssc.pertamina.com/dwp/app/#/itemprofile/311
+---
+
+---
+NAMA FORM: Multimedia and Sound System
+TRIGGER KEYWORD: multimedia, sound, system, proyektor, projector, screen, layar, tv, televisi, kabel, vga, hdmi, display, splitter, switcher, toa, converter, pengadaan proyektor baru, order sound system, minta pasang layar tv, request instalasi multimedia, ajukan projector screen, tambah perangkat display, order hdmi converter
+PANDUAN TIKET: Untuk menghubungi tim IT, silakan klik link di bawah ini dan ikuti alur yang tersedia.
+Link: https://myssc.pertamina.com/dwp/app/#/itemprofile/228
+---
+
+---
+NAMA FORM: Otorisasi MPS
+TRIGGER KEYWORD: mps, printer, user, kartu, id, minta otorisasi mps, order akses printer mps, request kartu id mps, tambah user mps, ajukan otorisasi printer
+PANDUAN TIKET: Untuk menghubungi tim IT, silakan klik link di bawah ini dan ikuti alur yang tersedia.
+Link: https://myssc.pertamina.com/dwp/app/#/itemprofile/306
+---
+
+---
+NAMA FORM: Pengembangan Aplikasi
+TRIGGER KEYWORD: aplikasi, pengembangan, erp, non-erp, aspen, sap, request pengembangan aplikasi, ajukan pembuatan aplikasi baru, order pengembangan erp, minta fitur baru aplikasi, request modifikasi sistem, tambah modul aplikasi, pengadaan lisensi aspen
+PANDUAN TIKET: Untuk menghubungi tim IT, silakan klik link di bawah ini dan ikuti alur yang tersedia.
+Link: https://myssc.pertamina.com/dwp/app/#/itemprofile/309
+---
+
+---
+NAMA FORM: Printer ERP
+TRIGGER KEYWORD: printer, sap, erp, minta printer erp baru, pengadaan printer sap, order printer erp, tambah printer erp, request instalasi printer sap, ajukan printer erp baru
+PANDUAN TIKET: Untuk menghubungi tim IT, silakan klik link di bawah ini dan ikuti alur yang tersedia.
+Link: https://myssc.pertamina.com/dwp/app/#/itemprofile/217
+---
+
+---
+NAMA FORM: Radio Handy Talky
+TRIGGER KEYWORD: radio, marine, fix, base, rts, subscriber, trunking, 2 way, plan, station, battery, baterai, charger, pengadaan radio ht, order handy talky baru, minta radio marine, request radio rts, tambah perangkat trunking, ajukan charger baterai radio
+PANDUAN TIKET: Untuk menghubungi tim IT, silakan klik link di bawah ini dan ikuti alur yang tersedia.
+Link: https://myssc.pertamina.com/dwp/app/#/itemprofile/227
+---
+
+---
+NAMA FORM: SIM Card Corporate
+TRIGGER KEYWORD: sim, card, corporate, kartu, handphone, pulsa, migrasi, ganti, order sim card corporate, minta kartu sim baru, pengadaan sim card, request ganti sim card, ajukan migrasi nomor, tambah sim card corporate
+PANDUAN TIKET: Untuk menghubungi tim IT, silakan klik link di bawah ini dan ikuti alur yang tersedia.
+Link: https://myssc.pertamina.com/dwp/app/#/itemprofile/214
+---
+
+---
+NAMA FORM: SIM Card Support
+TRIGGER KEYWORD: sim, card, corporate, kartu, handphone, pulsa, roaming, paket, fisik, tagihan, internasional, mikro, nano, minta paket roaming internasional, order sim card fisik, request sim nano mikro, ajukan paket data, tambah kuota pulsa sim card, minta sim card support
+PANDUAN TIKET: Untuk menghubungi tim IT, silakan klik link di bawah ini dan ikuti alur yang tersedia.
+Link: https://myssc.pertamina.com/dwp/app/#/itemprofile/214
+---
+
+---
+NAMA FORM: Software
+TRIGGER KEYWORD: aplikasi, 7zip, abby finereader, acrobat, adobe, autocad, corel draw, ms office, ms project, ms visio, skype for business, teamviewer, snagit, sap crystal reports, order software baru, pengadaan lisensi aplikasi, request instalasi software, minta lisensi adobe, ajukan software autocad, tambah lisensi ms office, order software resmi
+PANDUAN TIKET: Untuk menghubungi tim IT, silakan klik link di bawah ini dan ikuti alur yang tersedia.
+Link: https://myssc.pertamina.com/dwp/app/#/itemprofile/312
+---
+
+---
+NAMA FORM: Telephone
+TRIGGER KEYWORD: telephone, telepon, extension, extention, ekstensi, pasang telepon baru, order ekstensi telepon, pengadaan pesawat telepon, minta tambah extension, request nomor telepon baru, ajukan instalasi telepon
+PANDUAN TIKET: Untuk menghubungi tim IT, silakan klik link di bawah ini dan ikuti alur yang tersedia.
+Link: https://myssc.pertamina.com/dwp/app/#/itemprofile/213
+---
+
+---
+NAMA FORM: User ID ERP & Non ERP
+TRIGGER KEYWORD: user id, erp, user, id, non erp, akses, otorisasi, autorisasi, pengalihan, perpanjangan, akun, email, aplikasi, sap, minta user id erp baru, order akun sap, request otorisasi erp, ajukan perpanjangan user id, tambah akses non erp, pengadaan akun aplikasi baru
+PANDUAN TIKET: Untuk menghubungi tim IT, silakan klik link di bawah ini dan ikuti alur yang tersedia.
+Link: https://myssc.pertamina.com/dwp/app/#/itemprofile/271
+---
+
+---
+NAMA FORM: Video Conference atau Audio Conference
+TRIGGER KEYWORD: video, conference, audio, townhall, meeting, order video conference, minta setup audio conference, request townhall meeting, pengadaan fasilitas video call, ajukan ruang konferensi, tambah lisensi video conference
+PANDUAN TIKET: Untuk menghubungi tim IT, silakan klik link di bawah ini dan ikuti alur yang tersedia.
+Link: https://myssc.pertamina.com/dwp/app/#/itemprofile/225
+---
+
+---
+NAMA FORM: Wifi Access
+TRIGGER KEYWORD: wifi, guest, temporer, tamu, jaringan, minta akses wifi tamu, request wifi temporer, order wifi guest, ajukan koneksi wifi sementara, pengadaan akses wifi baru, tambah jaringan wifi
+PANDUAN TIKET: Untuk menghubungi tim IT, silakan klik link di bawah ini dan ikuti alur yang tersedia.
+Link: https://myssc.pertamina.com/dwp/app/#/itemprofile/225
+---
+
+---
+NAMA FORM: Customer Service
+TRIGGER KEYWORD: setup, asistensi, onsite, on-site, bantuan, service, minta asistensi onsite, request bantuan langsung, order kunjungan teknisi, ajukan on-site service, pengadaan layanan setup
+PANDUAN TIKET: Untuk menghubungi tim IT, silakan klik link di bawah ini dan ikuti alur yang tersedia.
+Link: N/A
+---
+
+---
+NAMA FORM: Database Storage
+TRIGGER KEYWORD: database, storage, pengadaan storage baru, order database server, minta tambah kapasitas storage, request penyimpanan data, ajukan database baru, tambah storage server
+PANDUAN TIKET: Untuk menghubungi tim IT, silakan klik link di bawah ini dan ikuti alur yang tersedia.
+Link: N/A
+---
+
+---
+NAMA FORM: Developer Key
+TRIGGER KEYWORD: developer, SAP, minta developer key sap, request kunci developer, order akses developer sap, ajukan developer key baru, pengadaan akses pengembang sap
+PANDUAN TIKET: Untuk menghubungi tim IT, silakan klik link di bawah ini dan ikuti alur yang tersedia.
+Link: N/A
+---
+
+---
+NAMA FORM: ERP Front Page & LSMW Access
+TRIGGER KEYWORD: sap, lsmw, minta akses lsmw, request erp front page, order hak akses lsmw sap, ajukan akses erp baru, pengadaan akses lsmw
+PANDUAN TIKET: Untuk menghubungi tim IT, silakan klik link di bawah ini dan ikuti alur yang tersedia.
+Link: N/A
+---
+
+---
+NAMA FORM: Exit Clearance Details
+TRIGGER KEYWORD: exit, pensiun, resign, fasilitas, sarana ti, minta clearance it pensiun, order pengembalian fasilitas it, request exit clearance, ajukan proses resign it, pengembalian laptop resign
+PANDUAN TIKET: Untuk menghubungi tim IT, silakan klik link di bawah ini dan ikuti alur yang tersedia.
+Link: N/A
+---
+
+---
+NAMA FORM: Fasilitas Data Center
+TRIGGER KEYWORD: fasilitas, data center, rak, ups, pengadaan rak server, order ups data center, minta fasilitas data center baru, request penambahan rak, ajukan perangkat data center
+PANDUAN TIKET: Untuk menghubungi tim IT, silakan klik link di bawah ini dan ikuti alur yang tersedia.
+Link: N/A
+---
+
+---
+NAMA FORM: Geomatika
+TRIGGER KEYWORD: geomatika, geodesi, data geologi, GGRP, request data geomatika, order layanan geodesi, minta data geologi, ajukan akses GGRP, pengadaan data geospasial
+PANDUAN TIKET: Untuk menghubungi tim IT, silakan klik link di bawah ini dan ikuti alur yang tersedia.
+Link: N/A
+---
+
+---
+NAMA FORM: Hak Akses Admin - VRA
+TRIGGER KEYWORD: akses, admin, administrator, VRA, minta hak akses admin, request akun administrator, order akses admin VRA, ajukan otorisasi administrator, tambah hak admin
+PANDUAN TIKET: Untuk menghubungi tim IT, silakan klik link di bawah ini dan ikuti alur yang tersedia.
+Link: N/A
+---
+
+---
+NAMA FORM: IT Helpdesk Query
+TRIGGER KEYWORD: faq, help, bantuan, guide, panduan, minta panduan it, request informasi it, order konsultasi helpdesk, ajukan pertanyaan it, cari panduan penggunaan
+PANDUAN TIKET: Untuk menghubungi tim IT, silakan klik link di bawah ini dan ikuti alur yang tersedia.
+Link: N/A
+---
+
+---
+NAMA FORM: Modifikasi Akses Port
+TRIGGER KEYWORD: firewall, port, open, security, minta buka port firewall, request modifikasi port, order akses port baru, ajukan perubahan firewall, tambah rule firewall
+PANDUAN TIKET: Untuk menghubungi tim IT, silakan klik link di bawah ini dan ikuti alur yang tersedia.
+Link: N/A
+---
+
+---
+NAMA FORM: Object Key Access
+TRIGGER KEYWORD: object, key, access, sap, minta object key sap, request akses object key, order hak akses object sap, ajukan object key baru, pengadaan akses object sap
+PANDUAN TIKET: Untuk menghubungi tim IT, silakan klik link di bawah ini dan ikuti alur yang tersedia.
+Link: N/A
+---
+
+---
+NAMA FORM: Package Service New RIG
+TRIGGER KEYWORD: RIG, pengeboran, package, windows, akun, email, explosion, mobile, VSAT, HT, RTS, printer, scanner, desktop, pc, laptop, notebook, proyektor, PABX, telepon, VHF, pengadaan paket rig baru, order fasilitas pengeboran, minta package service rig, request perangkat rig lengkap, ajukan setup rig baru
+PANDUAN TIKET: Untuk menghubungi tim IT, silakan klik link di bawah ini dan ikuti alur yang tersedia.
+Link: N/A
+---
+
+---
+NAMA FORM: SAP Locking Process
+TRIGGER KEYWORD: sap, locking, minta locking process sap, request sap lock, order proses penguncian sap, ajukan locking sap, penguncian transaksi sap
+PANDUAN TIKET: Untuk menghubungi tim IT, silakan klik link di bawah ini dan ikuti alur yang tersedia.
+Link: N/A
+---
+
+---
+NAMA FORM: SAP Runtime Dialogue Extension
+TRIGGER KEYWORD: runtime, sap, minta perpanjangan runtime sap, request sap runtime extension, order dialog extension sap, ajukan sap runtime, tambah waktu runtime sap
+PANDUAN TIKET: Untuk menghubungi tim IT, silakan klik link di bawah ini dan ikuti alur yang tersedia.
+Link: N/A
+---
+
+---
+NAMA FORM: SAPBATCH Locking Process
+TRIGGER KEYWORD: sap, batch, locking, job, minta sap batch lock, request locking job sap, order proses batch sap, ajukan penguncian sapbatch, locking sap batch job
+PANDUAN TIKET: Untuk menghubungi tim IT, silakan klik link di bawah ini dan ikuti alur yang tersedia.
+Link: N/A
+---
+
+---
+NAMA FORM: Server atau Virtual Desktop
+TRIGGER KEYWORD: server, virtual desktop, pengadaan server baru, order virtual desktop, minta provisioning server, request virtual machine baru, ajukan server baru, tambah kapasitas server
+PANDUAN TIKET: Untuk menghubungi tim IT, silakan klik link di bawah ini dan ikuti alur yang tersedia.
+Link: N/A
+---
+
+---
+NAMA FORM: Souvenir
+TRIGGER KEYWORD: souvenir, minta souvenir it, order souvenir, request barang souvenir, pengadaan souvenir
+PANDUAN TIKET: Untuk menghubungi tim IT, silakan klik link di bawah ini dan ikuti alur yang tersedia.
+Link: N/A
+---
+
+---
+NAMA FORM: Upgrade Quota Online Mailbox dan/atau Online Archive
+TRIGGER KEYWORD: upgrade, quota, kuota, mailbox, email, e-mail, archive, minta upgrade kuota email, request tambah kapasitas mailbox, order upgrade archive, ajukan penambahan kuota mailbox, tambah storage email
+PANDUAN TIKET: Untuk menghubungi tim IT, silakan klik link di bawah ini dan ikuti alur yang tersedia.
+Link: N/A
+---

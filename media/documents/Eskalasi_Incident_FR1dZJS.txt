@@ -1,0 +1,6 @@
+---
+NAMA FORM: Incident
+TRIGGER KEYWORD: error, rusak, tidak bisa, mati, gagal, lambat, putus, bermasalah, ngehang, nyangkut, bluescreen, layar hitam, down, gangguan, crash, tidak berfungsi, tidak bisa login, aplikasi error, sap error, jaringan putus, laptop mati, printer rusak, internet down, wifi putus, email tidak bisa dibuka, sistem gagal, aplikasi hang, server down, tidak bisa akses, koneksi terputus, layar biru, komputer ngehang, bi error, pi error, prisma error, absensi error, fingerprint tidak bisa, erp tidak bisa diakses, sap tidak bisa login, aspen error, lims error, komet error, ess tidak bisa, i-serv error, jaringan bermasalah, handphone mati, tablet rusak, radio tidak berfungsi, printer gagal cetak, scanner tidak terdeteksi, projector mati, display rusak, telepon mati, ekstensi tidak bisa dihubungi, vpn putus, sharepoint error, email gagal kirim, one drive bermasalah
+PANDUAN TIKET: Untuk menghubungi tim IT, silakan klik link di bawah ini dan ikuti alur yang tersedia.
+Link: https://myssc.pertamina.com/dwp/app/#/itemprofile/313
+---

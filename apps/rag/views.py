@@ -12,6 +12,7 @@ from django.contrib import messages as django_messages
 import json
 import time
 import logging
+import os
 import ollama
 
 from .models import Document, DocumentChunk  # apps.rag.models — hanya model RAG
@@ -216,7 +217,7 @@ Pilih kategori yang paling cocok.
 Jawab HANYA satu kata kategori.
 """
     response = ollama.chat(
-        model="llama3:8b",
+        model=os.getenv("LLM_MODEL", "qwen2.5:7b"),
         messages=[
             {"role": "system", "content": "Anda adalah classifier masalah IT."},
             {"role": "user", "content": prompt}
@@ -266,7 +267,7 @@ def stream_chat(request):
     def generate():
         try:
             stream = ollama.chat(
-                model="llama3:8b",
+                model=os.getenv("LLM_MODEL", "qwen2.5:7b"),
                 messages=[
                     {"role": "user", "content": query}
                 ],

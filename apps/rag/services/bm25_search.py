@@ -26,6 +26,59 @@ import re
 logger = logging.getLogger(__name__)
 
 
+# ============================================================
+# LANGUAGE-MISMATCH PENALTY (Fix for Bug 2)
+# ============================================================
+# Problem: Indonesian query "kartu akses" semantically matches
+# English chunk "Object Key Access" because the BM25 tokenizer
+# treats "akses" and "access" as near-identical tokens after
+# lowercasing. The embedding model also overlaps them heavily.
+#
+# Solution: detect the dominant language of both the query and
+# the candidate chunk, then apply a score penalty when they
+# mismatch. This is a cheap heuristic (no external library)
+# that works by counting common Indonesian function words.
+#
+# Trade-off: purely heuristic; bilingual chunks score neutrally.
+# ============================================================
+
+# A small set of high-frequency Indonesian words that almost
+# never appear in English text — used as a language signal.
+_ID_STOPWORDS_SIGNAL = frozenset([
+    'yang', 'dan', 'atau', 'untuk', 'dengan', 'dalam', 'pada',
+    'dari', 'tidak', 'adalah', 'ke', 'di', 'ini', 'itu',
+    'jika', 'karena', 'saya', 'anda', 'kami', 'kita',
+    'mau', 'bisa', 'akan', 'sudah', 'belum', 'masih',
+    'pengajuan', 'pengadaan', 'permintaan', 'akses', 'kartu',
+    'baru', 'tolong', 'butuh', 'perlu', 'ingin',
+])
+
+# Minimum fraction of tokens that must be Indonesian signal words
+# for a text to be classified as "predominantly Indonesian".
+_ID_LANG_THRESHOLD = 0.12  # >=12% signal words → Indonesian
+
+
+def _detect_lang_id(text: str) -> bool:
+    """
+    Return True if ``text`` is likely Indonesian.
+
+    Uses presence-ratio of Indonesian signal words as a fast
+    proxy for language detection (no external library needed).
+    """
+    tokens = re.findall(r'[a-z]+', text.lower())
+    if not tokens:
+        return False
+    id_count = sum(1 for t in tokens if t in _ID_STOPWORDS_SIGNAL)
+    return (id_count / len(tokens)) >= _ID_LANG_THRESHOLD
+
+
+# Penalty multiplier applied when query and chunk languages differ.
+# 0.65 cuts a 0.72 cross-encoder score down to ~0.47,
+# placing it below a true match at 0.55+.
+_LANG_MISMATCH_PENALTY = 0.65
+
+
+
 class BM25Search:
     """
     BM25 search engine untuk chunks.
@@ -205,6 +258,38 @@ def hybrid_search(
         logger.debug("hybrid_search_no_relevant_results", extra={"max_score": max(combined_scores.values()) if combined_scores else 0})
         return []
     
+    # ── Language-mismatch penalty ──────────────────────────────────────────────
+    # Build a lookup from doc_id → chunk content for the penalty check.
+    # Combine both result lists; semantic_results takes precedence.
+    all_docs: Dict = {r.get("id") or r.get("document_chunk_id"): r
+                      for r in bm25_results + semantic_results}  # semantic overwrites
+
+    query_is_id = _detect_lang_id(query)
+
+    penalised: Dict[int, float] = {}
+    for doc_id, score in combined_scores.items():
+        chunk_text = (all_docs.get(doc_id) or {}).get("content", "")
+        chunk_is_id = _detect_lang_id(chunk_text)
+        if query_is_id != chunk_is_id:
+            # Language mismatch: scale score down
+            penalised[doc_id] = score * _LANG_MISMATCH_PENALTY
+            logger.debug(
+                "hybrid_lang_mismatch_penalty",
+                extra={
+                    "doc_id": doc_id,
+                    "query_lang": "id" if query_is_id else "en",
+                    "chunk_lang": "id" if chunk_is_id else "en",
+                    "original_score": round(score, 4),
+                    "penalised_score": round(score * _LANG_MISMATCH_PENALTY, 4),
+                    "snippet": chunk_text[:60],
+                }
+            )
+        else:
+            penalised[doc_id] = score
+
+    combined_scores = penalised
+    # ──────────────────────────────────────────────────────────────────────────
+
     # Top-k hasil
     ranked = sorted(
         combined_scores.items(),
@@ -214,8 +299,6 @@ def hybrid_search(
     
     # Build final results (preserving original data)
     final_results = []
-    all_docs = {r.get("id") or r.get("document_chunk_id"): r 
-                for r in semantic_results + bm25_results}
     
     for doc_id, score in ranked:
         if doc_id in all_docs:

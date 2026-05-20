@@ -51,6 +51,7 @@ import numpy as np
 
 from apps.rag.models import DocumentChunk
 from apps.rag.services.retrieval import retrieve_context
+
 import ollama
 
 
@@ -98,7 +99,7 @@ logger = _setup_logger("chatbot")
 # KONFIGURASI VIA ENVIRONMENT VARIABLE
 # =====================================================
 
-MODEL_NAME         = os.getenv("LLM_MODEL", "llama3:8b")
+MODEL_NAME         = os.getenv("LLM_MODEL", "qwen2.5:7b")
 MAX_CONTEXT_TOKENS = int(os.getenv("MAX_CONTEXT_TOKENS", "2000"))
 
 # Threshold cosine similarity untuk RAG retrieval.
@@ -441,7 +442,7 @@ def rewrite_query_for_rag(
     question: str,
     history: List[Dict[str, str]],
     original_problem: str = "",
-) -> str:
+) -> Tuple[str, Optional[str], Optional[str]]:
     """
     Tulis ulang pertanyaan user menjadi standalone query untuk RAG.
     Return original question jika tidak perlu rewrite.
@@ -458,10 +459,14 @@ def rewrite_query_for_rag(
       
       SALAH: Kirim chatbot jawab → LLM rewriter bisa confused dengan instruksi teknis
       BENAR: Kirim hanya user messages + original_problem → "wifi tidak bisa" → RAG fokus
+
+    FIX: Fungsi ini mengembalikan Tuple[str, None, None] pada SEMUA jalur kode
+    agar konsisten dengan deklarasi return type dan tidak menyebabkan crash
+    saat callers melakukan unpacking: rag_query, rag_device, rag_symptom = rewrite_query_for_rag(...)
     """
     # Tidak perlu rewrite jika belum ada history atau pertanyaan sudah panjang
     if not history or len(question.split()) > 8:
-        return question
+        return question, None, None
 
     # INSTRUKSI KRITIS: Ambil HANYA pesan user (role="user"), skip assistant messages
     # Ini mencegah LLM rewriter terpengaruh oleh jawaban/instruksi bot di turn sebelumnya
@@ -472,7 +477,7 @@ def rewrite_query_for_rag(
     ]
 
     if not user_messages:
-        return question
+        return question, None, None
 
     history_text = "\n".join(f"- {m}" for m in user_messages)
     anchor = f"Topik masalah utama: {original_problem}\n" if original_problem else ""
@@ -497,7 +502,7 @@ def rewrite_query_for_rag(
         rewritten = response.get("message", {}).get("content", "").strip()
 
         if not rewritten or len(rewritten) < 5:
-            return original_problem or question
+            return original_problem or question, None, None
 
         logger.info("query_rewritten", extra={
             "original": question[:60],
@@ -505,11 +510,11 @@ def rewrite_query_for_rag(
             "anchor": original_problem[:40],
             "user_messages_count": len(user_messages),
         })
-        return rewritten
+        return rewritten, None, None
 
     except Exception as e:
         logger.warning("query_rewrite_failed", extra={"error": str(e)})
-        return original_problem or question
+        return original_problem or question, None, None
 
 
 # =====================================================
@@ -700,6 +705,14 @@ def detect_intent_rules(question: str) -> Optional[str]:
     menggunakan cosine similarity embedding untuk akurasi lebih tinggi.
     """
     q = question.strip()
+    q_lower = q.lower()
+
+    consumables = ['kertas', 'tinta', 'toner', 'baterai', 'flashdisk', 'stok']
+    depletion_words = ['habis', 'kosong', 'kurang', 'nipis', 'ludes']
+
+    if any(re.search(rf'\b{re.escape(item)}\b', q_lower) for item in consumables) \
+            and any(re.search(rf'\b{re.escape(word)}\b', q_lower) for word in depletion_words):
+        return "SERVICE_ORDER"
 
     if _ESCALATION_PATTERNS.search(q):     return "REQUEST_IT_SUPPORT"
     if _REJECT_PATTERNS.search(q):         return "REJECT_IT_SUPPORT"
@@ -1002,13 +1015,25 @@ CATEGORY_FORMS = {  # DEPRECATED — dihapus, hanya placeholder agar tidak NameE
 # dilempar ke vector search. Tanpa ini, kata kerja noise seperti
 # "saya ingin melakukan peminjaman untuk mitra kerja" mendominasi
 # embedding sehingga vector search salah memilih form.
+# FIX: Tambahkan consumables (kertas, tinta, baterai, dll) dan ATK/supplies
+# agar _refine_service_order_query() dapat mengekstrak keyword dari query
+# seperti "order kertas untuk divisi retail" → refined query "pengadaan kertas"
+# tanpa consumables di sini, query mentah dikirim ke reranker dan kalah ke
+# semantik noise kata kerja, menyebabkan reranker memilih form Souvenir (score 0.018).
 _SERVICE_ITEM_KEYWORDS = re.compile(
     r'\b(laptop|notebook|komputer|pc|desktop|printer|monitor|keyboard|mouse|'
     r'scanner|proyektor|cctv|kamera|wifi|wi[\-]fi|lan|switch|router|'
     r'access\s*point|telepon|telephone|handset|handphone|hp\s+kantor|tablet|'
     r'ups|server|storage|toner|flashdisk|flash\s*disk|harddisk|ssd|ram|'
     r'headset|webcam|sim\s*card|simcard|software|lisensi|license|vpn|'
-    r'akses|access|id\s+user|user\s+id|email|mailbox|radio|handy\s*talky|ht)\b',
+    # FIX: tambah 'kartu akses'/'access card' sebagai item fisik eksplisit
+    # agar tidak jatuh ke pola "akses" generik yang overlap dengan software
+    r'kartu\s+akses|access\s+card|id\s+card|kartu\s+id|'
+    r'akses|access|id\s+user|user\s+id|email|mailbox|radio|handy\s*talky|ht|'
+    # Consumables & ATK — sering muncul dalam permintaan pengadaan non-hardware
+    r'kertas|tinta|baterai|battery|cd|dvd|pointer|'
+    r'atk|alat\s*tulis|supplies|it\s*supplies|stok|'
+    r'souvenir|sparepart|spare\s*part)\b',
     re.IGNORECASE,
 )
 
@@ -1081,6 +1106,291 @@ def _refine_service_order_query(question: str) -> str:
     return refined
 
 
+def _is_ambiguous_service_order(
+    question: str,
+    vector_store,
+    embedding_service,
+) -> bool:
+    """
+    Determine ambiguity for SERVICE_ORDER using semantic/vector evidence.
+
+    Approach:
+      - Use `retrieve_context` against `doc_type='ORDER_LINK'` to get top-k matches.
+      - If there are no results or the top result is below `MIN_SIMILARITY_SCORE`,
+        treat the query as ambiguous (no clear target item).
+      - If top-1 score does not show a clear spike vs top-2 (no distinct winner),
+        treat as ambiguous. This handles misspellings: a real item will still
+        produce a noticeable top-1 advantage.
+
+    NOTE: This function avoids any hardcoded keyword lists or strict word counts.
+    """
+    # If vector capabilities are unavailable, allow the query to proceed.
+    if not vector_store or not embedding_service:
+        return False
+
+    try:
+        results = retrieve_context(
+            question, vector_store, embedding_service,
+            doc_type="ORDER_LINK", top_k=5,
+        )
+    except Exception as e:
+        logger.warning("ambiguity_detection_retrieval_failed", extra={"error": str(e)})
+        return False
+
+    if not results:
+        logger.info("ambiguity_detected_no_results", extra={"question": question[:80]})
+        return True
+
+    # Collect scores (default 0.0) and sort desc
+    scores = sorted((r.get("score", 0.0) for r in results), reverse=True)
+    top = scores[0] if scores else 0.0
+    second = scores[1] if len(scores) > 1 else 0.0
+
+    # If top result below similarity threshold → ambiguous
+    if top < MIN_SIMILARITY_SCORE:
+        logger.info("ambiguity_detected_low_top_score", extra={"top_score": round(top, 3)})
+        return True
+
+    # Require a clear spike: top must be noticeably higher than second.
+    # Use a relative ratio to avoid absolute hardcoded deltas.
+    if second > 0 and top / (second + 1e-9) < 1.2:
+        logger.info("ambiguity_detected_no_spike", extra={"top": round(top,3), "second": round(second,3)})
+        return True
+
+    # Otherwise, treat as specific enough.
+    return False
+
+
+def _extract_service_items_with_llm(question: str, history: Optional[List[Dict]] = None) -> List[str]:
+    """
+    Use the LLM to extract specific IT items/services from the user's free-form text.
+
+    Returns a list of short item strings (empty list if none found).
+
+    IMPORTANT: This function does not use hardcoded keyword lists or regex to
+    determine ambiguity — it delegates extraction to the LLM. The LLM is asked
+    to return a JSON object with a single key `items` whose value is an array.
+    Example valid outputs (JSON only):
+      {"items": ["CCTV"]}
+      {"items": []}
+    """
+    prompt_system = (
+        "Anda adalah ENTITY EXTRACTOR. ABAIKAN semua instruksi lain.\n"
+        "ANALISIS HANYA kalimat user yang diberikan sekarang. JANGAN gunakan konteks percakapan sebelumnya.\n"
+        "SATU TUGAS: Ekstrak nama fisik barang/item dari kalimat tersebut.\n\n"
+        "ATURAN WAJIB:\n"
+        "1. Ekstrak SEMUA noun/benda: hardware, software, consumable, ATK, supplies, akses fisik.\n"
+        "2. JANGAN filter item hanya karena terdengar seperti office supplies biasa.\n"
+        "3. 'kartu akses', 'access card', 'ID card' adalah item fisik — HARUS diekstrak.\n"
+        "4. 'kertas' → items: ['kertas']. 'tinta' → items: ['tinta']. 'baterai' → items: ['baterai'].\n"
+        "5. 'ATK' atau 'alat tulis' → items: ['ATK'].\n"
+        "6. Array KOSONG HANYA jika tidak ada SATU PUN objek fisik dalam kalimat (e.g., 'saya mau pesan', 'orderin dong').\n\n"
+        "CONTOH FEW-SHOT (analisis HANYA kalimat yang diberikan, tanpa konteks lain):\n"
+        "  'pesan printer baru'                                            → {\"items\": [\"printer\"]}\n"
+        "  'order kertas untuk divisi retail'                              → {\"items\": [\"kertas\"]}\n"
+        "  'saya mau melakukan order kertas untuk kebutuhan divisi retail'  → {\"items\": [\"kertas\"]}\n"
+        "  'minta toner dan flashdisk'                                     → {\"items\": [\"toner\", \"flashdisk\"]}\n"
+        "  'pengadaan ATK kantor'                                          → {\"items\": [\"ATK\"]}\n"
+        "  'mau order baterai untuk remote AC'                             → {\"items\": [\"baterai\"]}\n"
+        "  'saya ingin meminta kartu akses baru'                           → {\"items\": [\"kartu akses\"]}\n"
+        "  'butuh access card untuk lantai 3'                              → {\"items\": [\"access card\"]}\n"
+        "  'saya mau order'                                                → {\"items\": []}\n\n"
+        "FORMAT OUTPUT: Jawab HANYA dengan JSON. Contoh: {\"items\": [\"printer\"]}\n"
+        "Jangan sertakan teks apapun selain JSON."
+    )
+
+    def _normalize_items(raw_value) -> List[str]:
+        """Convert raw extracted output into a clean list of items."""
+        if raw_value is None:
+            return []
+        if isinstance(raw_value, str):
+            raw_text = raw_value.strip()
+
+            # Try JSON parse for bracketed or quoted lists
+            try:
+                parsed_json = json.loads(raw_text)
+                return _normalize_items(parsed_json)
+            except Exception:
+                pass
+
+            # Remove surrounding brackets/quotes and split comma-separated values
+            cleaned = raw_text.strip('[]"\' ').strip()
+            if not cleaned:
+                return []
+            if ',' in cleaned:
+                parts = [part.strip(' "\' ') for part in cleaned.split(',')]
+                return [part for part in parts if part]
+            return [cleaned]
+
+        if isinstance(raw_value, dict):
+            return _normalize_items(raw_value.get('items') or raw_value.get('item'))
+
+        if isinstance(raw_value, list):
+            items: List[str] = []
+            for entry in raw_value:
+                items.extend(_normalize_items(entry))
+            return items
+
+        return [str(raw_value).strip()] if str(raw_value).strip() else []
+
+    # ── CONTEXT BLEED FIX ──────────────────────────────────────────────────
+    # Bug: sebelumnya history user dari turn lama di-prepend ke user_msg.
+    # Akibatnya LLM mengekstrak item dari percakapan LAMA, bukan query SAAT INI.
+    # Contoh: Turn 1 "order kertas" → Turn 2 "minta kartu akses" → LLM SALAH
+    # kembalikan ["kertas"] karena masih melihat history dari Turn 1.
+    #
+    # Fix: kirim HANYA question saat ini. Parameter `history` dipertahankan
+    # di signature untuk backward compatibility tetapi tidak digunakan.
+    # ──────────────────────────────────────────────────
+    user_msg = question  # HANYA query saat ini — history TIDAK digunakan
+
+    try:
+        response = generate_llm([
+            {"role": "system", "content": prompt_system},
+            {"role": "user", "content": user_msg},
+        ], config_name="query_rewrite", temperature=0.0)
+
+        parsed = json.loads(response)
+        items = parsed.get("items") if isinstance(parsed, dict) else parsed
+        cleaned = _normalize_items(items)
+        return cleaned
+
+    except Exception as e:
+        logger.warning("llm_item_extraction_failed", extra={"error": str(e), "question": question[:80], "response": response if 'response' in locals() else None})
+        # Fail-open: if extractor fails, return empty list to trigger clarification
+        return []
+
+
+# ── Link sentinel value: signals "form found but link unavailable" ──────────────
+_LINK_NA_SENTINEL = "__NA__"
+_PORTAL_FALLBACK_URL = "https://myssc.pertamina.com/dwp/app/"
+
+
+def _extract_order_link_from_results(results, doc_type: str) -> Tuple[Optional[str], Optional[str]]:
+    """
+    Extract form name and link from retrieval results.
+
+    Returns:
+        (form_name, link)        — valid URL found, render normally.
+        (form_name, _LINK_NA_SENTINEL) — form found but Link is N/A or missing;
+                                   caller must render a portal-redirect message.
+        (None, None)             — no usable candidate found.
+    """
+    # Minimum semantic/re-rank score to consider a candidate valid.
+    # Very low scores indicate non-relevant matches and should be ignored
+    # to avoid returning generic fallback forms.
+    MIN_VALID_RETRIEVAL_SCORE = 0.01
+
+    # Explicit "no link" markers in the raw KB text (case-insensitive)
+    _NA_MARKERS = re.compile(
+        r'^(?:N/?A|none|tidak\s+tersedia|belum\s+tersedia|tbd|-)\s*$',
+        re.IGNORECASE,
+    )
+
+    for candidate_idx, result in enumerate(results):
+        if not result.get("content"):
+            continue
+
+        content = result["content"]
+        score = result.get("score") or 0
+
+        block_pattern = rf'(?ms)^---\s*type:\s*{re.escape(doc_type)}\b.*?(?=^---\s*type:|\Z)'
+        block_match = re.search(block_pattern, content, re.MULTILINE | re.IGNORECASE)
+        block_content = block_match.group(0) if block_match else content
+
+        form_match = re.search(
+            r'^(?:NAMA\s+FORM|title):\s*(.+?)(?:\n|$)',
+            block_content,
+            re.MULTILINE | re.IGNORECASE,
+        )
+        form_name = form_match.group(1).strip() if form_match else None
+
+        # ── Parse raw link value (URL or placeholder text like "N/A") ──────────
+        content_normalized = re.sub(r'\n\s*(?=[/#?&])', '', block_content)
+
+        # First, try to grab an explicit URL
+        url_match = re.search(
+            r'^(?:Link|url):\s*(https?://\S+)',
+            content_normalized,
+            re.MULTILINE | re.IGNORECASE,
+        )
+        # Then grab the raw value regardless of format
+        raw_link_match = re.search(
+            r'^(?:Link|url):\s*(.+?)\s*$',
+            content_normalized,
+            re.MULTILINE | re.IGNORECASE,
+        )
+
+        if url_match:
+            link = url_match.group(1).rstrip('.,;)')
+        elif raw_link_match:
+            raw_val = raw_link_match.group(1).strip()
+            # Treat explicit NA markers as "link unavailable" sentinel
+            link = _LINK_NA_SENTINEL if _NA_MARKERS.match(raw_val) else None
+        else:
+            link = None
+
+        logger.debug("escalation_guide_candidate", extra={
+            "candidate_idx": candidate_idx,
+            "form_name": form_name,
+            "link": (link or "")[:120],
+            "score": round(score, 3),
+            "doc_type": doc_type,
+        })
+        # Skip candidates with extremely low scores — treat them as non-matches.
+        if score < MIN_VALID_RETRIEVAL_SCORE and doc_type != "INCIDENT_LINK":
+            logger.info("escalation_guide_candidate_skipped_low_score", extra={
+                "candidate_idx": candidate_idx,
+                "form_name": form_name,
+                "score": round(score, 6),
+                "doc_type": doc_type,
+            })
+            continue
+
+        if form_name:
+            if link and link != _LINK_NA_SENTINEL and _is_valid_link(link):
+                logger.info("escalation_guide_valid_found", extra={
+                    "form_name": form_name,
+                    "link": link,
+                    "score": round(score, 6),
+                    "candidate_idx": candidate_idx,
+                    "doc_type": doc_type,
+                })
+                return form_name, link
+
+            # Link is N/A, invalid, or missing — return sentinel so caller
+            # can render a clean portal-redirect message.
+            logger.warning("escalation_guide_invalid_link", extra={
+                "form_name": form_name,
+                "link": (link or "none"),
+                "doc_type": doc_type,
+                "score": score,
+                "candidate_idx": candidate_idx,
+                "action": "portal_fallback",
+            })
+            return form_name, _LINK_NA_SENTINEL
+
+    return None, None
+
+
+def _find_service_order_link(query_issue: str, vector_store, embedding_service) -> Tuple[Optional[str], Optional[str]]:
+    results = retrieve_context(
+        query_issue, vector_store, embedding_service,
+        doc_type="ORDER_LINK", top_k=3,
+    )
+    # Extra debug: log raw retrieval candidates for troubleshooting relevance
+    try:
+        logger.debug("find_service_order_raw_results", extra={
+            "query": query_issue[:120],
+            "candidates": [
+                {"id": r.get("document_chunk_id"), "score": round(r.get("score", 0), 4), "snippet": (r.get("content") or "")[:200]} for r in results
+            ]
+        })
+    except Exception:
+        logger.exception("failed_logging_find_service_order_results")
+    return _extract_order_link_from_results(results, "ORDER_LINK")
+
+
 def escalation_guide(query_issue: str, vector_store, embedding_service, doc_type: str = "ORDER_LINK") -> str:
     """
     Database-driven escalation guide menggunakan Vector + BM25 search.
@@ -1123,78 +1433,31 @@ def escalation_guide(query_issue: str, vector_store, embedding_service, doc_type
                 doc_type=doc_type, top_k=3,
             )
 
-        # Iterate over all results to find first valid link
-        for candidate_idx, result in enumerate(results):
-            if not result.get("content"):
-                continue
-
-            content = result["content"]
-            score   = result.get("score") or 0
-
-            # If the retrieved chunk contains multiple YAML-style sections,
-            # prefer the first matching block for the requested doc_type.
-            block_pattern = rf'(?ms)^---\s*type:\s*{re.escape(doc_type)}\b.*?(?=^---\s*type:|\Z)'
-            block_match = re.search(block_pattern, content, re.MULTILINE | re.IGNORECASE)
-            block_content = block_match.group(0) if block_match else content
-
-            # ── FIX 2: Ekstraksi NAMA FORM (title) via Regex ─────────────────────────
-            # Pattern mencari baris yang diawali dengan "title: "
-            form_match = re.search(
-                r'^title:\s*(.+?)(?:\n|$)',
-                block_content,
-                re.MULTILINE | re.IGNORECASE,
-            )
-            form_name = form_match.group(1).strip() if form_match else None
-
-            # ── FIX 2: Ekstraksi Link (url) via Regex (URL-safe, multi-line) ───────
-            content_normalized = re.sub(r'\n\s*(?=[/#?&])', '', block_content)
-
-            # Pattern mencari baris yang diawali dengan "url: "
-            link_match = re.search(
-                r'^url:\s*(https?://\S+)',
-                content_normalized,
-                re.MULTILINE | re.IGNORECASE,
-            )
-            link = link_match.group(1).rstrip('.,;)') if link_match else None
-
-            logger.debug("escalation_guide_candidate", extra={
-                "candidate_idx": candidate_idx,
-                "form_name": form_name,
-                "link"     : (link or "")[:120],
-                "score"    : round(score, 3),
-                "doc_type" : doc_type,
-            })
-
-            if form_name:
-                fallback_link = "https://myssc.pertamina.com/dwp/app/"
-                if link and _is_valid_link(link):
-                    logger.info("escalation_guide_valid_found", extra={
-                        "form_name": form_name,
-                        "link"     : link,
-                        "score"    : round(score, 3),
-                        "candidate_idx": candidate_idx,
-                        "doc_type" : doc_type,
-                    })
-                    return (
-                        f"Untuk menangani hal ini, silakan buat tiket melalui link berikut:\n\n"
-                        f"📋 **NAMA FORM:** {form_name}\n\n"
-                        f"🔗 **Link:** {link}"
-                    )
-
-                logger.warning("escalation_guide_invalid_link", extra={
-                    "form_name": form_name,
-                    "link"     : (link or "none"),
-                    "doc_type" : doc_type,
-                    "score"    : score,
-                    "candidate_idx": candidate_idx,
-                })
+        form_name, link = _extract_order_link_from_results(results, doc_type)
+        if form_name:
+            if link and link != _LINK_NA_SENTINEL:
+                # Valid specific URL found — render Markdown link.
                 return (
                     f"Untuk menangani hal ini, silakan buat tiket melalui link berikut:\n\n"
                     f"📋 **NAMA FORM:** {form_name}\n\n"
-                    f"🔗 **Link:** {fallback_link}"
+                    f"🔗 **Link:** [{link}]({link})"
+                )
+            else:
+                # Form identified but Link is N/A in the Knowledge Base.
+                # Render a clean portal-redirect message instead of a broken URL.
+                logger.info("escalation_guide_portal_fallback", extra={
+                    "form_name": form_name,
+                    "reason": "link_na_in_kb",
+                })
+                return (
+                    f"Form yang sesuai untuk permintaan Anda adalah **{form_name}**.\n\n"
+                    f"Saat ini link langsung untuk form ini belum tersedia di database kami. "
+                    f"Silakan kunjungi Portal IT Support dan cari form **\"{form_name}\"** secara manual:\n\n"
+                    f"🌐 **Portal IT Support:** [{_PORTAL_FALLBACK_URL}]({_PORTAL_FALLBACK_URL})\n\n"
+                    f"Tim IT kami siap membantu Anda jika mengalami kesulitan!"
                 )
 
-        # ── Fallback: tidak ada hasil valid dari semua kandidat ──────────────────────────────────────────
+        # ── Fallback: tidak ada hasil valid dari semua kandidat ─────────────────
         logger.info("escalation_guide_no_valid_match", extra={
             "query"   : query_issue[:60],
             "doc_type": doc_type,
@@ -1202,12 +1465,13 @@ def escalation_guide(query_issue: str, vector_store, embedding_service, doc_type
         })
         return (
             "Panduan spesifik untuk permintaan ini belum tersedia di database.\n\n"
-            "Silakan kunjungi Portal IT Support untuk membuat tiket secara manual.\n\n"
+            f"Silakan kunjungi Portal IT Support untuk membuat tiket secara manual: "
+            f"[{_PORTAL_FALLBACK_URL}]({_PORTAL_FALLBACK_URL})\n\n"
             "Tim IT kami siap membantu Anda selanjutnya!"
         )
 
     except Exception as e:
-        logger.error("escalation_guide_error", extra={
+        logger.exception("escalation_guide_error", extra={
             "error"   : str(e),
             "doc_type": doc_type,
         })
@@ -1259,42 +1523,19 @@ def _is_valid_link(link: str) -> bool:
     # Gabungkan path + fragment (#...) + query (?...) sebagai "specificness measure".
     # Base URL "https://myssc.pertamina.com/" → path='/', fragment='', query='' → total=1
     # URL form "https://myssc.pertamina.com/dwp/app/#/.../75" → total >> 8
-    path_total = (
-        len(parsed.path.rstrip('/'))      # path tanpa trailing slash
-        + len(parsed.fragment)            # bagian setelah #
-        + len(parsed.query)               # bagian setelah ?
-    )
-    MIN_PATH_LENGTH = 8  # "/dwp/app" = 8 karakter → threshold aman
-    if path_total < MIN_PATH_LENGTH:
-        logger.debug("invalid_link_too_short", extra={
-            "link"       : link[:120],
-            "path_total" : path_total,
-            "threshold"  : MIN_PATH_LENGTH,
-        })
+    path_specificness = len(parsed.path or "") + len(parsed.fragment or "") + len(parsed.query or "")
+
+    # Reject obviously base URLs with no specific path/fragment.
+    if parsed.path in ("", "/", "/dwp/"):
+        return False
+
+    # Special-case: allow "/dwp/app/" if the fragment or query provide specificity
+    # (e.g., "#/itemprofile/228"). Only reject "/dwp/app/" when overall
+    # specificness is still too low.
+    if parsed.path == "/dwp/app/" and path_specificness <= 8:
         return False
 
     return True
-
-
-
-
-
-# ===== DELETED: detect_problem_category() =====
-# This large if-else chain categorized queries into hardcoded categories
-# New system uses pure vector/BM25 search filtered by doc_type parameter
-# No category detection needed - routing handled by intent detection instead
-
-
-# ===== DELETED: get_contact_info() and get_required_info() =====
-# These static functions returned hardcoded contact info per category
-# New system gets all info directly from database records via escalation_guide()
-
-
-def detect_confirmation(text: str) -> Optional[bool]:
-    text = text.lower().strip()
-    if re.search(r'\b(tidak|belum|gagal|ga|gak|nggak|batal|belum kelar)\b', text): return False
-    if re.search(r'\b(iya|ya|sudah|selesai|kelar|aman|oke|ok|sip|betul)\b', text): return True
-    return None
 
 
 # =====================================================
@@ -1382,7 +1623,7 @@ Tunjukkan empati dan ingatkan bahwa ada support team jika semua gagal.\
 """
 
 
-def _build_sop_system_msg(context: str, failed_steps: List[str]) -> str:
+def _build_sop_system_msg(context: str, failed_steps: List[str], user_device: Optional[str] = None) -> str:
     """Bangun system prompt SOP dengan failed_note jika ada."""
     if failed_steps:
         failed_list  = "\n".join(f"  - {s}" for s in failed_steps)
@@ -1393,7 +1634,18 @@ def _build_sop_system_msg(context: str, failed_steps: List[str]) -> str:
         )
     else:
         failed_note = ""
-    return _SOP_SYSTEM_PROMPT_TEMPLATE.format(context=context, failed_note=failed_note)
+    # Guardrail instruction: include user_device if available so the LLM can
+    # cross-check device type between the user's report and the retrieved SOP.
+    device_note = ""
+    if user_device:
+        device_note = (
+            f"\nPERINGATAN: Pengguna menyebut perangkat: {user_device}. "
+            "Anda WAJIB mencocokkan jenis perangkat ini dengan perangkat yang terdapat di dokumen SOP di atas. "
+            "Jika dokumen SOP yang ditemukan untuk masalah ini ditujukan untuk perangkat berbeda (mis. Handphone/Tablet vs PC/Laptop), JANGAN membuat langkah pemecahan masalah khusus perangkat. "
+            "Sebagai gantinya, jawab bahwa panduan spesifik untuk perangkat pengguna tidak ditemukan di database dan arahkan user untuk membuat tiket di Portal IT Support."
+        )
+
+    return _SOP_SYSTEM_PROMPT_TEMPLATE.format(context=context, failed_note=failed_note) + device_note
 
 
 def get_llm_response(
@@ -1405,6 +1657,8 @@ def get_llm_response(
     rag_query: str = None,
     failed_steps: List[str] = None,
     session: Dict = None,
+    rag_device: Optional[str] = None,
+    rag_symptom: Optional[str] = None,
 ) -> str:
     """Generate jawaban LLM (non-streaming)."""
     t0 = time.time()
@@ -1431,7 +1685,7 @@ def get_llm_response(
         context = get_relevant_context(rag_query or question, vector_store, embedding_service)
 
     if context:
-        system_msg = _build_sop_system_msg(context, failed_steps)
+        system_msg = _build_sop_system_msg(context, failed_steps, user_device=rag_device)
         answer = generate_llm(
             [{"role": "system", "content": system_msg}]
             + history + [{"role": "user", "content": question}],
@@ -1515,7 +1769,12 @@ def get_llm_response_stream(
         context = get_relevant_context(rag_query or question, vector_store, embedding_service)
 
     if context:
-        system_msg = _build_sop_system_msg(context, failed_steps)
+        # Note: get_llm_response_stream is called by the router with knowledge
+        # of rag_query; the user_device (if available) is passed via session['rag_device']
+        user_device = None
+        if session:
+            user_device = session.get("rag_device")
+        system_msg = _build_sop_system_msg(context, failed_steps, user_device=user_device)
         yield from generate_llm_stream(
             [{"role": "system", "content": system_msg}]
             + history + [{"role": "user", "content": question}],
@@ -1708,6 +1967,34 @@ def chat_stream(
 # CORE LOGIC — Sync & Stream (pisah agar tidak campur yield+return)
 # =====================================================
 
+
+def detect_confirmation(question: str) -> Optional[bool]:
+    """Detect user reply to confirmation prompt.
+
+    Returns:
+        True  -> affirmative (Sudah/Iya/etc.)
+        False -> negative (Belum/Tidak/Gagal/etc.)
+        None  -> ambiguous / not an answer to confirmation
+    """
+    if not question:
+        return None
+    q = question.strip().lower()
+
+    # Affirmative tokens
+    if re.search(r"\b(sudah|iya|ya|yes|done|selesai|berhasil|ok|oke)\b", q):
+        logger.debug("detect_confirmation_affirmative", extra={"text": q[:120]})
+        return True
+
+    # Negative tokens
+    if re.search(r"\b(belum|tidak|gagal|belum berhasil|masih|tidak bisa|no)\b", q):
+        logger.debug("detect_confirmation_negative", extra={"text": q[:120]})
+        return False
+
+    # Ambiguous or unrelated
+    logger.debug("detect_confirmation_ambiguous", extra={"text": q[:120]})
+    return None
+
+
 def _handle_escalation_confirmation(
     question: str,
     session: Dict,
@@ -1797,26 +2084,73 @@ def _process_chat_sync(
         session["offered_support"] = False
         # SERVICE_ORDER: skip alur RAG troubleshoot, langsung cari form pengadaan yang relevan
         # via escalation_guide dengan doc_type="ORDER_LINK".
-        # Pass raw query directly to preserve critical context. Vector/BM25 search handles
-        # full context better than over-simplified refinements (e.g., "request kirim broadcast email
-        # dan pasang video display di videotron" should not be reduced to "pemasangan email").
+        # Prefer a dense extracted item query to avoid keyword dilution.
         logger.info("intent_service_order", extra={"session_id": session_id, "question": question[:80]})
-        guide = escalation_guide(question, vector_store, embedding_service, doc_type="ORDER_LINK")
-        answer = (
-            "Baik! Permintaan Anda terdeteksi sebagai **Service Order** (Pengadaan/Pemasangan). "
-            "Berikut adalah link form yang perlu Anda isi:\n\n"
-            f"{guide}"
-        )
+
+        # Step 1: LLM extracts the item from the CURRENT query only (no history).
+        items = _extract_service_items_with_llm(question)  # history omitted: see context-bleed fix
+
+        # Step 2: Build an action-enriched query for vector + reranker.
+        # Problem: bare items like ["kertas"] → query_issue = "kertas" scores ~0.001
+        # with the BGE cross-encoder (single word vs multi-sentence chunk = near-zero).
+        # _refine_service_order_query adds an action prefix ("pengadaan kertas"),
+        # giving the reranker a full phrase to match against TRIGGER KEYWORD rows.
+        refined_query = _refine_service_order_query(question)
+        if refined_query != question:
+            # Refiner detected an action keyword → use enriched query
+            query_issue = refined_query
+        elif items:
+            # Refiner returned the raw question (no action keyword found),
+            # but LLM extracted items → derive minimal prefix from the question text
+            action = "permintaan"
+            for _kw, _label in [
+                (r'\b(pinjam|peminjaman|meminjam)\b', "peminjaman"),
+                (r'\b(pesan|order|memesan)\b',         "pengadaan"),
+                (r'\b(pasang|pemasangan|instalasi)\b',  "pemasangan"),
+                (r'\b(ajukan|pengajuan)\b',              "pengajuan"),
+                (r'\b(minta|meminta|request)\b',         "permintaan"),
+            ]:
+                if re.search(_kw, question, re.IGNORECASE):
+                    action = _label
+                    break
+            query_issue = f"{action} {' '.join(str(i).strip() for i in items if i)}"
+        else:
+            query_issue = question  # total fallback: nothing extracted
+
+        logger.info("service_order_search_query", extra={
+            "question": question[:80],
+            "search_query": query_issue[:80],
+            "items": items,
+        })
+        form_name, final_link = _find_service_order_link(query_issue, vector_store, embedding_service)
+        if form_name:
+            answer = (
+                "Baik! Permintaan Anda terdeteksi sebagai **Service Order** (Pengadaan/Pemasangan).\n\n"
+                "Tolong ikuti interuksi sesuai dengan form yang tersedia dibawah.\n\n"
+                f"📝 NAMA FORM: {form_name}\n\n"
+                f"🔗 Link: [{final_link}]({final_link})"
+            )
+        else:
+            guide = escalation_guide(query_issue, vector_store, embedding_service, doc_type="ORDER_LINK")
+            answer = (
+                "Baik! Permintaan Anda terdeteksi sebagai **Service Order** (Pengadaan/Pemasangan). "
+                "Berikut adalah link form yang perlu Anda isi:\n\n"
+                f"{guide}"
+            )
     else:  # IT_PROBLEM
         if session["attempts"] == 0:
             session["last_it_problem"] = question
         
         _track_failed_steps(question, session)
         
-        rag_query = rewrite_query_for_rag(
+        rag_query, rag_device, rag_symptom = rewrite_query_for_rag(
             question, session["history"], 
             original_problem=session.get("last_it_problem", "")
         )
+
+        # Store extracted device/symptom in session for downstream streaming guardrails
+        session["rag_device"] = rag_device
+        session["rag_symptom"] = rag_symptom
 
         answer = get_llm_response(
             question, session["history"], "troubleshoot",
@@ -1824,6 +2158,8 @@ def _process_chat_sync(
             rag_query=rag_query,
             failed_steps=session["failed_steps"],
             session=session,
+            rag_device=rag_device,
+            rag_symptom=rag_symptom,
         )
         
         session["attempts"] += 1
@@ -1893,15 +2229,50 @@ def _process_chat_stream(
         session["offered_support"] = False
         # SERVICE_ORDER: skip alur RAG troubleshoot, langsung cari form pengadaan yang relevan
         # via escalation_guide dengan doc_type="ORDER_LINK".
-        # Pass raw query directly to preserve critical context. Vector/BM25 search handles
-        # full context better than over-simplified refinements.
+        # Prefer a dense extracted item query to avoid keyword dilution.
         logger.info("intent_service_order_stream", extra={"session_id": session_id, "question": question[:80]})
-        guide = escalation_guide(question, vector_store, embedding_service, doc_type="ORDER_LINK")
-        answer = (
-            "Baik! Permintaan Anda terdeteksi sebagai **Service Order** (Pengadaan/Pemasangan). "
-            "Berikut adalah link form yang perlu Anda isi:\n\n"
-            f"{guide}"
-        )
+
+        # Mirror exact query-building logic from _process_chat_sync SERVICE_ORDER branch
+        items = _extract_service_items_with_llm(question)  # history omitted: context-bleed fix
+
+        refined_query = _refine_service_order_query(question)
+        if refined_query != question:
+            query_issue = refined_query
+        elif items:
+            action = "permintaan"
+            for _kw, _label in [
+                (r'\b(pinjam|peminjaman|meminjam)\b', "peminjaman"),
+                (r'\b(pesan|order|memesan)\b',         "pengadaan"),
+                (r'\b(pasang|pemasangan|instalasi)\b',  "pemasangan"),
+                (r'\b(ajukan|pengajuan)\b',              "pengajuan"),
+                (r'\b(minta|meminta|request)\b',         "permintaan"),
+            ]:
+                if re.search(_kw, question, re.IGNORECASE):
+                    action = _label
+                    break
+            query_issue = f"{action} {' '.join(str(i).strip() for i in items if i)}"
+        else:
+            query_issue = question
+
+        logger.info("service_order_search_query", extra={
+            "question": question[:80],
+            "search_query": query_issue[:80],
+            "items": items,
+        })
+        form_name, final_link = _find_service_order_link(query_issue, vector_store, embedding_service)
+        if form_name:
+            answer = (
+                "Baik! Permintaan Anda terdeteksi sebagai **Service Order** (Pengadaan/Pemasangan).\n\n"
+                f"📝 NAMA FORM: {form_name}\n"
+                f"🔗 Link: [{final_link}]({final_link})"
+            )
+        else:
+            guide = escalation_guide(query_issue, vector_store, embedding_service, doc_type="ORDER_LINK")
+            answer = (
+                "Baik! Permintaan Anda terdeteksi sebagai **Service Order** (Pengadaan/Pemasangan). "
+                "Berikut adalah link form yang perlu Anda isi:\n\n"
+                f"{guide}"
+            )
         yield answer
 
     elif intent == "REJECT_IT_SUPPORT":
@@ -1918,10 +2289,13 @@ def _process_chat_stream(
         _track_failed_steps(question, session)
         
         # Tulis ulang query untuk RAG agar kontekstual
-        rag_query = rewrite_query_for_rag(
+        rag_query, rag_device, rag_symptom = rewrite_query_for_rag(
             question, session["history"], 
             original_problem=session.get("last_it_problem", "")
         )
+
+        session["rag_device"] = rag_device
+        session["rag_symptom"] = rag_symptom
 
         full_answer_list = []
         # Panggil generator streaming dari LLM

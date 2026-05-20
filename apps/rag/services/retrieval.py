@@ -12,6 +12,25 @@ logger = logging.getLogger(__name__)
 _bm25_index = None
 _bm25_last_updated = None
 
+
+def invalidate_bm25_index() -> None:
+    """
+    Reset the in-memory BM25 cache so it is rebuilt on the next search call.
+
+    Must be called after any ingestion that changes DocumentChunk rows
+    (insert, delete, or update) so that newly-uploaded documents are immediately
+    searchable without a server restart.
+
+    Thread-safety note: assignment of a module-level variable in CPython is
+    effectively atomic under the GIL, so no explicit lock is needed here.
+    The worst race is that one concurrent request rebuilds the index twice,
+    which is harmless.
+    """
+    global _bm25_index, _bm25_last_updated
+    _bm25_index = None
+    _bm25_last_updated = None
+    logger.info("bm25_index_invalidated", extra={"reason": "post_ingestion_sync"})
+
 # Global Re-Ranker (lazy-loaded)
 _reranker_model = None
 

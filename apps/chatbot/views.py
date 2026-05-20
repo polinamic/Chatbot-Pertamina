@@ -8,6 +8,7 @@ from django.http import StreamingHttpResponse, JsonResponse
 from django.views.decorators.csrf import csrf_exempt
 
 import json
+import os
 import ollama
 
 from .models import Conversation, Message, ChatSession, UINavigatorMap
@@ -99,7 +100,7 @@ Jawab HANYA satu kata kategori.
 """
 
     response = ollama.chat(
-        model="llama3:8b",
+        model=os.getenv("LLM_MODEL", "qwen2.5:7b"),
         messages=[
             {"role": "system", "content": "Anda adalah classifier masalah IT yang sangat ahli. WAJIB gunakan Bahasa Indonesia."},
             {"role": "user", "content": prompt}
@@ -121,6 +122,7 @@ def chat_view(request):
         "messages": []
     })
 
+model=os.getenv("LLM_MODEL", "qwen2.5:7b"),
 
 def chat_page(request):
     """
@@ -248,7 +250,7 @@ Di akhir jawaban WAJIB bertanya:
 """
 
             response = ollama.chat(
-                model="llama3:8b",
+                model=os.getenv("LLM_MODEL", "qwen2.5:7b"),
                 messages=[
                     {"role": "system", "content": system_prompt},
                     {"role": "user", "content": prompt}
@@ -360,7 +362,7 @@ def stream_chat(request):
                 yield DISCLAIMER
 
             stream = ollama.chat(
-                model="llama3:8b",
+                model=os.getenv("LLM_MODEL", "qwen2.5:7b"),
                 messages=[
                     {"role": "system", "content": system_prompt},
                     {"role": "user", "content": query}

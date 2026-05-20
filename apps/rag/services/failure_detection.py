@@ -1,3 +1,4 @@
+import os
 import ollama
 
 
@@ -20,7 +21,7 @@ def detect_failure(message):
     """
 
     response = ollama.chat(
-        model="llama3:8b",
+        model=os.getenv("LLM_MODEL", "qwen2.5:7b"),
         messages=[{"role": "user", "content": prompt}]
     )
 
