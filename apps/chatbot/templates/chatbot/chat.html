@@ -211,6 +211,15 @@
     }
 
     // =====================================
+    // NEW SESSION FLAG (State Leakage Fix)
+    // =====================================
+    // Dikirim ke backend HANYA pada pesan PERTAMA dari setiap chat baru.
+    // Backend menggunakan flag ini untuk mereset failed_steps & attempts ke 0.
+    // Setelah pesan pertama terkirim, flag langsung di-flip ke false agar
+    // pesan selanjutnya dalam sesi yang sama TIDAK mereset state backend.
+    let isNewSession = true;
+
+    // =====================================
     // AUTO RESIZE TEXTAREA
     // =====================================
     input.addEventListener('input', function () {
@@ -283,6 +292,11 @@
         input.value = "";
         input.style.height = "auto";
         
+        // Reset new session flag — backend MUST reset its state counters
+        // (failed_steps, attempts, etc.) when the first message of this
+        // new chat arrives. The flag is flipped back to false after dispatch.
+        isNewSession = true;
+
         // Create new conversation in database
         const convId = await createNewConversation();
         if (convId) {
@@ -582,6 +596,16 @@
         showTyping();
 
         try {
+            // ── NEW SESSION FLAG ────────────────────────────────────────────────
+            // Capture the flag BEFORE flipping it to false. Only the FIRST message
+            // of each new chat session carries new_session=true. The backend uses
+            // this to reset failed_steps, attempts, and all per-session counters.
+            // Subsequent messages in the same thread send new_session=false so the
+            // backend state is never accidentally wiped mid-conversation.
+            const sendAsNewSession = isNewSession;
+            isNewSession = false;  // Flip immediately — before await, to be safe
+            // ───────────────────────────────────────────────────────────────────
+
             // Send message to conversation endpoint (saves to DB)
             const response = await fetch(`${CONVERSATIONS_ENDPOINT}${currentConversationId}/send_message/`, {
                 method: "POST",
@@ -589,15 +613,12 @@
                     "Content-Type": "application/json",
                     "X-CSRFToken": getCookie("csrftoken")
                 },
-                // BUG FIX 3: Menggabungkan dua `body: JSON.stringify()` yang duplikat.
-                // Sebelumnya ada dua key `body:` dalam satu object literal dan
-                // baris pertama tidak ditutup `})` → SyntaxError "Unexpected identifier 'body'".
-                // Perbaikan: gunakan satu body dengan semua field yang dibutuhkan.
                 body: JSON.stringify({
                     query: message,
                     session_id: sessionId,
                     user_id: currentUserId,
-                    content: message
+                    content: message,
+                    new_session: sendAsNewSession
                 })
             });
 

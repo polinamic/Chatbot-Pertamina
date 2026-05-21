@@ -380,7 +380,7 @@ def ingest_document(document, vector_store=None, embedding_service=None):
             created += 1
 
         except Exception as e:
-            logger.error(
+            logger.exception(
                 "Failed to embed/save chunk",
                 extra={
                     "document_id": document.id,

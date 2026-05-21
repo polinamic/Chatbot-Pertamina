@@ -16,7 +16,7 @@
     </div>
 </div>
 
-<div class="stats-grid">
+<div class="stats-grid" style="grid-template-columns: repeat(3, 1fr);">
     <div class="stat-card">
         <div class="stat-card-header">
             <span class="stat-card-title">Total Documents</span>
@@ -52,27 +52,14 @@
                 <i class="bi bi-bag-plus"></i>
             </div>
         </div>
-        <div class="stat-card-value">{{ stats.order_link }}</div>
+        <div class="stat-card-value">{{ stats.order_link|default:"0" }}</div>
         <div class="stat-card-change">
             <i class="bi bi-info-circle"></i>
             <span>Permintaan pengadaan item baru</span>
         </div>
     </div>
-    
-    <div class="stat-card">
-        <div class="stat-card-header">
-            <span class="stat-card-title">Incident Links</span>
-            <div class="stat-card-icon" style="background-color: rgba(245, 158, 11, 0.1); color: var(--warning);">
-                <i class="bi bi-exclamation-circle"></i>
-            </div>
-        </div>
-        <div class="stat-card-value">{{ stats.incident_link }}</div>
-        <div class="stat-card-change">
-            <i class="bi bi-alert-triangle"></i>
-            <span>Laporan error/kerusakan</span>
-        </div>
-    </div>
 </div>
+
 
 <div class="content-card" style="margin-top: 2rem;">
     <div class="content-card-header">
@@ -194,6 +181,280 @@
     </div>
 </div>
 
+{# ================================================================ #}
+{# GLOBAL INCIDENT FALLBACK SETTINGS CARD — NEW (DO NOT REMOVE) #}
+{# Inject point: after "Daftar Knowledge Base" table card. #}
+{# ================================================================ #}
+
+<style>
+/* ── Global Incident Settings Card ─────────────────────────────── */
+#globalIncidentSettingsCard .gis-header {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    padding: 1.25rem 1.5rem;
+    border-radius: 0.75rem 0.75rem 0 0;
+    background: linear-gradient(135deg, rgba(196,30,58,0.07) 0%, rgba(196,30,58,0.02) 100%);
+    border-bottom: 1px solid var(--border-light);
+}
+
+#globalIncidentSettingsCard .gis-icon-wrap {
+    width: 2.5rem;
+    height: 2.5rem;
+    border-radius: 0.6rem;
+    background: rgba(196,30,58,0.12);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 1.2rem;
+    flex-shrink: 0;
+}
+
+#globalIncidentSettingsCard .gis-header h2 {
+    margin: 0;
+    font-size: 1.05rem;
+    font-weight: 700;
+    letter-spacing: -0.01em;
+}
+
+#globalIncidentSettingsCard .gis-header .gis-subtitle {
+    font-size: 0.78rem;
+    color: var(--gray-500);
+    margin: 0.1rem 0 0;
+    font-weight: 400;
+}
+
+#globalIncidentSettingsCard .gis-body {
+    padding: 1.5rem;
+}
+
+#globalIncidentSettingsCard .gis-desc {
+    font-size: 0.875rem;
+    color: var(--gray-500);
+    margin: 0 0 1.5rem;
+    line-height: 1.6;
+    padding: 0.85rem 1rem;
+    background: rgba(245,158,11,0.06);
+    border-left: 3px solid var(--warning, #f59e0b);
+    border-radius: 0 0.375rem 0.375rem 0;
+}
+
+.gis-input-group {
+    display: flex;
+    align-items: stretch;
+    gap: 0;
+    border: 1.5px solid var(--border-light);
+    border-radius: 0.625rem;
+    overflow: hidden;
+    transition: border-color 0.2s, box-shadow 0.2s;
+    background: var(--bg-white, #fff);
+}
+
+.gis-input-group:focus-within {
+    border-color: var(--primary, #c41e3a);
+    box-shadow: 0 0 0 3px rgba(196,30,58,0.12);
+}
+
+.gis-input-group .gis-input-icon {
+    display: flex;
+    align-items: center;
+    padding: 0 0.85rem;
+    background: rgba(196,30,58,0.06);
+    border-right: 1.5px solid var(--border-light);
+    color: var(--primary, #c41e3a);
+    font-size: 1rem;
+    flex-shrink: 0;
+    transition: background 0.2s;
+}
+
+.gis-input-group:focus-within .gis-input-icon {
+    background: rgba(196,30,58,0.1);
+}
+
+.gis-input-group input[type="url"] {
+    flex: 1;
+    border: none !important;
+    outline: none !important;
+    padding: 0.7rem 1rem;
+    font-size: 0.9rem;
+    background: transparent;
+    color: inherit;
+    min-width: 0;
+    box-shadow: none !important;
+}
+
+.gis-input-group input[type="url"]::placeholder {
+    color: var(--gray-400, #9ca3af);
+}
+
+#saveIncidentLinkBtn {
+    white-space: nowrap;
+    padding: 0 1.4rem;
+    border-radius: 0.5rem;
+    font-size: 0.9rem;
+    font-weight: 600;
+    display: inline-flex;
+    align-items: center;
+    gap: 0.4rem;
+    transition: all 0.2s;
+    flex-shrink: 0;
+}
+
+#saveIncidentLinkBtn:not(:disabled):hover {
+    transform: translateY(-1px);
+    box-shadow: 0 4px 12px rgba(196,30,58,0.3);
+}
+
+.gis-field-wrapper {
+    display: flex;
+    gap: 0.75rem;
+    align-items: center;
+    flex-wrap: wrap;
+}
+
+.gis-field-wrapper .gis-input-group {
+    flex: 1;
+    min-width: 260px;
+}
+
+#incidentLinkFeedback {
+    margin-top: 0.75rem;
+    font-size: 0.84rem;
+    display: none;
+    padding: 0.5rem 0.75rem;
+    border-radius: 0.375rem;
+    font-weight: 500;
+}
+
+/* Dark mode overrides */
+body.dark-mode #globalIncidentSettingsCard .gis-header {
+    background: linear-gradient(135deg, rgba(196,30,58,0.12) 0%, rgba(196,30,58,0.04) 100%);
+    border-bottom-color: var(--gray-700, #374151);
+}
+
+body.dark-mode .gis-input-group {
+    background: var(--gray-800, #1f2937);
+    border-color: var(--gray-600, #4b5563);
+}
+
+body.dark-mode .gis-input-group:focus-within {
+    border-color: var(--primary, #c41e3a);
+    box-shadow: 0 0 0 3px rgba(196,30,58,0.18);
+}
+
+body.dark-mode .gis-input-group .gis-input-icon {
+    border-right-color: var(--gray-600, #4b5563);
+    background: rgba(196,30,58,0.1);
+}
+
+body.dark-mode .gis-input-group input[type="url"] {
+    color: #f9fafb;
+}
+
+body.dark-mode #globalIncidentSettingsCard .gis-desc {
+    background: rgba(245,158,11,0.08);
+    color: var(--gray-400, #9ca3af);
+}
+</style>
+
+<div class="content-card" style="margin-top: 2rem;" id="globalIncidentSettingsCard">
+    <div class="gis-header">
+        <div class="gis-icon-wrap">⚙️</div>
+        <div>
+            <h2>Pengaturan Eskalasi Global</h2>
+            <p class="gis-subtitle">Konfigurasi link fallback IT Support Portal</p>
+        </div>
+    </div>
+    <div class="gis-body">
+        <p class="gis-desc">
+            Link portal IT Support ini akan digunakan sebagai <strong>fallback</strong> saat pengguna
+            menjawab <em>"Belum"</em> pada konfirmasi penyelesaian masalah dan tidak ada link spesifik
+            yang ditemukan di Knowledge Base.
+        </p>
+
+        <label for="incidentLinkInput"
+               style="font-weight:600; font-size:0.8rem; text-transform:uppercase; letter-spacing:0.05em;
+                      color:var(--gray-500); display:block; margin-bottom:0.6rem;">
+            DEFAULT_INCIDENT_LINK
+        </label>
+
+        <div class="gis-field-wrapper">
+            <div class="gis-input-group">
+                <span class="gis-input-icon">
+                    <i class="bi bi-link-45deg"></i>
+                </span>
+                <input
+                    id="incidentLinkInput"
+                    type="url"
+                    value="{{ default_incident_link|default:'' }}"
+                    placeholder="https://myssc.pertamina.com/dwp/app/"
+                />
+            </div>
+            <button
+                id="saveIncidentLinkBtn"
+                onclick="saveIncidentLink()"
+                class="btn btn-primary"
+            >
+                <i class="bi bi-floppy"></i> Simpan Link
+            </button>
+        </div>
+
+        <div id="incidentLinkFeedback"></div>
+    </div>
+</div>
+{# ================================================================ #}
+
+<script>
+/* ── Global Incident Fallback Settings ─────────────────────────── */
+function saveIncidentLink() {
+    const input   = document.getElementById('incidentLinkInput');
+    const btn     = document.getElementById('saveIncidentLinkBtn');
+    const feedback = document.getElementById('incidentLinkFeedback');
+    const value   = (input.value || '').trim();
+
+    if (!value) {
+        feedback.style.display = 'block';
+        feedback.style.color   = 'var(--danger, #dc2626)';
+        feedback.textContent   = '❌ Link tidak boleh kosong.';
+        return;
+    }
+
+    btn.disabled    = true;
+    btn.innerHTML   = '<i class="bi bi-hourglass-split"></i> Menyimpan...';
+    feedback.style.display = 'none';
+
+    fetch('{% url "dashboard:api_save_global_setting" %}', {
+        method : 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+            'X-CSRFToken' : getCookie('csrftoken'),
+        },
+        body: JSON.stringify({ key: 'DEFAULT_INCIDENT_LINK', value: value }),
+    })
+    .then(res => res.json())
+    .then(data => {
+        feedback.style.display = 'block';
+        if (data.status === 'success') {
+            feedback.style.color = 'var(--success, #10b981)';
+            feedback.textContent = data.message;
+        } else {
+            feedback.style.color = 'var(--danger, #dc2626)';
+            feedback.textContent = '❌ ' + (data.message || 'Gagal menyimpan.');
+        }
+    })
+    .catch(err => {
+        feedback.style.display = 'block';
+        feedback.style.color   = 'var(--danger, #dc2626)';
+        feedback.textContent   = '❌ Network error: ' + err.message;
+    })
+    .finally(() => {
+        btn.disabled  = false;
+        btn.innerHTML = '<i class="bi bi-floppy"></i> Simpan Link';
+        setTimeout(() => { feedback.style.display = 'none'; }, 5000);
+    });
+}
+</script>
+
 <div id="uploadModal" class="custom-modal">
     <div class="custom-modal-content">
         <div class="modal-header">
@@ -207,12 +468,11 @@
                 <select id="docType" style="width: 100%; padding: 0.75rem; border-radius: 0.5rem; border: 1px solid var(--border-light); background-color: var(--bg-light); color: inherit;">
                     <option value="TROUBLESHOOT">🔧 Langkah Troubleshooting (Solusi Mandiri)</option>
                     <option value="ORDER_LINK">📦 Link Pemesanan/Pengadaan Item IT Baru (SERVICE_ORDER)</option>
-                    <option value="INCIDENT_LINK">⚠️ Link Pelaporan Error/Kerusakan (INCIDENT_LINK)</option>
                 </select>
                 <p class="format-hint" style="margin-top: 0.5rem; font-size: 0.85rem; color: var(--gray-500);">
                     <strong>Format yang Diterima:</strong>
                     <br>• <strong>Troubleshoot:</strong> KATEGORI: [nama] dengan langkah-langkah
-                    <br>• <strong>Order Link & Incident Link:</strong> NAMA FORM: | TRIGGER KEYWORD: | PANDUAN TIKET: | Link:
+                    <br>• <strong>Order Link:</strong> NAMA FORM: | TRIGGER KEYWORD: | PANDUAN TIKET: | Link:
                 </p>
             </div>
 
@@ -246,7 +506,7 @@ Langkah Perbaikan:
 2. Ketik 'ncpa.cpl' lalu Enter
 ...</pre>
                     </div>
-                    <div style="margin-bottom: 1rem;">
+                    <div>
                         <strong style="color: #3b82f6;">✓ Format Order Link (Pengadaan Item):</strong>
                         <pre style="background: var(--bg-white); padding: 0.75rem; border-radius: 0.25rem; overflow-x: auto; margin: 0.5rem 0;">---
 NAMA FORM: Handset (Perangkat Mobile Perusahaan)
@@ -259,20 +519,6 @@ NAMA FORM: Desktop (PC, Laptop, Peripheral)
 TRIGGER KEYWORD: laptop baru, pc, pesan laptop, komputer baru
 PANDUAN TIKET: Untuk mengajukan pengadaan perangkat baru
 Link: https://myssc.pertamina.com/dwp/app/#/itemprofile/102</pre>
-                    </div>
-                    <div>
-                        <strong style="color: var(--warning);">✓ Format Incident Link (Error/Kerusakan):</strong>
-                        <pre style="background: var(--bg-white); padding: 0.75rem; border-radius: 0.25rem; overflow-x: auto; margin: 0.5rem 0;">---
-NAMA FORM: Incident (Gangguan Aplikasi & Sistem)
-TRIGGER KEYWORD: error, crash, tidak bisa, aplikasi tidak berfungsi, sistem down
-PANDUAN TIKET: Untuk melaporkan gangguan sistem, silahkan klik link dibawah
-Link: https://myssc.pertamina.com/dwp/app/#/itemprofile/200
-
----
-NAMA FORM: Email & Collaboration Tools Details
-TRIGGER KEYWORD: email error, outlook tidak bisa, teams error, mailbox
-PANDUAN TIKET: Untuk melaporkan masalah email, silahkan buat tiket
-Link: https://myssc.pertamina.com/dwp/app/#/itemprofile/201</pre>
                     </div>
                 </div>
             </div>
@@ -450,60 +696,7 @@ function resetUploadForm() {
     dropZone.innerHTML = '<i class="bi bi-cloud-arrow-up upload-icon"></i><p><strong>Drag & drop file TXT kesini</strong></p><p class="sub-text">atau klik untuk browse</p>';
 }
 
-// Drag and Drop Handler
-document.addEventListener('DOMContentLoaded', function() {
-    const dropZone = document.getElementById('dropZone');
-    const fileInput = document.getElementById('fileInput');
-    
-    if (!dropZone || !fileInput) return;
-    
-    // Click untuk open file picker
-    dropZone.addEventListener('click', () => {
-        fileInput.click();
-    });
-    
-    // File picker selection
-    fileInput.addEventListener('change', (e) => {
-        const file = e.target.files[0];
-        if (file) {
-            updateDropZonePreview(file);
-        }
-    });
-    
-    // Drag over
-    dropZone.addEventListener('dragover', (e) => {
-        e.preventDefault();
-        dropZone.style.backgroundColor = 'rgba(13, 110, 253, 0.1)';
-        dropZone.style.borderColor = 'var(--primary)';
-    });
-    
-    // Drag leave
-    dropZone.addEventListener('dragleave', () => {
-        dropZone.style.backgroundColor = '';
-        dropZone.style.borderColor = '';
-    });
-    
-    // Drop
-    dropZone.addEventListener('drop', (e) => {
-        e.preventDefault();
-        dropZone.style.backgroundColor = '';
-        dropZone.style.borderColor = '';
-        
-        const files = e.dataTransfer.files;
-        if (files.length > 0) {
-            const file = files[0];
-            
-            // Validate file type
-            if (!file.name.toLowerCase().endsWith('.txt')) {
-                showNotification('❌ Hanya file TXT yang diterima', 'error');
-                return;
-            }
-            
-            fileInput.files = files;
-            updateDropZonePreview(file);
-        }
-    });
-});
+
 
 function updateDropZonePreview(file) {
     const dropZone = document.getElementById('dropZone');
@@ -741,7 +934,7 @@ function attachDropzoneHandlers() {
 
     fileInput.addEventListener('change', function() {
         if (this.files && this.files[0]) {
-            dropZone.innerHTML = '<i class="bi bi-cloud-check upload-icon" style="color: var(--success);"></i><p><strong>✓ Selected: ' + this.files[0].name + '</strong></p>';
+            updateDropZonePreview(this.files[0]);
         }
     });
 }

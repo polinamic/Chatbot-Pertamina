@@ -24,4 +24,5 @@ urlpatterns = [
     path('api/stats/', views.dashboard_api_stats, name='api_stats'),
     path('api/documents/upload/', views.api_upload_document, name='api_upload_document'),
     path('api/documents/delete/<int:doc_id>/', views.api_delete_document, name='api_delete_document'),
+    path('api/settings/save/', views.api_save_global_setting, name='api_save_global_setting'),
 ]

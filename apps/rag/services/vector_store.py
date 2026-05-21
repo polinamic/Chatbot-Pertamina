@@ -1,6 +1,7 @@
 import faiss
 import numpy as np
 import logging
+import threading
 from apps.rag.models import DocumentChunk
 from apps.rag.services.embedding import EmbeddingService
 
@@ -23,6 +24,7 @@ class VectorStore:
         self.ids = []
         # Gunakan singleton dari luar jika ada, jika tidak buat baru
         self.embedding_service = embedding_service or EmbeddingService()
+        self._lock = threading.RLock()
 
     # =========================================
     # LOAD ALL EMBEDDINGS FROM DATABASE
@@ -36,6 +38,7 @@ class VectorStore:
         chunks = DocumentChunk.objects.exclude(embedding_vector=None)
 
         vectors = []
+        ids_list = []
 
         for chunk in chunks:
             vec = self.embedding_service.from_bytes(chunk.embedding_vector)
@@ -44,10 +47,13 @@ class VectorStore:
                 continue
 
             vectors.append(vec)
-            self.ids.append(chunk.id)
+            ids_list.append(chunk.id)
 
         if not vectors:
             logger.warning("vector_store_no_embeddings", extra={"total_chunks": len(chunks)})
+            with self._lock:
+                self.index = None
+                self.ids = []
             return
 
         # Convert ke numpy float32
@@ -76,30 +82,35 @@ class VectorStore:
         faiss.normalize_L2(vectors)
 
         # Gunakan Inner Product (IP) untuk cosine
-        self.index = faiss.IndexFlatIP(dimension)
+        new_index = faiss.IndexFlatIP(dimension)
+        new_index.add(vectors)
 
-        self.index.add(vectors)
+        with self._lock:
+            self.index = new_index
+            self.ids = ids_list
 
     # =========================================
     # SEARCH FUNCTION
     # =========================================
     def search(self, query_vector, top_k=5):
 
-        if self.index is None:
-            logger.warning("vector_store_search_no_index")
-            return []
+        with self._lock:
+            if self.index is None:
+                logger.warning("vector_store_search_no_index")
+                return []
 
-        # Convert dan normalize query
-        query_vector = np.array([query_vector]).astype("float32")
-        faiss.normalize_L2(query_vector)
+            # Convert dan normalize query
+            query_vector = np.array([query_vector]).astype("float32")
+            faiss.normalize_L2(query_vector)
 
-        query_norm = float(np.linalg.norm(query_vector))
-        logger.debug("vector_store_search_query", extra={
-            "query_norm": round(query_norm, 3),
-            "dimension": query_vector.shape[1]
-        })
+            query_norm = float(np.linalg.norm(query_vector))
+            logger.debug("vector_store_search_query", extra={
+                "query_norm": round(query_norm, 3),
+                "dimension": query_vector.shape[1]
+            })
 
-        scores, indices = self.index.search(query_vector, top_k)
+            scores, indices = self.index.search(query_vector, top_k)
+            ids_snapshot = list(self.ids)
 
         results = []
 
@@ -108,7 +119,11 @@ class VectorStore:
             if idx == -1:
                 continue
 
-            chunk_id = self.ids[idx]
+            if idx >= len(ids_snapshot):
+                logger.warning("vector_store_idx_out_of_bounds", extra={"idx": int(idx), "ids_len": len(ids_snapshot)})
+                continue
+
+            chunk_id = ids_snapshot[idx]
             similarity_score = float(scores[0][i])  # cosine similarity
 
             results.append({

@@ -53,3 +53,27 @@ class DocumentChunk(models.Model):
     class Meta:
         ordering = ['document', 'chunk_index']
         unique_together = ['document', 'chunk_index']
+
+
+class GlobalSetting(models.Model):
+    """
+    Key-value store untuk konfigurasi global yang dapat diubah via Dashboard.
+
+    Contoh penggunaan:
+        GlobalSetting.objects.get_or_create(key='DEFAULT_INCIDENT_LINK')[0].value
+
+    Keys yang dikenali:
+        'DEFAULT_INCIDENT_LINK' : Fallback URL portal eskalasi tiket IT.
+    """
+    key   = models.CharField(max_length=100, unique=True, db_index=True)
+    value = models.TextField(blank=True, default="")
+
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        verbose_name        = "Global Setting"
+        verbose_name_plural = "Global Settings"
+        ordering            = ['key']
+
+    def __str__(self):
+        return f"{self.key} = {self.value[:60]}"

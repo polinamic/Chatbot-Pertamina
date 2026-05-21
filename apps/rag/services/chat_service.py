@@ -99,8 +99,9 @@ logger = _setup_logger("chatbot")
 # KONFIGURASI VIA ENVIRONMENT VARIABLE
 # =====================================================
 
-MODEL_NAME         = os.getenv("LLM_MODEL", "qwen2.5:7b")
-MAX_CONTEXT_TOKENS = int(os.getenv("MAX_CONTEXT_TOKENS", "2000"))
+MODEL_NAME            = os.getenv("LLM_MODEL", "qwen2.5:7b")
+MAX_CONTEXT_TOKENS    = int(os.getenv("MAX_CONTEXT_TOKENS", "2000"))
+OLLAMA_TIMEOUT_SECONDS = int(os.getenv("OLLAMA_TIMEOUT", "30"))
 
 # Threshold cosine similarity untuk RAG retrieval.
 # Nilai 0.35 dengan all-mpnet-base-v2 dan IndexFlatIP:
@@ -111,8 +112,13 @@ MAX_CONTEXT_TOKENS = int(os.getenv("MAX_CONTEXT_TOKENS", "2000"))
 MIN_SIMILARITY_SCORE = float(os.getenv("MIN_SIMILARITY", "0.35"))
 
 # Threshold cosine similarity untuk Semantic Routing (Layer 2).
-# Nilai 0.65 cukup ketat — hanya match jika benar-benar mirip anchor.
-SEMANTIC_THRESHOLD = float(os.getenv("SEMANTIC_THRESHOLD", "0.65"))
+# Dinaikkan dari 0.65 → 0.78 untuk mencegah false positive pada query IT hardware
+# yang secara semantik dekat dengan anchor "history_general" / "entertainment"
+# karena kesamaan kosakata (wifi, internet, router, laptop).
+# Pada 0.65: "Router wifi muncul LED merah" → sim=0.668 → salah blokir (FP)
+# Pada 0.78: hanya kalimat yang benar-benar OOS (sejarah, resep, dll) yang ditolak.
+# Turunkan ke 0.72 jika OOS lolos; naikkan ke 0.82 jika masih ada FP.
+SEMANTIC_THRESHOLD = float(os.getenv("SEMANTIC_THRESHOLD", "0.78"))
 
 SYSTEM_RULE_CONTENT = (
     "Anda adalah AI IT Support perusahaan yang sangat kompeten.\n\n"
@@ -175,25 +181,41 @@ def get_llm_config(config_name: str = "sop_strict") -> dict:
 # =====================================================
 
 def _default_session() -> Dict:
+    """Return a fresh, zeroed-out session state dict.
+
+    PENTING: Setiap field di sini HARUS di-reset ke nilai awal saat session baru
+    dibuat. Jangan pernah menyimpan state lintas-sesi di level modul (global var)
+    atau class-level attribute — itu penyebab state leakage antar percakapan.
+    """
     return {
         "attempts"                   : 0,
         "offered_support"            : False,
         "awaiting_support_confirmation": False,
         "last_it_problem"            : "",
         "cached_context"             : None,   # RAG context turn pertama — reuse untuk follow-up
-        "failed_steps"               : [],     # Langkah yang sudah dicoba dan gagal
+        "failed_steps"               : [],     # Langkah yang sudah dicoba dan gagal — HARUS [] saat sesi baru
         "history"                    : [],
+        "rag_device"                 : None,
+        "rag_symptom"                : None,
     }
 
 
 class InMemorySessionManager:
-    """Session storage di RAM. Hilang saat restart. Cocok untuk development."""
+    """Session storage di RAM. Hilang saat restart. Cocok untuk development.
+
+    SCOPING RULE (kritis):
+    Setiap `session_id` unik dipetakan ke satu Dict state yang terisolasi.
+    Jangan pernah berbagi referensi Dict yang sama antar `session_id`.
+    State seperti `failed_steps` dan `attempts` TIDAK BOLEH bocor antar sesi.
+    """
     def __init__(self):
         self._store: Dict[str, Dict] = {}
 
     def get(self, session_id: str) -> Dict:
+        """Kembalikan state sesi yang ada, atau buat baru jika belum ada."""
         if session_id not in self._store:
             self._store[session_id] = _default_session()
+            logger.info("session_created", extra={"session_id": session_id})
         return self._store[session_id]
 
     def save(self, session_id: str, session: Dict) -> None:
@@ -201,6 +223,21 @@ class InMemorySessionManager:
 
     def delete(self, session_id: str) -> None:
         self._store.pop(session_id, None)
+
+    def reset(self, session_id: str) -> Dict:
+        """Hapus state lama dan kembalikan sesi baru yang bersih.
+
+        Dipanggil saat user memulai percakapan baru (new_session=True).
+        Memastikan `failed_steps`, `attempts`, dan semua counter kembali ke 0
+        tanpa menunggu session_id yang berbeda.
+        """
+        fresh = _default_session()
+        self._store[session_id] = fresh
+        logger.info("session_reset", extra={
+            "session_id": session_id,
+            "reason": "new_chat_requested",
+        })
+        return fresh
 
 
 # Uncomment saat production (Redis):
@@ -253,16 +290,21 @@ class OutOfScopeSemanticsDetector:
                 "cara membuat minuman smoothie tips chef memasak kuliner masakan"
             ),
             "entertainment": (
-                "jokes lucu tentang wifi dan laptop kumpulan meme dan humor "
-                "cerita lucu dan komedi film movie recommendations lagu musik artis"
+                # PERBAIKAN: Dihapus kata "wifi" dan "laptop" dari anchor ini
+                # agar tidak terjadi semantic bleed dengan query IT hardware.
+                "jokes lucu kumpulan meme humor cerita komedi "
+                "film movie recommendations lagu musik artis hiburan"
             ),
             "advice_opinion": (
                 "mending beli iphone atau android rekomendasi smartphone terbaik "
-                "perbandingan produk laptop hp lenovo mana yang lebih baik saran beli gadget"
+                "perbandingan produk mana yang lebih baik saran beli gadget terbaru"
             ),
             "history_general": (
-                "siapa pencipta wifi dan internet sejarah teknologi kapan ditemukan "
-                "komputer pertama biografi tokoh penemu asal usul"
+                # PERBAIKAN: Dihapus "wifi" dan "internet" dari anchor ini
+                # agar query IT seperti "router wifi LED merah" tidak false-positive.
+                # Anchor kini fokus ke konten sejarah murni tanpa kosakata IT operasional.
+                "siapa penemu listrik sejarah penemuan ilmu pengetahuan kapan ditemukan "
+                "biografi tokoh ilmuwan asal usul peradaban sejarah dunia"
             ),
             "lifestyle": (
                 "tips fashion dan pakaian panduan beauty makeup skincare relationship "
@@ -497,7 +539,7 @@ def rewrite_query_for_rag(
         response = ollama.chat(
             model=MODEL_NAME,
             messages=[{"role": "user", "content": rewrite_prompt}],
-            options=get_llm_config("query_rewrite"),
+            options={**get_llm_config("query_rewrite"), "timeout": OLLAMA_TIMEOUT_SECONDS},
         )
         rewritten = response.get("message", {}).get("content", "").strip()
 
@@ -729,6 +771,7 @@ def detect_intent_llm_fallback(question: str) -> str:
     Layer 3: LLM JSON classifier — dipanggil jika Layer 1 & 2 tidak yakin.
     Pakai format="json" untuk output terstruktur + fallback string parsing.
     """
+    raw = ""  # Pre-initialize to prevent NameError if ollama call fails
     try:
         response = ollama.chat(
             model=MODEL_NAME,
@@ -737,7 +780,7 @@ def detect_intent_llm_fallback(question: str) -> str:
                 {"role": "user",   "content": question},
             ],
             format="json",
-            options=get_llm_config("intent_detect"),
+            options={**get_llm_config("intent_detect"), "timeout": OLLAMA_TIMEOUT_SECONDS},
         )
         raw    = response.get("message", {}).get("content", "").strip()
         parsed = json.loads(raw)
@@ -750,8 +793,7 @@ def detect_intent_llm_fallback(question: str) -> str:
     except (json.JSONDecodeError, Exception) as e:
         logger.warning("intent_json_parse_failed", extra={"error": str(e)})
         # Fallback: string matching pada raw output
-        raw_text = response.get("message", {}).get("content", "").upper() \
-                   if 'response' in locals() else ""
+        raw_text = raw.upper() if raw else ""
         for intent in ["REQUEST_IT_SUPPORT","REJECT_IT_SUPPORT","OUT_OF_SCOPE","SERVICE_ORDER","GENERAL_CHAT","IT_PROBLEM"]:
             if intent in raw_text:
                 return intent
@@ -1037,6 +1079,35 @@ _SERVICE_ITEM_KEYWORDS = re.compile(
     re.IGNORECASE,
 )
 
+# Frasa yang mengindikasikan stok/persediaan habis — tanpa kata "stok" eksplisit.
+# Jika user menyatakan kondisi ini pada item consumable/supplies, sistem harus
+# menyuntikkan "stok supplies" ke dalam query agar cosine similarity dengan
+# chunk "IT Supplies" di knowledge base tidak runtuh ke ~0.007.
+# Contoh trigger:
+#   "kertas disini sudah mau habis"  → inject "stok supplies"
+#   "toner printer udah kosong"      → inject "stok supplies"
+#   "baterai remote AC menipis"      → inject "stok supplies"
+_REPLENISHMENT_SIGNALS = re.compile(
+    r'\b(habis|mau\s+habis|udah\s+habis|sudah\s+habis|'
+    r'hampir\s+habis|menipis|mau\s+menipis|'
+    r'kosong|kehabisan|kekurangan|sedikit|tinggal\s+sedikit|'
+    r'perlu\s+tambah|butuh\s+tambah|butuh\s+stok|'
+    r'mau\s+kosong|sudah\s+kosong|hampir\s+kosong)\b',
+    re.IGNORECASE,
+)
+
+# Item-item yang tergolong consumable/supplies — bukan hardware utama.
+# Digunakan bersama _REPLENISHMENT_SIGNALS untuk memastikan injeksi
+# "stok supplies" hanya dilakukan pada permintaan pengisian ulang,
+# bukan pada hardware seperti laptop yang "habis" masa garansi, dsb.
+_CONSUMABLE_ITEMS = re.compile(
+    r'\b(kertas|tinta|toner|baterai|battery|cd|dvd|pointer|'
+    r'atk|alat\s*tulis|supplies|it\s*supplies|stok|flashdisk|flash\s*disk|'
+    r'sparepart|spare\s*part|souvenir|bulpen|pulpen|staples|amplop|'
+    r'materai|pita|ribbon|cartridge|refill)\b',
+    re.IGNORECASE,
+)
+
 
 def _refine_service_order_query(question: str) -> str:
     """
@@ -1083,6 +1154,36 @@ def _refine_service_order_query(question: str) -> str:
     _SYNONYM_MAP = {"notebook": "laptop", "komputer": "komputer desktop", "hp kantor": "handset"}
     unique_items = [_SYNONYM_MAP.get(i, i) for i in unique_items]
 
+    # ── REPLENISHMENT SIGNAL INJECTION ─────────────────────────────────────────
+    # ROOT CAUSE FIX: Jika user menyatakan kondisi stok habis/kosong/menipis
+    # (mis. "kertas disini sudah mau habis") TANPA kata "stok" eksplisit,
+    # refined query-nya hanya "permintaan kertas" → cosine similarity ~0.007
+    # karena chunk "IT Supplies" di KB mengandung kata "stok", "supplies", dll
+    # yang absen dari query pendek tersebut.
+    #
+    # Solusi: Deteksi _REPLENISHMENT_SIGNALS + _CONSUMABLE_ITEMS secara bersamaan
+    # → Suntikkan "stok supplies" ke dalam query agar embedding query cukup
+    # dekat ke chunk "IT Supplies" dan menghasilkan similarity yang sehat.
+    #
+    # Contoh:
+    #   BEFORE: "permintaan kertas"         → score ~0.007  ← BUG
+    #   AFTER : "permintaan stok kertas supplies" → score ~0.40  ← FIX
+    # ───────────────────────────────────────────────────────────────────────────
+    is_replenishment = bool(
+        _REPLENISHMENT_SIGNALS.search(question)
+        and _CONSUMABLE_ITEMS.search(question)
+    )
+    if is_replenishment:
+        # Suntikkan sinyal domain-supply agar embedding query cukup tebal
+        # untuk match chunk KB. "stok" dan "supplies" adalah anchor words.
+        for signal in ("stok", "supplies"):
+            if signal not in unique_items:
+                unique_items.append(signal)
+        logger.info(
+            "service_order_replenishment_signal_injected",
+            extra={"question": question[:80], "injected": ["stok", "supplies"]},
+        )
+
     # Tentukan action intent dari query
     if re.search(r'\b(pinjam|peminjaman|meminjam)\b', question, re.IGNORECASE):
         action = "peminjaman"
@@ -1092,16 +1193,20 @@ def _refine_service_order_query(question: str) -> str:
         action = "pemasangan"
     elif re.search(r'\b(ajukan|pengajuan)\b', question, re.IGNORECASE):
         action = "pengajuan"
+    elif is_replenishment:
+        # Depletion statement without explicit action word → replenishment = pengadaan
+        action = "pengadaan"
     else:
         action = "permintaan"
 
     refined = f"{action} {' '.join(unique_items)}"
 
     logger.info("service_order_query_refined", extra={
-        "original" : question[:80],
-        "refined"  : refined,
-        "items"    : unique_items,
-        "action"   : action,
+        "original"       : question[:80],
+        "refined"        : refined,
+        "items"          : unique_items,
+        "action"         : action,
+        "is_replenishment": is_replenishment,
     })
     return refined
 
@@ -1185,6 +1290,15 @@ def _extract_service_items_with_llm(question: str, history: Optional[List[Dict]]
         "4. 'kertas' → items: ['kertas']. 'tinta' → items: ['tinta']. 'baterai' → items: ['baterai'].\n"
         "5. 'ATK' atau 'alat tulis' → items: ['ATK'].\n"
         "6. Array KOSONG HANYA jika tidak ada SATU PUN objek fisik dalam kalimat (e.g., 'saya mau pesan', 'orderin dong').\n\n"
+        # ── VERBATIM EXTRACTION RULES ──────────────────────────────────────────
+        # Prevent the LLM from translating Indonesian item names to English
+        # (e.g. "access control pintu" → "access card" is WRONG).
+        "ATURAN EKSTRAKSI VERBATIM (WAJIB — TIDAK BOLEH DILANGGAR):\n"
+        "V1. SALIN KATA-KATA USER PERSIS APA ADANYA. Jangan terjemahkan ke Bahasa Inggris.\n"
+        "V2. Jangan ringkas, ubah, atau parafrase nama item yang disebutkan user.\n"
+        "V3. Contoh SALAH: user tulis 'access control pintu' → JANGAN output 'access card'.\n"
+        "V4. Contoh BENAR: user tulis 'access control pintu' → output 'access control pintu'.\n"
+        "V5. Pertahankan campuran bahasa (Inggris-Indonesia) persis seperti yang diucapkan user.\n\n"
         "CONTOH FEW-SHOT (analisis HANYA kalimat yang diberikan, tanpa konteks lain):\n"
         "  'pesan printer baru'                                            → {\"items\": [\"printer\"]}\n"
         "  'order kertas untuk divisi retail'                              → {\"items\": [\"kertas\"]}\n"
@@ -1194,6 +1308,9 @@ def _extract_service_items_with_llm(question: str, history: Optional[List[Dict]]
         "  'mau order baterai untuk remote AC'                             → {\"items\": [\"baterai\"]}\n"
         "  'saya ingin meminta kartu akses baru'                           → {\"items\": [\"kartu akses\"]}\n"
         "  'butuh access card untuk lantai 3'                              → {\"items\": [\"access card\"]}\n"
+        # Explicit few-shot example for the reported hallucination case:
+        "  'pesan access control pintu'                                    → {\"items\": [\"access control pintu\"]}\n"
+        "  'saya mau order access control untuk pintu kantor'              → {\"items\": [\"access control\"]}\n"
         "  'saya mau order'                                                → {\"items\": []}\n\n"
         "FORMAT OUTPUT: Jawab HANYA dengan JSON. Contoh: {\"items\": [\"printer\"]}\n"
         "Jangan sertakan teks apapun selain JSON."
@@ -1542,48 +1659,64 @@ def _is_valid_link(link: str) -> bool:
 # LLM RESPONSE — System prompt lengkap dari versi lama
 # =====================================================
 
-# Disclaimer hardcoded (bukan instruksi ke LLM) → 100% muncul saat SOP tidak ada
+# Disclaimer hardcoded — prepend via Python HANYA saat RAG tidak menemukan konteks.
+# LLM tidak pernah membuat disclaimer ini sendiri.
 DISCLAIMER = (
-    "⚠️ *Masalah ini belum tercatat dalam panduan SOP resmi kami.*\n\n"
-    "Namun, berikut beberapa langkah umum yang dapat Anda coba terlebih dahulu:\n\n"
+    "\u26a0\ufe0f *Panduan spesifik untuk masalah ini belum tersedia di database resmi IT. "
+    "Berikut adalah saran umum dari AI:* \n\n"
 )
 
 _SOP_SYSTEM_PROMPT_TEMPLATE = """\
 Anda adalah SITI, AI IT Support tingkat L1 di perusahaan. \
-Anda sangat disiplin, profesional, dan kaku terhadap prosedur.
+Anda profesional, empatik, dan mengutamakan kejelasan panduan.
 
 INSTRUKSI KETAT BAHASA
 WAJIB 100%: Gunakan Bahasa Indonesia formal. DILARANG SEKALI Inggris kecuali istilah teknis (Cache, Login, Restart).
-
 Jika user bertanya dalam English, TETAP jawab dalam Bahasa Indonesia.
 
-=== KONTEKS SOP RESMI (WAJIB DIIKUTI 100%) ===
+=== KONTEKS PANDUAN TEKNIS ===
 {context}
-==============================================
+==============================
 
-INSTRUKSI KETAT:
-1. KEPATUHAN SOP: Anda HANYA boleh memberikan langkah yang tertulis di KONTEKS SOP di atas. \
-DILARANG mengarang, menambah, atau memodifikasi berdasarkan pengetahuan eksternal.
-2. EKSEKUSI BERURUTAN: Berikan panduan TAHAP DEMI TAHAP (1, 2, 3...). \
-JANGAN melompati atau merangkum beberapa langkah.
-3. LARANGAN ESKALASI PREMATUR: JANGAN suruh user buat tiket ke IT Helpdesk \
+INSTRUKSI:
+1. Gunakan teknik ABSTRACTIVE SUMMARIZATION: baca konteks di atas, lalu jelaskan
+   langkah-langkah secara jelas, natural, dan mudah diikuti. BOLEH menyusun ulang
+   kalimat agar lebih mudah dipahami, selama MAKNA dan LANGKAH tidak berubah.
+2. CRITICAL RULE — LLM VETO FLAG: Evaluasi apakah KONTEKS DI ATAS benar-benar
+   mengandung solusi yang relevan untuk masalah spesifik user. Jika konteks TIDAK
+   relevan atau tidak membantu, Anda BOLEH menggunakan pengetahuan umum IT internal
+   Anda untuk membantu user. Namun, jika Anda menggunakan pengetahuan internal
+   tersebut, Anda WAJIB memulai respons Anda dengan tag tersembunyi ini persis:
+   [GENERAL_KNOWLEDGE_USED]
+   (Tag ini tidak akan terlihat oleh user — backend akan memprosesnya.)
+3. EKSEKUSI BERURUTAN: Berikan panduan TAHAP DEMI TAHAP (1, 2, 3...).
+4. LARANGAN ESKALASI PREMATUR: JANGAN suruh user buat tiket ke IT Helpdesk \
 KECUALI user sudah menyatakan SELURUH langkah teknis telah gagal.
-4. ISOLASI TOPIK: Jika ada >1 KATEGORI SOP di konteks, pilih SATU yang paling cocok. \
-Abaikan kategori lainnya.
-5. KONSISTENSI TOPIK: Jika user bilang langkah gagal, tetap gunakan SOP dari KATEGORI \
-yang sama. JANGAN comot langkah dari kategori lain.{failed_note}
+5. ISOLASI TOPIK: Jika ada > 1 topik di konteks, pilih SATU yang paling cocok. \
+Abaikan topik lainnya.
+6. KONSISTENSI TOPIK: Jika user bilang langkah gagal, tetap gunakan topik yang \
+sama. JANGAN beralih ke topik lain.{failed_note}
 
 FORMAT JAWABAN (ikuti persis):
 **ANALISIS MASALAH:**
 (Satu kalimat konfirmasi masalah)
 
 **LANGKAH PENYELESAIAN:**
-1. [Langkah dari SOP]
-2. [Langkah dari SOP]
+1. [Langkah pertama]
+2. [Langkah berikutnya]
 ...
 
 **HASIL YANG DIHARAPKAN:**
-(Satu kalimat tentang hasil setelah langkah diikuti)\
+(Satu kalimat tentang hasil setelah langkah diikuti)
+
+CRITICAL — LARANGAN MUTLAK:
+SELESAI di sini. JANGAN tambahkan pertanyaan penutup apapun setelah bagian **HASIL YANG DIHARAPKAN**.
+DILARANG KERAS menuliskan kalimat seperti:
+- "Apakah masalahnya masih belum terselesaikan?"
+- "Apakah masalah Anda sudah terselesaikan?"
+- "Apakah langkah di atas berhasil?"
+- Variasi apapun dari pertanyaan konfirmasi di atas.
+Sistem backend akan menangani konfirmasi ini secara otomatis. HENTIKAN respons tepat setelah **HASIL YANG DIHARAPKAN**.\"
 """
 
 _SMALL_TALK_SYSTEM_PROMPT = """\
@@ -1600,26 +1733,37 @@ Apakah ada masalah jaringan/perangkat yang bisa saya bantu?"
 """
 
 _FALLBACK_SYSTEM_PROMPT = """\
-Anda adalah teknisi IT Support. Jawab dengan empati.
+Anda adalah SITI, AI IT Support. Jawab dengan empati dan bahasa yang jelas.
 
-INSTRUKSI KETAT BAHASA 
+INSTRUKSI KETAT BAHASA
 WAJIB 100%: Gunakan Bahasa Indonesia formal. DILARANG SEKALI Inggris.
 Istilah teknis saja yang boleh (Cache, Login, Restart).
 
-PENTING: Masalah ini TIDAK ADA di SOP resmi kami. 
-Berikan saran umum yang terstruktur bertahap:
+TUGAS: Bantu user menyelesaikan masalah IT-nya menggunakan pengetahuan umum yang relevan.
+Berikan saran teknis bertahap dengan format:
 
-FORMAT:
 **ANALISIS MASALAH:**
-(Ringkas masalahnya)
+(Ringkas masalahnya dalam satu kalimat)
 
 **LANGKAH PENYELESAIAN:**
 1. [Cek hal ini]
 2. [Coba langkah ini]
 3. [Jika masih bermasalah, lakukan ini]
 
+**HASIL YANG DIHARAPKAN:**
+(Satu kalimat tentang hasil setelah langkah diikuti)
+
 Jangan langsung menyuruh hubungi IT sebelum user coba langkah-langkah di atas.
-Tunjukkan empati dan ingatkan bahwa ada support team jika semua gagal.\
+Tunjukkan empati dan ingatkan bahwa ada support team jika semua gagal.
+
+CRITICAL — LARANGAN MUTLAK:
+JANGAN tambahkan pertanyaan penutup apapun di akhir jawaban.
+DILARANG KERAS menuliskan kalimat seperti:
+- "Apakah masalahnya masih belum terselesaikan?"
+- "Apakah masalah Anda sudah terselesaikan?"
+- "Apakah langkah di atas berhasil?"
+- Variasi apapun dari pertanyaan konfirmasi di atas.
+Sistem backend akan menangani konfirmasi ini secara otomatis. HENTIKAN respons tepat setelah **HASIL YANG DIHARAPKAN**.\
 """
 
 
@@ -1646,6 +1790,81 @@ def _build_sop_system_msg(context: str, failed_steps: List[str], user_device: Op
         )
 
     return _SOP_SYSTEM_PROMPT_TEMPLATE.format(context=context, failed_note=failed_note) + device_note
+
+
+# =====================================================
+# POST-PROCESSING — Bulletproof cleanup for TROUBLESHOOT
+# =====================================================
+
+# Catches ANY hallucinated closing question the LLM emits despite negative prompting.
+# Broadened to catch all known variants:
+#   "Apakah masalah sudah terselesaikan? (Sudah / Belum)"
+#   "Apakah masalah Anda sudah terselesaikan?"
+#   "apakah masalahnya masih belum terselesaikan?"
+#   "Apakah langkah di atas berhasil?"
+#   "Apakah solusi ini membantu?"
+#   "Semoga membantu! Apakah masalahnya sudah teratasi?"
+#   Any line containing "(Sudah / Belum)" or "(Sudah/Belum)"
+_CLOSING_QUESTION_RE = re.compile(
+    r'(?:'
+    # Pattern 1: "Apakah masalah/langkah/solusi/kendala/..." + any trailing text + "?"
+    r'Apakah\s+(?:masalah|langkah|solusi|kendala|cara|saran|panduan|tips|metode|error|issue)'
+    r'[^\n]*?\?(?:\s*\(Sudah\s*/\s*Belum\))?'
+    r'|'
+    # Pattern 2: Any line ending with "(Sudah / Belum)" or "(Sudah/Belum)"
+    r'[^\n]*\(\s*Sudah\s*/\s*Belum\s*\)[^\n]*'
+    r'|'
+    # Pattern 3: "Semoga ..." pleasantry followed by a question on the same/next line
+    r'Semoga[^\n]*?\n?\s*Apakah[^\n]*\?[^\n]*'
+    r')',
+    re.IGNORECASE,
+)
+
+# Official confirmation question appended unconditionally by the backend.
+_OFFICIAL_CLOSING = "\n\nApakah masalah Anda sudah terselesaikan? (Sudah / Belum)"
+
+
+# Tag injected by LLM when it falls back to internal knowledge despite receiving context.
+# Must be stripped from the final response and replaced with the official disclaimer.
+_GENERAL_KNOWLEDGE_TAG = "[GENERAL_KNOWLEDGE_USED]"
+
+
+def _post_process_troubleshoot(raw_text: str, context_found: bool) -> str:
+    """
+    Bulletproof post-processor for every TROUBLESHOOT LLM response.
+
+    Steps (in order):
+    1. Detect the LLM Veto Flag [GENERAL_KNOWLEDGE_USED] to catch the
+       "RAG Paradox" false-positive: FAISS returned irrelevant context,
+       Python skipped the disclaimer, but the LLM silently used internal
+       knowledge instead of the useless context.
+    2. Strip hallucinated closing questions produced by the LLM.
+    3. Prepend DISCLAIMER when:
+       a) RAG returned no valid context (context_found=False), OR
+       b) The LLM emitted [GENERAL_KNOWLEDGE_USED] despite context being found.
+    4. Append the single official confirmation question unconditionally.
+    """
+    # 1. Detect & strip LLM Veto Flag — covers the RAG Paradox false-positive.
+    #    The flag may appear at the very start or anywhere in the raw output.
+    llm_used_general_knowledge = _GENERAL_KNOWLEDGE_TAG in raw_text
+    if llm_used_general_knowledge:
+        raw_text = raw_text.replace(_GENERAL_KNOWLEDGE_TAG, "").strip()
+        logger.info("llm_veto_flag_detected", extra={
+            "context_found": context_found,
+            "action": "prepend_disclaimer",
+        })
+
+    # 2. Strip any hallucinated closing question
+    cleaned = _CLOSING_QUESTION_RE.sub('', raw_text).strip()
+
+    # 3. Prepend disclaimer when context was absent OR the LLM vetoed the context
+    if not context_found or llm_used_general_knowledge:
+        cleaned = DISCLAIMER + cleaned
+
+    # 4. Append the one official closing question
+    cleaned = cleaned + _OFFICIAL_CLOSING
+
+    return cleaned
 
 
 def get_llm_response(
@@ -1686,11 +1905,12 @@ def get_llm_response(
 
     if context:
         system_msg = _build_sop_system_msg(context, failed_steps, user_device=rag_device)
-        answer = generate_llm(
+        raw_answer = generate_llm(
             [{"role": "system", "content": system_msg}]
             + history + [{"role": "user", "content": question}],
             config_name="sop_strict",
         )
+        answer = _post_process_troubleshoot(raw_answer, context_found=True)
         logger.info("llm_response_ok", extra={
             "type": "sop", "elapsed_ms": int((time.time()-t0)*1000),
             "ctx_len": len(context),
@@ -1726,18 +1946,20 @@ def get_llm_response(
                 f"{incident_guide}"
             )
 
-        # Turn pertama, tidak ada SOP → LLM fallback dengan DISCLAIMER
-        llm_answer = generate_llm(
+        # Turn pertama, tidak ada SOP → LLM fallback.
+        # Disclaimer + closing question diurus oleh _post_process_troubleshoot().
+        raw_answer = generate_llm(
             [{"role": "system", "content": _FALLBACK_SYSTEM_PROMPT}]
             + history + [{"role": "user", "content": question}],
             config_name="fallback_general",
         )
+        answer = _post_process_troubleshoot(raw_answer, context_found=False)
         logger.info("llm_response_ok", extra={
             "type"      : "fallback",
             "elapsed_ms": int((time.time()-t0)*1000),
             "attempt"   : current_attempt,
         })
-        return DISCLAIMER + llm_answer
+        return answer
 
 
 def get_llm_response_stream(
@@ -1775,11 +1997,13 @@ def get_llm_response_stream(
         if session:
             user_device = session.get("rag_device")
         system_msg = _build_sop_system_msg(context, failed_steps, user_device=user_device)
-        yield from generate_llm_stream(
+        # Buffer full response so post-processing regex can operate on complete text.
+        raw_tokens = list(generate_llm_stream(
             [{"role": "system", "content": system_msg}]
             + history + [{"role": "user", "content": question}],
             config_name="sop_strict",
-        )
+        ))
+        yield _post_process_troubleshoot("".join(raw_tokens), context_found=True)
     else:
         # Streaming fallback — mirror logika sync (FIX 1)
         current_attempt = session.get("attempts", 0) if session else 0
@@ -1795,12 +2019,13 @@ def get_llm_response_stream(
                 f"{incident_guide}"
             )
         else:
-            yield DISCLAIMER
-            yield from generate_llm_stream(
+            # Buffer full response; disclaimer + closing injected by _post_process_troubleshoot.
+            raw_tokens = list(generate_llm_stream(
                 [{"role": "system", "content": _FALLBACK_SYSTEM_PROMPT}]
                 + history + [{"role": "user", "content": question}],
                 config_name="fallback_general",
-            )
+            ))
+            yield _post_process_troubleshoot("".join(raw_tokens), context_found=False)
 
 
 # =====================================================
@@ -1885,16 +2110,13 @@ def _update_history(session: Dict, question: str, answer: str) -> None:
 # CONTEXTUAL MESSAGES
 # =====================================================
 
-# Pesan konfirmasi yang muncul di turn ke-2
-_SOLVED_CONFIRMATION_PROMPT = (
-    "\n\n---\n"
-    "**Apakah masalah Anda sudah terselesaikan?** (Sudah / Belum)"
-)
+# Pesan konfirmasi yang muncul di setiap respons troubleshoot
+_SOLVED_CONFIRMATION_PROMPT = "\n\nApakah masalah Anda sudah terselesaikan? (Sudah / Belum)"
 
 # Respon jika masalah selesai
 _HAPPY_TO_HELP_REPLY = (
-    "Alhamdulillah, saya senang bisa membantu! 😊 Jika ada kendala IT lainnya di kemudian hari, "
-    "jangan ragu untuk menyapa saya kembali. Selamat beraktivitas!"
+    "Senang bisa membantu 😊 Jika nanti ada pertanyaan atau kendala lainnya, "
+    "jangan ragu untuk menghubungi saya kembali. Semoga aktivitas Anda berjalan lancar dan menyenangkan!"
 )
 
 # NOTE: _INCIDENT_ESCALATION_REPLY DELETED
@@ -1929,20 +2151,45 @@ def chat(
     vector_store,
     embedding_service,
     session_id: str = "default",
+    new_session: bool = False,
 ) -> str:
-    """Entry point utama. Return string lengkap."""
+    """Entry point utama. Return string lengkap.
+
+    Args:
+        new_session: Jika True, state sesi (termasuk `failed_steps` dan `attempts`)
+                     di-reset ke 0 sebelum pesan pertama diproses. Gunakan ini
+                     setiap kali user memulai percakapan baru agar counter tidak
+                     bocor dari sesi sebelumnya.
+    """
     question = question.strip()
     if not question:
         return "Ada yang bisa saya bantu?"
 
-    t0      = time.time()
-    session = session_manager.get(session_id)
-    answer  = _process_chat_sync(question, session, vector_store, embedding_service, session_id)
+    t0 = time.time()
+
+    # ── STATE ISOLATION FIX ──────────────────────────────────────────────────
+    # new_session=True wajib dikirim saat frontend membuat chat baru.
+    # Tanpa ini, jika session_id yang sama dipakai lagi (atau selalu "default"),
+    # `failed_steps` dan `attempts` dari percakapan lama akan terbawa.
+    if new_session:
+        session = session_manager.reset(session_id)
+    else:
+        session = session_manager.get(session_id)
+    # ────────────────────────────────────────────────────────────────────────
 
     logger.info("chat_request", extra={
-        "session_id"     : session_id,
-        "question_length": len(question),
-        "elapsed_ms"     : int((time.time() - t0) * 1000),
+        "session_id"        : session_id,
+        "new_session"       : new_session,
+        "question_length"   : len(question),
+        "attempts_at_start" : session.get("attempts", 0),
+        "failed_steps_count": len(session.get("failed_steps", [])),
+    })
+
+    answer = _process_chat_sync(question, session, vector_store, embedding_service, session_id)
+
+    logger.info("chat_response", extra={
+        "session_id" : session_id,
+        "elapsed_ms" : int((time.time() - t0) * 1000),
     })
     return answer
 
@@ -1952,14 +2199,33 @@ def chat_stream(
     vector_store,
     embedding_service,
     session_id: str = "default",
+    new_session: bool = False,
 ) -> Generator[str, None, None]:
-    """Entry point streaming. Yield token per token."""
+    """Entry point streaming. Yield token per token.
+
+    Args:
+        new_session: Jika True, state sesi di-reset ke 0 sebelum pesan pertama
+                     diproses. Wajib dikirim saat frontend membuat chat baru.
+    """
     question = question.strip()
     if not question:
         yield "Ada yang bisa saya bantu?"
         return
 
-    session = session_manager.get(session_id)
+    # ── STATE ISOLATION FIX ──────────────────────────────────────────────────
+    if new_session:
+        session = session_manager.reset(session_id)
+    else:
+        session = session_manager.get(session_id)
+    # ────────────────────────────────────────────────────────────────────────
+
+    logger.info("chat_stream_request", extra={
+        "session_id"        : session_id,
+        "new_session"       : new_session,
+        "attempts_at_start" : session.get("attempts", 0),
+        "failed_steps_count": len(session.get("failed_steps", [])),
+    })
+
     yield from _process_chat_stream(question, session, vector_store, embedding_service, session_id)
 
 
@@ -2025,16 +2291,35 @@ def _handle_escalation_confirmation(
 
     elif confirmation is False:  # User menjawab "Belum/Tidak/Gagal"
         session["awaiting_support_confirmation"] = False
-        # Use dynamic escalation_guide with ORDER_LINK
-        # This retrieves actual form and link from the database for service/repair requests
+
+        # ── Global Incident Fallback ──────────────────────────────────
+        # 1. Coba ambil link dari GlobalSetting (diatur admin via Dashboard).
+        # 2. Jika kosong, gunakan escalation_guide() yang mencari via KB DB.
         preamble = "Mohon maaf langkah-langkah di atas belum berhasil membantu.\n\n"
-        incident_guide = escalation_guide(
-            session.get("last_it_problem") or question, 
-            vector_store, 
-            embedding_service, 
-            doc_type="ORDER_LINK"
-        )
-        answer = preamble + incident_guide
+        try:
+            from apps.rag.models import GlobalSetting
+            gs_obj = GlobalSetting.objects.filter(key="DEFAULT_INCIDENT_LINK").first()
+            default_link = gs_obj.value.strip() if gs_obj else ""
+        except Exception:
+            default_link = ""
+
+        if default_link:
+            answer = (
+                preamble
+                + "Silakan buat tiket eskalasi melalui portal berikut:\n\n"
+                + f"🌐 **Link:** [{default_link}]({default_link})"
+            )
+        else:
+            # Fallback: cari via Knowledge Base DB (dynamic escalation_guide)
+            incident_guide = escalation_guide(
+                session.get("last_it_problem") or question,
+                vector_store,
+                embedding_service,
+                doc_type="ORDER_LINK",
+            )
+            answer = preamble + incident_guide
+        # ─────────────────────────────────────────────────────────────
+
         _update_history(session, question, answer)
         session_manager.save(session_id, session)
         return answer
@@ -2113,7 +2398,20 @@ def _process_chat_sync(
                 if re.search(_kw, question, re.IGNORECASE):
                     action = _label
                     break
-            query_issue = f"{action} {' '.join(str(i).strip() for i in items if i)}"
+            # REPLENISHMENT INJECTION (same logic as _refine_service_order_query)
+            # Handles the edge case where the refiner was bypassed but user implied
+            # stock depletion (e.g. "kertas disini sudah mau habis" with no explicit
+            # action keyword — items=["kertas"] but query would be only "permintaan kertas")
+            item_tokens = [str(i).strip() for i in items if i]
+            if (
+                _REPLENISHMENT_SIGNALS.search(question)
+                and _CONSUMABLE_ITEMS.search(question)
+            ):
+                for signal in ("stok", "supplies"):
+                    if signal not in item_tokens:
+                        item_tokens.append(signal)
+                action = "pengadaan"
+            query_issue = f"{action} {' '.join(item_tokens)}"
         else:
             query_issue = question  # total fallback: nothing extracted
 
@@ -2123,12 +2421,20 @@ def _process_chat_sync(
             "items": items,
         })
         form_name, final_link = _find_service_order_link(query_issue, vector_store, embedding_service)
-        if form_name:
+        if form_name and final_link and final_link != _LINK_NA_SENTINEL:
             answer = (
                 "Baik! Permintaan Anda terdeteksi sebagai **Service Order** (Pengadaan/Pemasangan).\n\n"
-                "Tolong ikuti interuksi sesuai dengan form yang tersedia dibawah.\n\n"
+                "Tolong ikuti instruksi sesuai dengan form yang tersedia dibawah.\n\n"
                 f"📝 NAMA FORM: {form_name}\n\n"
                 f"🔗 Link: [{final_link}]({final_link})"
+            )
+        elif form_name:
+            answer = (
+                "Baik! Permintaan Anda terdeteksi sebagai **Service Order** (Pengadaan/Pemasangan).\n\n"
+                f"Form yang sesuai untuk permintaan Anda adalah **{form_name}**.\n\n"
+                f"Saat ini link langsung untuk form ini belum tersedia. "
+                f"Silakan kunjungi Portal IT Support dan cari form **\"{form_name}\"** secara manual:\n\n"
+                f"🌐 **Portal IT Support:** [{_PORTAL_FALLBACK_URL}]({_PORTAL_FALLBACK_URL})"
             )
         else:
             guide = escalation_guide(query_issue, vector_store, embedding_service, doc_type="ORDER_LINK")
@@ -2164,11 +2470,10 @@ def _process_chat_sync(
         
         session["attempts"] += 1
 
-        # Turn ke-2: Tambahkan pertanyaan konfirmasi penyelesaian
-        if session["attempts"] >= 2 and not session.get("offered_support"):
-            session["offered_support"] = True
-            session["awaiting_support_confirmation"] = True
-            answer += _SOLVED_CONFIRMATION_PROMPT
+        # Konfirmasi "Sudah/Belum" sudah ditambahkan oleh _post_process_troubleshoot().
+        # JANGAN append _SOLVED_CONFIRMATION_PROMPT di sini — itu penyebab duplikasi.
+        session["offered_support"] = True
+        session["awaiting_support_confirmation"] = True
 
     _update_history(session, question, answer)
     session_manager.save(session_id, session)
@@ -2250,7 +2555,17 @@ def _process_chat_stream(
                 if re.search(_kw, question, re.IGNORECASE):
                     action = _label
                     break
-            query_issue = f"{action} {' '.join(str(i).strip() for i in items if i)}"
+            # Mirror replenishment injection from sync path (stream path)
+            item_tokens = [str(i).strip() for i in items if i]
+            if (
+                _REPLENISHMENT_SIGNALS.search(question)
+                and _CONSUMABLE_ITEMS.search(question)
+            ):
+                for signal in ("stok", "supplies"):
+                    if signal not in item_tokens:
+                        item_tokens.append(signal)
+                action = "pengadaan"
+            query_issue = f"{action} {' '.join(item_tokens)}"
         else:
             query_issue = question
 
@@ -2260,11 +2575,19 @@ def _process_chat_stream(
             "items": items,
         })
         form_name, final_link = _find_service_order_link(query_issue, vector_store, embedding_service)
-        if form_name:
+        if form_name and final_link and final_link != _LINK_NA_SENTINEL:
             answer = (
                 "Baik! Permintaan Anda terdeteksi sebagai **Service Order** (Pengadaan/Pemasangan).\n\n"
                 f"📝 NAMA FORM: {form_name}\n"
                 f"🔗 Link: [{final_link}]({final_link})"
+            )
+        elif form_name:
+            answer = (
+                "Baik! Permintaan Anda terdeteksi sebagai **Service Order** (Pengadaan/Pemasangan).\n\n"
+                f"Form yang sesuai untuk permintaan Anda adalah **{form_name}**.\n\n"
+                f"Saat ini link langsung untuk form ini belum tersedia. "
+                f"Silakan kunjungi Portal IT Support dan cari form **\"{form_name}\"** secara manual:\n\n"
+                f"🌐 **Portal IT Support:** [{_PORTAL_FALLBACK_URL}]({_PORTAL_FALLBACK_URL})"
             )
         else:
             guide = escalation_guide(query_issue, vector_store, embedding_service, doc_type="ORDER_LINK")
@@ -2312,12 +2635,10 @@ def _process_chat_stream(
         answer = "".join(full_answer_list)
         session["attempts"] += 1
 
-        # Turn ke-2+: Tawarkan konfirmasi penyelesaian (Sudah/Belum)
-        if session["attempts"] >= 2 and not session.get("offered_support"):
-            session["offered_support"] = True
-            session["awaiting_support_confirmation"] = True
-            yield _SOLVED_CONFIRMATION_PROMPT
-            answer += _SOLVED_CONFIRMATION_PROMPT
+        # Konfirmasi "Sudah/Belum" sudah ditambahkan oleh _post_process_troubleshoot().
+        # JANGAN yield/append _SOLVED_CONFIRMATION_PROMPT di sini — itu penyebab duplikasi.
+        session["offered_support"] = True
+        session["awaiting_support_confirmation"] = True
 
     # 4. Finalisasi: Update history dan simpan session
     if answer:

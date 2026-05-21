@@ -32,6 +32,10 @@ def _get_chat_fn():
     from apps.rag.services.chat_service import chat as chat_fn
     return chat_fn
 
+def _get_chat_stream_fn():
+    from apps.rag.services.chat_service import chat_stream as chat_stream_fn
+    return chat_stream_fn
+
 def _get_rag_dependencies():
     """
     Ambil vector_store dan embedding_service dari singleton AppConfig.
@@ -309,6 +313,10 @@ def siti_chat(request):
     query = body.get("query", "").strip()
     session_id = body.get("session_id", "default")
     user_id = body.get("user_id")
+    # new_session=True signals the start of a fresh conversation.
+    # The chat engine resets failed_steps, attempts, and all counters to 0.
+    # Frontend MUST send this flag when the user opens a new chat window.
+    new_session = bool(body.get("new_session", False))
 
     if not query:
         return JsonResponse({"error": "Field 'query' wajib diisi."}, status=400)
@@ -342,6 +350,7 @@ def siti_chat(request):
             vector_store=vector_store,
             embedding_service=embedding_service,
             session_id=session_id,
+            new_session=new_session,
         )
 
         import types
@@ -502,12 +511,16 @@ def send_message(request, conversation_id):
         chat_fn = _get_chat_fn()
         vector_store, embedding_service = _get_rag_dependencies()
         actual_session_id = session_id or f"conv_{conversation_id}"
+        # new_session resets stale state when caller explicitly requests it.
+        # Default False: mid-conversation messages continue the same session.
+        new_session_flag = bool(request.data.get("new_session", False))
 
         answer = chat_fn(
             question=content,
             vector_store=vector_store,
             embedding_service=embedding_service,
-            session_id=actual_session_id
+            session_id=actual_session_id,
+            new_session=new_session_flag,
         )
 
         Message.objects.create(

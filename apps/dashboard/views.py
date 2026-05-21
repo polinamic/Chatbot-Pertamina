@@ -14,7 +14,7 @@ from apps.core.models import ActivityLog # Document dihapus dari import core
 
 # --- PERBAIKAN IMPORT MODEL RAG ---
 # Sekarang kita menggunakan Document dari RAG sebagai sumber kebenaran utama
-from apps.rag.models import Document, DocumentChunk
+from apps.rag.models import Document, DocumentChunk, GlobalSetting
 
 # Import ingestion service untuk chunking yang lebih baik
 from apps.rag.services.ingestion_service import markdown_aware_chunking, ingest_document
@@ -283,40 +283,47 @@ def analytics(request):
 @user_passes_test(is_admin_or_staff)
 def knowledge_base(request):
     """Knowledge Base Manager - untuk manage panduan troubleshooting & eskalasi
-    
+
     UI ini menampilkan semua knowledge base documents yang tersimpan, dengan stats
     tentang jumlah document, breakdown per tipe (troubleshoot vs escalation).
+    Juga menyediakan form untuk mengatur DEFAULT_INCIDENT_LINK.
     """
     from django.utils import timezone
     from django.db.models import Count, Q
-    
+
     documents = Document.objects.select_related('uploaded_by').order_by('-created_at')
-    
+
     paginator = Paginator(documents, 15)
     page_number = request.GET.get('page', 1)
     page_obj = paginator.get_page(page_number)
-    
+
     # Calculate stats dengan breakdown per doc_type
-    total_docs = Document.objects.count()
+    total_docs         = Document.objects.count()
     troubleshoot_count = Document.objects.filter(doc_type='TROUBLESHOOT').count()
-    escalation_count = Document.objects.filter(doc_type='ESCALATION').count()
-    today_count = Document.objects.filter(created_at__date=timezone.now().date()).count()
-    
+    order_link_count   = Document.objects.filter(doc_type='ORDER_LINK').count()
+    today_count        = Document.objects.filter(created_at__date=timezone.now().date()).count()
+
     stats = {
-        'total': total_docs,
+        'total'       : total_docs,
         'troubleshoot': troubleshoot_count,
-        'escalation': escalation_count,
-        'today': today_count,
-        # Legacy fields untuk compatibility
-        'processed': total_docs,
-        'pending': 0,
+        'order_link'  : order_link_count,
+        'today'       : today_count,
+        'processed'   : total_docs,
+        'pending'     : 0,
     }
-    
+
+    # Ambil nilai DEFAULT_INCIDENT_LINK dari GlobalSetting (buat jika belum ada)
+    incident_setting, _ = GlobalSetting.objects.get_or_create(
+        key='DEFAULT_INCIDENT_LINK',
+        defaults={'value': 'https://myssc.pertamina.com/dwp/app/'},
+    )
+
     context = {
-        'page_obj': page_obj,
-        'stats': stats,
+        'page_obj'              : page_obj,
+        'stats'                 : stats,
+        'default_incident_link' : incident_setting.value,
     }
-    
+
     return render(request, 'dashboard/knowledge_base.html', context)
 
 
@@ -616,3 +623,46 @@ def api_delete_document(request, doc_id):
             'status': 'error', 
             'message': f'Gagal menghapus document: {str(e)}'
         }, status=500)
+
+
+@login_required(login_url='/auth/login/')
+@user_passes_test(is_admin_or_staff)
+@require_http_methods(["POST"])
+def api_save_global_setting(request):
+    """API untuk menyimpan nilai GlobalSetting dari Dashboard.
+
+    Body JSON: { "key": "DEFAULT_INCIDENT_LINK", "value": "https://..." }
+    """
+    import logging
+    _logger = logging.getLogger(__name__)
+
+    try:
+        body = json.loads(request.body)
+    except (json.JSONDecodeError, Exception):
+        return JsonResponse({'status': 'error', 'message': 'Body bukan JSON valid.'}, status=400)
+
+    key   = body.get('key', '').strip()
+    value = body.get('value', '').strip()
+
+    # Whitelist key yang boleh disimpan via dashboard
+    ALLOWED_KEYS = {'DEFAULT_INCIDENT_LINK'}
+    if key not in ALLOWED_KEYS:
+        return JsonResponse({'status': 'error', 'message': f'Key "{key}" tidak diizinkan.'}, status=400)
+
+    try:
+        setting, created = GlobalSetting.objects.update_or_create(
+            key=key,
+            defaults={'value': value},
+        )
+        action = 'created' if created else 'updated'
+        _logger.info(f'global_setting_{action}', extra={'key': key, 'user': request.user.username})
+
+        return JsonResponse({
+            'status' : 'success',
+            'message': f'✅ Pengaturan "{key}" berhasil disimpan.',
+            'key'    : key,
+            'value'  : value,
+        })
+    except Exception as e:
+        _logger.error(f'api_save_global_setting_error: {e}', exc_info=True)
+        return JsonResponse({'status': 'error', 'message': f'Gagal menyimpan: {str(e)}'}, status=500)
