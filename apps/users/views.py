@@ -7,7 +7,7 @@ from django.utils import timezone
 import jwt
 import logging
 
-from .models import UserProfile, UserSettings
+from .models import UserProfile, UserSettings, PasswordResetToken
 from .serializers import (
     UserSerializer, 
     UserProfileSerializer, 
@@ -15,10 +15,15 @@ from .serializers import (
     UserLoginSerializer,
     TokenRefreshSerializer,
     UserUpdateSerializer,
-    ChangePasswordSerializer
+    ChangePasswordSerializer,
+    ForgotPasswordSerializer,
+    ResetPasswordSerializer
 )
 from .token_manager import TokenManager
+from .email_service import EmailService
 from apps.core.models import ActivityLog
+from django.conf import settings
+from django.core.exceptions import ObjectDoesNotExist
 
 logger = logging.getLogger(__name__)
 
@@ -559,3 +564,364 @@ def settings_page(request):
         })
     
     return _settings_page(request)
+
+
+class ForgotPasswordView(views.APIView):
+    """
+    API endpoint untuk request password reset
+    POST /api/auth/forgot-password/
+    
+    Endpoint ini menerima email dan:
+    1. Generate secure random token
+    2. Simpan token hash di database dengan expiry
+    3. Kirim email reset link ke user
+    
+    Security: Selalu return success message apakah email ditemukan atau tidak
+    (mencegah email enumeration)
+    """
+    permission_classes = [AllowAny]
+    
+    def post(self, request):
+        serializer = ForgotPasswordSerializer(data=request.data)
+        
+        if serializer.is_valid():
+            email = serializer.validated_data['email']
+            
+            try:
+                # Find user by email
+                user = User.objects.get(email=email)
+                
+                # Create password reset token
+                plain_token, reset_token = PasswordResetToken.create_for_user(
+                    user, 
+                    expiry_minutes=15
+                )
+                
+                # Build reset link
+                frontend_url = getattr(settings, 'FRONTEND_URL', 'http://localhost:3000')
+                reset_link = f"{frontend_url}/auth/reset-password?token={plain_token}"
+                
+                # Send email
+                email_sent = EmailService.send_password_reset_email(
+                    user.email,
+                    reset_link,
+                    token_expiry_minutes=15
+                )
+                
+                if email_sent:
+                    logger.info(f"Password reset email sent to {user.email}")
+                else:
+                    logger.warning(f"Failed to send password reset email to {user.email}")
+                
+                # Log activity
+                ActivityLog.objects.create(
+                    action='FORGOT_PASSWORD',
+                    description=f'Password reset requested for {user.email}',
+                    user_id=str(user.id),
+                    ip_address=self.get_client_ip(request)
+                )
+                
+            except User.DoesNotExist:
+                # Security best practice: Don't reveal if email exists
+                logger.info(f"Password reset requested for non-existent email: {email}")
+                pass
+            except Exception as e:
+                logger.error(f"Error in forgot password: {str(e)}", exc_info=True)
+            
+            # Always return generic success message (security best practice)
+            return Response({
+                'message': 'Jika email terdaftar, link reset password telah dikirim ke email Anda. Silakan cek inbox atau folder spam Anda.',
+                'code': 'PASSWORD_RESET_EMAIL_SENT'
+            }, status=status.HTTP_200_OK)
+        
+        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+    
+    @staticmethod
+    def get_client_ip(request):
+        """Get client IP address"""
+        x_forwarded_for = request.META.get('HTTP_X_FORWARDED_FOR')
+        if x_forwarded_for:
+            ip = x_forwarded_for.split(',')[0]
+        else:
+            ip = request.META.get('REMOTE_ADDR')
+        return ip
+
+
+class ResetPasswordView(views.APIView):
+    """
+    API endpoint untuk reset password dengan token
+    POST /api/auth/reset-password/
+    
+    Endpoint ini:
+    1. Validasi token (ada, tidak expired, tidak used)
+    2. Update password user
+    3. Tandai token sebagai used
+    4. Kirim confirmation email
+    """
+    permission_classes = [AllowAny]
+    
+    def post(self, request):
+        serializer = ResetPasswordSerializer(data=request.data)
+        
+        if serializer.is_valid():
+            token = serializer.validated_data['token']
+            new_password = serializer.validated_data['new_password']
+            
+            try:
+                # Validate token and get user
+                user, reset_token = PasswordResetToken.get_user_from_token(token)
+                
+                if not user or not reset_token:
+                    return Response({
+                        'error': 'Token tidak valid atau sudah kadaluarsa',
+                        'code': 'INVALID_TOKEN'
+                    }, status=status.HTTP_400_BAD_REQUEST)
+                
+                # Check token validity
+                if not reset_token.is_valid():
+                    if reset_token.is_used:
+                        return Response({
+                            'error': 'Token sudah digunakan',
+                            'code': 'TOKEN_ALREADY_USED'
+                        }, status=status.HTTP_400_BAD_REQUEST)
+                    else:
+                        return Response({
+                            'error': 'Token sudah kadaluarsa',
+                            'code': 'TOKEN_EXPIRED'
+                        }, status=status.HTTP_400_BAD_REQUEST)
+                
+                # Update user password
+                user.set_password(new_password)
+                user.save()
+                
+                # Mark token as used
+                reset_token.mark_as_used()
+                
+                # Send confirmation email
+                EmailService.send_password_changed_confirmation_email(user.email)
+                
+                # Log activity
+                ActivityLog.objects.create(
+                    action='RESET_PASSWORD',
+                    description=f'Password reset completed for {user.email}',
+                    user_id=str(user.id),
+                    ip_address=self.get_client_ip(request)
+                )
+                
+                logger.info(f"Password successfully reset for {user.email}")
+                
+                return Response({
+                    'message': 'Password berhasil diubah. Silakan login dengan password baru Anda.',
+                    'code': 'PASSWORD_RESET_SUCCESS'
+                }, status=status.HTTP_200_OK)
+                
+            except Exception as e:
+                logger.error(f"Error in reset password: {str(e)}", exc_info=True)
+                return Response({
+                    'error': 'Terjadi kesalahan saat mereset password',
+                    'code': 'RESET_PASSWORD_ERROR'
+                }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+        
+        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+    
+    @staticmethod
+    def get_client_ip(request):
+        """Get client IP address"""
+        x_forwarded_for = request.META.get('HTTP_X_FORWARDED_FOR')
+        if x_forwarded_for:
+            ip = x_forwarded_for.split(',')[0]
+        else:
+            ip = request.META.get('REMOTE_ADDR')
+        return ip
+
+
+# Template Views for Web Pages
+def forgot_password_page(request):
+    """
+    Handle forgot password page
+    GET: Display form
+    POST: Process forgot password request
+    """
+    from django.shortcuts import render
+    
+    if request.method == 'POST':
+        email = request.POST.get('email', '').strip().lower()
+        
+        if not email:
+            return render(request, 'users/forgot_password.html', {
+                'error': 'Email wajib diisi'
+            })
+        
+        try:
+            # Find user
+            user = User.objects.get(email=email)
+            
+            # Create password reset token
+            plain_token, reset_token = PasswordResetToken.create_for_user(
+                user,
+                expiry_minutes=15
+            )
+            
+            # Build reset link
+            frontend_url = getattr(settings, 'FRONTEND_URL', 'http://localhost:3000')
+            reset_link = f"{frontend_url}/auth/reset-password?token={plain_token}"
+            
+            # Send email
+            email_sent = EmailService.send_password_reset_email(
+                user.email,
+                reset_link,
+                token_expiry_minutes=15
+            )
+            
+            # Log activity
+            ActivityLog.objects.create(
+                action='FORGOT_PASSWORD',
+                description=f'Password reset requested for {user.email}',
+                user_id=str(user.id),
+                ip_address=get_client_ip(request)
+            )
+            
+            # Show success message
+            return render(request, 'users/forgot_password.html', {
+                'success': True,
+                'message': 'Jika email terdaftar, link reset password telah dikirim ke email Anda. Silakan cek inbox atau folder spam Anda.'
+            })
+            
+        except User.DoesNotExist:
+            # Don't reveal if email exists (security best practice)
+            return render(request, 'users/forgot_password.html', {
+                'success': True,
+                'message': 'Jika email terdaftar, link reset password telah dikirim ke email Anda. Silakan cek inbox atau folder spam Anda.'
+            })
+        except Exception as e:
+            logger.error(f"Forgot password error: {str(e)}", exc_info=True)
+            return render(request, 'users/forgot_password.html', {
+                'error': 'Terjadi kesalahan. Silakan coba lagi nanti.'
+            })
+    
+    return render(request, 'users/forgot_password.html')
+
+
+def reset_password_page(request):
+    """
+    Handle reset password page
+    GET: Display form (validate token first)
+    POST: Process password reset
+    """
+    from django.shortcuts import render, redirect
+    
+    if request.method == 'GET':
+        token = request.GET.get('token', '')
+        
+        if not token:
+            return render(request, 'users/reset_password.html', {
+                'error': 'Token tidak ditemukan'
+            })
+        
+        # Validate token
+        user, reset_token = PasswordResetToken.get_user_from_token(token)
+        
+        if not user or not reset_token:
+            return render(request, 'users/reset_password.html', {
+                'error': 'Token tidak valid atau sudah kadaluarsa'
+            })
+        
+        if not reset_token.is_valid():
+            if reset_token.is_used:
+                return render(request, 'users/reset_password.html', {
+                    'error': 'Token sudah digunakan'
+                })
+            else:
+                return render(request, 'users/reset_password.html', {
+                    'error': 'Token sudah kadaluarsa'
+                })
+        
+        # Token valid, show form
+        return render(request, 'users/reset_password.html', {
+            'token': token,
+            'token_valid': True
+        })
+    
+    if request.method == 'POST':
+        token = request.POST.get('token', '')
+        new_password = request.POST.get('new_password', '')
+        confirm_password = request.POST.get('confirm_password', '')
+        
+        errors = {}
+        
+        # Validation
+        if not token:
+            errors['token'] = 'Token tidak ditemukan'
+        
+        if not new_password:
+            errors['new_password'] = 'Password baru wajib diisi'
+        elif len(new_password) < 8:
+            errors['new_password'] = 'Password minimal 8 karakter'
+        elif not any(char.isupper() for char in new_password):
+            errors['new_password'] = 'Password harus mengandung minimal 1 huruf besar'
+        elif not any(char.isdigit() for char in new_password):
+            errors['new_password'] = 'Password harus mengandung minimal 1 angka'
+        
+        if new_password != confirm_password:
+            errors['confirm_password'] = 'Password tidak cocok'
+        
+        # Validate token
+        user, reset_token = PasswordResetToken.get_user_from_token(token)
+        
+        if not user or not reset_token:
+            errors['token'] = 'Token tidak valid atau sudah kadaluarsa'
+        elif not reset_token.is_valid():
+            if reset_token.is_used:
+                errors['token'] = 'Token sudah digunakan'
+            else:
+                errors['token'] = 'Token sudah kadaluarsa'
+        
+        if errors:
+            return render(request, 'users/reset_password.html', {
+                'errors': errors,
+                'token': token
+            })
+        
+        try:
+            # Update password
+            user.set_password(new_password)
+            user.save()
+            
+            # Mark token as used
+            reset_token.mark_as_used()
+            
+            # Send confirmation email
+            EmailService.send_password_changed_confirmation_email(user.email)
+            
+            # Log activity
+            ActivityLog.objects.create(
+                action='RESET_PASSWORD',
+                description=f'Password reset completed for {user.email}',
+                user_id=str(user.id),
+                ip_address=get_client_ip(request)
+            )
+            
+            return render(request, 'users/reset_password.html', {
+                'success': True,
+                'message': 'Password berhasil diubah. Silakan login dengan password baru Anda.'
+            })
+            
+        except Exception as e:
+            logger.error(f"Reset password error: {str(e)}", exc_info=True)
+            return render(request, 'users/reset_password.html', {
+                'errors': {'general': 'Terjadi kesalahan saat mereset password'},
+                'token': token
+            })
+    
+    return render(request, 'users/reset_password.html')
+
+
+def get_client_ip(request):
+    """Get client IP address"""
+    x_forwarded_for = request.META.get('HTTP_X_FORWARDED_FOR')
+    if x_forwarded_for:
+        ip = x_forwarded_for.split(',')[0]
+    else:
+        ip = request.META.get('REMOTE_ADDR')
+    return ip
+

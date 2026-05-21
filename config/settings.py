@@ -170,6 +170,33 @@ REDIS_URL = config('REDIS_URL', default='redis://localhost:6379/0')
 CELERY_BROKER_URL = REDIS_URL
 CELERY_RESULT_BACKEND = REDIS_URL
 
+# ==========================================
+# EMAIL CONFIGURATION
+# ==========================================
+EMAIL_BACKEND = config(
+    'EMAIL_BACKEND',
+    default='django.core.mail.backends.console.EmailBackend'
+)
+
+# Email configuration - use environment variables
+# For development, use console backend (prints to console)
+# For production, configure SMTP settings
+EMAIL_HOST = config('EMAIL_HOST', default='smtp.gmail.com')
+EMAIL_PORT = config('EMAIL_PORT', default=587, cast=int)
+EMAIL_USE_TLS = config('EMAIL_USE_TLS', default=True, cast=bool)
+EMAIL_HOST_USER = config('EMAIL_HOST_USER', default='')
+EMAIL_HOST_PASSWORD = config('EMAIL_HOST_PASSWORD', default='')
+DEFAULT_FROM_EMAIL = config(
+    'DEFAULT_FROM_EMAIL',
+    default='noreply@sitichatbot.pertamina.com'
+)
+
+# Frontend URL for password reset links
+FRONTEND_URL = config(
+    'FRONTEND_URL',
+    default='http://localhost:3000'
+)
+
 # Logging
 LOGGING = {
     'version': 1,

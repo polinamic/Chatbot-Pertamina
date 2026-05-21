@@ -6,11 +6,15 @@ from .views import (
     LoginView,
     RefreshTokenView,
     LogoutView,
+    ForgotPasswordView,
+    ResetPasswordView,
     signup_page,
     login_page,
     logout_page,
     profile_page,
     settings_page,
+    forgot_password_page,
+    reset_password_page,
 )
 
 app_name = 'users'
@@ -25,6 +29,8 @@ api_urlpatterns = [
     path('auth/login/', LoginView.as_view(), name='api_login'),
     path('auth/refresh/', RefreshTokenView.as_view(), name='api_refresh_token'),
     path('auth/logout/', LogoutView.as_view(), name='api_logout'),
+    path('auth/forgot-password/', ForgotPasswordView.as_view(), name='api_forgot_password'),
+    path('auth/reset-password/', ResetPasswordView.as_view(), name='api_reset_password'),
     path('', include(router.urls)),
 ]
 
@@ -35,4 +41,6 @@ urlpatterns = [
     path('logout/', logout_page, name='logout'),
     path('profile/', profile_page, name='profile'),
     path('settings/', settings_page, name='settings'),
+    path('forgot-password/', forgot_password_page, name='forgot_password'),
+    path('reset-password/', reset_password_page, name='reset_password'),
 ]

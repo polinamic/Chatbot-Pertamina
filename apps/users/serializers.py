@@ -220,3 +220,50 @@ class ChangePasswordSerializer(serializers.Serializer):
         
         return data
 
+
+class ForgotPasswordSerializer(serializers.Serializer):
+    """Serializer untuk request password reset"""
+    email = EmailField(required=True)
+    
+    def validate_email(self, value):
+        """Validate email exists in system"""
+        value = value.lower()
+        # Note: We don't raise error if email doesn't exist (security best practice)
+        # This is handled in the view
+        return value
+
+
+class ResetPasswordSerializer(serializers.Serializer):
+    """Serializer untuk reset password dengan token"""
+    token = serializers.CharField(required=True, write_only=True)
+    new_password = serializers.CharField(write_only=True, required=True, min_length=8)
+    new_password_confirm = serializers.CharField(write_only=True, required=True, min_length=8)
+    
+    def validate_new_password(self, value):
+        """Validate new password strength"""
+        if len(value) < 8:
+            raise serializers.ValidationError("Password minimal 8 karakter")
+        
+        if not any(char.isupper() for char in value):
+            raise serializers.ValidationError("Password harus mengandung minimal 1 huruf besar")
+        
+        if not any(char.isdigit() for char in value):
+            raise serializers.ValidationError("Password harus mengandung minimal 1 angka")
+        
+        return value
+    
+    def validate_token(self, value):
+        """Validate token is not empty"""
+        if not value or not value.strip():
+            raise serializers.ValidationError("Token diperlukan")
+        return value
+    
+    def validate(self, data):
+        """Validate passwords match"""
+        if data['new_password'] != data['new_password_confirm']:
+            raise serializers.ValidationError({
+                'new_password_confirm': 'Password tidak cocok'
+            })
+        
+        return data
+

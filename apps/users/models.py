@@ -1,6 +1,9 @@
 from django.db import models
 from django.contrib.auth.models import User
 from django.contrib.auth.hashers import make_password, check_password
+import secrets
+from django.utils import timezone
+from datetime import timedelta
 
 
 class UserProfile(models.Model):
@@ -113,3 +116,105 @@ class UserSettings(models.Model):
 
     def __str__(self):
         return f"Settings for {self.user.username}"
+
+
+class PasswordResetToken(models.Model):
+    """
+    Model untuk menyimpan token password reset
+    Token di-hash dan disimpan di database untuk keamanan
+    """
+    user = models.OneToOneField(User, on_delete=models.CASCADE, related_name='password_reset_token')
+    token_hash = models.CharField(max_length=255, unique=True, help_text='Hashed reset token')
+    created_at = models.DateTimeField(auto_now_add=True)
+    expires_at = models.DateTimeField(help_text='Token expiry time')
+    is_used = models.BooleanField(default=False, help_text='Whether the token has been used')
+    used_at = models.DateTimeField(null=True, blank=True, help_text='When the token was used')
+
+    class Meta:
+        verbose_name = 'Password Reset Token'
+        verbose_name_plural = 'Password Reset Tokens'
+        indexes = [
+            models.Index(fields=['token_hash']),
+            models.Index(fields=['user', 'is_used']),
+        ]
+
+    def __str__(self):
+        return f"Reset token for {self.user.email}"
+
+    @staticmethod
+    def generate_token():
+        """
+        Generate a cryptographically secure random token
+        Returns: plain token (to be sent to user)
+        """
+        return secrets.token_urlsafe(32)
+
+    @staticmethod
+    def hash_token(token):
+        """
+        Hash the token using Django's password hasher
+        Returns: hashed token (to be stored in DB)
+        """
+        return make_password(token)
+
+    def is_valid(self):
+        """
+        Check if token is still valid (not expired and not used)
+        """
+        return not self.is_used and timezone.now() < self.expires_at
+
+    @classmethod
+    def create_for_user(cls, user, expiry_minutes=15):
+        """
+        Create or update password reset token for user
+        Invalidates any existing token for this user
+        
+        Args:
+            user: User instance
+            expiry_minutes: Token expiry time in minutes
+            
+        Returns:
+            tuple (plain_token, reset_token_obj)
+        """
+        # Invalidate existing token
+        cls.objects.filter(user=user, is_used=False).delete()
+
+        # Generate new token
+        plain_token = cls.generate_token()
+        token_hash = cls.hash_token(plain_token)
+
+        # Create reset token
+        reset_token = cls.objects.create(
+            user=user,
+            token_hash=token_hash,
+            expires_at=timezone.now() + timedelta(minutes=expiry_minutes)
+        )
+
+        return plain_token, reset_token
+
+    @classmethod
+    def get_user_from_token(cls, token):
+        """
+        Validate token and return associated user
+        
+        Args:
+            token: Plain token from user
+            
+        Returns:
+            User instance if valid, None otherwise
+        """
+        # Find all tokens for this token string (since we don't know the hash upfront)
+        # We need to check each unused token
+        reset_tokens = cls.objects.filter(is_used=False)
+        
+        for reset_token in reset_tokens:
+            if reset_token.is_valid() and check_password(token, reset_token.token_hash):
+                return reset_token.user, reset_token
+
+        return None, None
+
+    def mark_as_used(self):
+        """Mark token as used"""
+        self.is_used = True
+        self.used_at = timezone.now()
+        self.save()
