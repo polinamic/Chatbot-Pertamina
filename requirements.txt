@@ -22,14 +22,22 @@ numpy>=1.24.0
 rank-bm25>=0.2.2
 
 # =========================
+# ML / DEEP LEARNING
+# =========================
+# Required by sentence-transformers; embedding.py imports torch directly
+torch>=2.0.0
+
+# =========================
 # LLM (OLLAMA CLIENT)
 # =========================
 ollama>=0.1.7
 
 # =========================
-# AUTH (Optional)
+# AUTH
 # =========================
-djangorestframework-simplejwt>=5.3.1
+# Custom JWT auth in apps/users/token_manager.py uses PyJWT directly.
+# NOTE: djangorestframework-simplejwt was removed — it is never imported anywhere.
+PyJWT>=2.8.0
 
 # =========================
 # REDIS & CELERY
