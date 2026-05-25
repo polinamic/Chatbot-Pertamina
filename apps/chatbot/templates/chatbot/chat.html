@@ -21,13 +21,41 @@
         0%, 80%, 100% { transform: scale(0); }
         40% { transform: scale(1); }
     }
+
+    /* ── Anti-spam: disabled state ───────────────────────────────────── */
+    .new-chat-btn:disabled,
+    .send-btn:disabled {
+        opacity: 0.55;
+        cursor: not-allowed;
+        pointer-events: none;
+    }
+    #message-input:disabled {
+        opacity: 0.55;
+        cursor: not-allowed;
+        resize: none;
+    }
+    /* Spinner inside new-chat-btn while processing */
+    @keyframes spin {
+        to { transform: rotate(360deg); }
+    }
+    .btn-spinner {
+        display: inline-block;
+        width: 12px;
+        height: 12px;
+        border: 2px solid currentColor;
+        border-top-color: transparent;
+        border-radius: 50%;
+        animation: spin 0.7s linear infinite;
+        vertical-align: middle;
+        margin-right: 4px;
+    }
 </style>
 {% endblock %}
 
 {% block content %}
 <div class="chat-container">
     <div class="chat-sidebar">
-        <button class="new-chat-btn" onclick="startNewChat()">
+        <button class="new-chat-btn" id="new-chat-btn" onclick="startNewChat()">
             <i class="bi bi-plus-lg"></i> Chat Baru
         </button>
         
@@ -103,8 +131,23 @@
 
     const input = document.getElementById('message-input');
     const sendBtn = document.getElementById('send-btn');
+    const newChatBtn = document.getElementById('new-chat-btn');
     const messagesContainer = document.getElementById('chat-messages');
     const chatHistoryContainer = document.getElementById('chat-history');
+
+    // ── Anti-spam helpers ────────────────────────────────────────────────
+    // Call setUiBusy(true) the INSTANT an async operation starts.
+    // Call setUiBusy(false) in a finally{} block so it ALWAYS fires.
+    function setUiBusy(busy) {
+        input.disabled    = busy;
+        sendBtn.disabled  = busy;
+        newChatBtn.disabled = busy;
+        if (busy) {
+            newChatBtn.innerHTML = '<span class="btn-spinner"></span> Memproses...';
+        } else {
+            newChatBtn.innerHTML = '<i class="bi bi-plus-lg"></i> Chat Baru';
+        }
+    }
 
     marked.setOptions({
         breaks: true,
@@ -282,30 +325,37 @@
     // START NEW CHAT
     // =====================================
     async function startNewChat() {
-        messagesContainer.innerHTML = `
-            <div class="chat-empty">
-                <div class="chat-empty-icon"><i class="bi bi-robot"></i></div>
-                <h3>SITI AI Assistant</h3>
-                <p>Halo! Saya SITI, Solusi Interaktif Teknologi Informasi.<br>Bagaimana saya bisa membantu Anda hari ini?</p>
-            </div>
-        `;
-        input.value = "";
-        input.style.height = "auto";
-        
-        // Reset new session flag — backend MUST reset its state counters
-        // (failed_steps, attempts, etc.) when the first message of this
-        // new chat arrives. The flag is flipped back to false after dispatch.
-        isNewSession = true;
+        // ── Anti-spam: lock all controls immediately ──────────────────
+        setUiBusy(true);
+        try {
+            messagesContainer.innerHTML = `
+                <div class="chat-empty">
+                    <div class="chat-empty-icon"><i class="bi bi-robot"></i></div>
+                    <h3>SITI AI Assistant</h3>
+                    <p>Halo! Saya SITI, Solusi Interaktif Teknologi Informasi.<br>Bagaimana saya bisa membantu Anda hari ini?</p>
+                </div>
+            `;
+            input.value = "";
+            input.style.height = "auto";
 
-        // Create new conversation in database
-        const convId = await createNewConversation();
-        if (convId) {
-            // Deselect all history items
-            document.querySelectorAll('.chat-item').forEach(item => {
-                item.classList.remove('active');
-            });
-            // Reload chat history to show new conversation
-            loadChatHistory();
+            // Reset new session flag — backend MUST reset its state counters
+            // (failed_steps, attempts, etc.) when the first message of this
+            // new chat arrives. The flag is flipped back to false after dispatch.
+            isNewSession = true;
+
+            // Create new conversation in database
+            const convId = await createNewConversation();
+            if (convId) {
+                // Deselect all history items
+                document.querySelectorAll('.chat-item').forEach(item => {
+                    item.classList.remove('active');
+                });
+                // Reload chat history to show new conversation
+                loadChatHistory();
+            }
+        } finally {
+            // ── Always unlock, even if createNewConversation() throws ──
+            setUiBusy(false);
         }
     }
 
@@ -554,48 +604,54 @@
     // =====================================
     // REMOVE TYPING
     // =====================================
+    // NOTE: isBotThinking and setUiBusy() are now managed exclusively
+    // by the sendMessage() finally{} block. removeTyping() only removes
+    // the DOM indicator — it no longer touches disabled/focus state
+    // to avoid double-toggling.
     function removeTyping(){
         const typing = document.getElementById("typing-indicator");
         if(typing){
             typing.remove();
         }
-        isBotThinking = false;
-        input.disabled = false;
-        sendBtn.disabled = false;
-        input.focus();
     }
 
     // =====================================
     // MAIN SEND MESSAGE
     // =====================================
     async function sendMessage(){
+        // ── Anti-spam gate #1: state flag ──────────────────────────────
+        // isBotThinking is true from the moment we lock controls until
+        // removeTyping() fires, so a racing Enter-key or button click
+        // that slips in before the DOM update is also rejected here.
         if(isBotThinking) return;
 
         const message = input.value.trim();
-        if(!message) return;
+        if(!message) return;  // reject empty / whitespace-only input
 
-        // Ensure conversation exists
-        if (!currentConversationId) {
-            const convId = await createNewConversation();
-            if (!convId) {
-                addBotMessage("Gagal membuat conversation baru. Silakan coba lagi.");
-                return;
-            }
-        }
-
-        addUserMessage(message);
-
+        // ── Anti-spam gate #2: lock ALL controls immediately ───────────
+        // Must happen BEFORE the first await so no concurrent click can
+        // sneak through between the guard check and the first suspension.
         isBotThinking = true;
-        input.disabled = true;
-        sendBtn.disabled = true;
-
-        input.value = "";
-        input.style.height = "auto";
-        messagesContainer.scrollTop = messagesContainer.scrollHeight;
-
-        showTyping();
+        setUiBusy(true);
 
         try {
+            // Ensure conversation exists
+            if (!currentConversationId) {
+                const convId = await createNewConversation();
+                if (!convId) {
+                    addBotMessage("Gagal membuat conversation baru. Silakan coba lagi.");
+                    return;  // finally{} will still run and unlock the UI
+                }
+            }
+
+            addUserMessage(message);
+
+            input.value = "";
+            input.style.height = "auto";
+            messagesContainer.scrollTop = messagesContainer.scrollHeight;
+
+            showTyping();
+
             // ── NEW SESSION FLAG ────────────────────────────────────────────────
             // Capture the flag BEFORE flipping it to false. Only the FIRST message
             // of each new chat session carries new_session=true. The backend uses
@@ -634,13 +690,18 @@
             const botText = (typeof rawAnswer === "string" && rawAnswer.trim())
                 ? rawAnswer
                 : "Maaf, terjadi kesalahan pada server.";
-            
+
             addBotMessage(botText);
 
         } catch(error) {
             removeTyping();
             addBotMessage("Terjadi kesalahan saat menghubungi server AI.");
             console.error("Chat Error:", error);
+        } finally {
+            // ── Always unlock controls, even on error or early return ──
+            isBotThinking = false;
+            setUiBusy(false);
+            input.focus();
         }
     }
 

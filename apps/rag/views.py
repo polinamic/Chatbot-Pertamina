@@ -492,12 +492,20 @@ def send_message(request, conversation_id):
     """
     Kirim pesan baru ke percakapan yang sudah ada via DRF API Endpoint.
     """
-    content = request.data.get('content')
-    session_id = request.data.get('session_id')
-    user_id = request.data.get('user_id')
+    # ── Anti-spam / input validation ─────────────────────────────────────────
+    # Strip BOTH fields before any emptiness check.  A payload that contains
+    # only spaces, tabs, or newlines must be rejected here — it must never
+    # reach the LLM or be written to the database.
+    raw_content  = request.data.get('content', '') or ''
+    content      = raw_content.strip()
+    session_id   = request.data.get('session_id')
+    user_id      = request.data.get('user_id')
 
     if not content:
-        return Response({"error": "Content is required"}, status=status.HTTP_400_BAD_REQUEST)
+        return Response(
+            {"error": "Pesan tidak boleh kosong atau hanya berisi spasi."},
+            status=status.HTTP_400_BAD_REQUEST,
+        )
 
     try:
         from apps.chatbot.models import Conversation, Message
