@@ -2291,6 +2291,11 @@ def _handle_escalation_confirmation(
 
     elif confirmation is False:  # User menjawab "Belum/Tidak/Gagal"
         session["awaiting_support_confirmation"] = False
+        # FIX: Reset counters so the next question doesn't immediately re-escalate
+        # due to stale attempts / failed_steps from the just-closed troubleshoot session.
+        session["attempts"] = 0
+        session["failed_steps"] = []
+        session["cached_context"] = None
 
         # ── Global Incident Fallback ──────────────────────────────────
         # 1. Coba ambil link dari GlobalSetting (diatur admin via Dashboard).
@@ -2367,6 +2372,8 @@ def _process_chat_sync(
         session["last_it_problem"] = ""
         session["attempts"] = 0
         session["offered_support"] = False
+        session["failed_steps"] = []       # FIX: clear stale failed steps from prior IT_PROBLEM
+        session["cached_context"] = None   # FIX: clear stale RAG cache from prior IT_PROBLEM
         # SERVICE_ORDER: skip alur RAG troubleshoot, langsung cari form pengadaan yang relevan
         # via escalation_guide dengan doc_type="ORDER_LINK".
         # Prefer a dense extracted item query to avoid keyword dilution.
@@ -2532,6 +2539,8 @@ def _process_chat_stream(
         session["last_it_problem"] = ""
         session["attempts"] = 0
         session["offered_support"] = False
+        session["failed_steps"] = []       # FIX: clear stale failed steps from prior IT_PROBLEM
+        session["cached_context"] = None   # FIX: clear stale RAG cache from prior IT_PROBLEM
         # SERVICE_ORDER: skip alur RAG troubleshoot, langsung cari form pengadaan yang relevan
         # via escalation_guide dengan doc_type="ORDER_LINK".
         # Prefer a dense extracted item query to avoid keyword dilution.
