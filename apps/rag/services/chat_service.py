@@ -47,12 +47,15 @@ import logging
 import threading
 from typing import List, Dict, Optional, Generator, Tuple
 
+# pyrefly: ignore [missing-import]
 import numpy as np
 
 from apps.rag.models import DocumentChunk
 from apps.rag.services.retrieval import retrieve_context
 
+# pyrefly: ignore [missing-import]
 import ollama
+
 
 
 # =====================================================
@@ -119,7 +122,7 @@ MIN_SIMILARITY_SCORE = float(os.getenv("MIN_SIMILARITY", "0.35"))
 # Pada 0.78: hanya kalimat yang benar-benar OOS (sejarah, resep, dll) yang ditolak.
 # Turunkan ke 0.72 jika OOS lolos; naikkan ke 0.82 jika masih ada FP.
 SEMANTIC_THRESHOLD = float(os.getenv("SEMANTIC_THRESHOLD", "0.78"))
-
+MIN_VALID_RETRIEVAL_SCORE = 0.01
 SYSTEM_RULE_CONTENT = (
     "Anda adalah AI IT Support perusahaan yang sangat kompeten.\n\n"
     "⚠️ INSTRUKSI BAHASA PALING KRITIS ⚠️\n"
@@ -207,13 +210,32 @@ class InMemorySessionManager:
     Setiap `session_id` unik dipetakan ke satu Dict state yang terisolasi.
     Jangan pernah berbagi referensi Dict yang sama antar `session_id`.
     State seperti `failed_steps` dan `attempts` TIDAK BOLEH bocor antar sesi.
+
+    FIX — Memory Leak Guard:
+    `_MAX_SESSIONS` membatasi ukuran store di RAM. Jika batas tercapai, sesi
+    TERLAMA (first-inserted) di-evict sebelum sesi baru dibuat. Ini mencegah
+    pertumbuhan dict tanpa batas di lingkungan produksi hingga migrasi ke Redis.
+    Ganti dengan RedisSessionManager untuk produksi sebenarnya.
     """
+    _MAX_SESSIONS: int = 1000
+
     def __init__(self):
         self._store: Dict[str, Dict] = {}
+
+    def _evict_oldest_if_full(self) -> None:
+        """Hapus sesi tertua jika store sudah mencapai batas maksimum."""
+        if len(self._store) >= self._MAX_SESSIONS:
+            oldest_key = next(iter(self._store))
+            self._store.pop(oldest_key, None)
+            logger.warning("session_evicted_max_capacity", extra={
+                "evicted_session_id": oldest_key,
+                "max_sessions": self._MAX_SESSIONS,
+            })
 
     def get(self, session_id: str) -> Dict:
         """Kembalikan state sesi yang ada, atau buat baru jika belum ada."""
         if session_id not in self._store:
+            self._evict_oldest_if_full()
             self._store[session_id] = _default_session()
             logger.info("session_created", extra={"session_id": session_id})
         return self._store[session_id]
@@ -416,6 +438,9 @@ def generate_llm(
     if temperature is not None:
         llm_config["temperature"] = temperature
 
+    # FIX — Inject timeout so a frozen Ollama server never hangs a Django worker.
+    llm_config.setdefault("timeout", OLLAMA_TIMEOUT_SECONDS)
+
     try:
         response = ollama.chat(
             model=MODEL_NAME,
@@ -448,6 +473,9 @@ def generate_llm_stream(
     llm_config = get_llm_config(config_name)
     if temperature is not None:
         llm_config["temperature"] = temperature
+
+    # FIX — Inject timeout so a frozen Ollama server never hangs a Django worker.
+    llm_config.setdefault("timeout", OLLAMA_TIMEOUT_SECONDS)
 
     try:
         response = ollama.chat(
@@ -524,11 +552,16 @@ def rewrite_query_for_rag(
     history_text = "\n".join(f"- {m}" for m in user_messages)
     anchor = f"Topik masalah utama: {original_problem}\n" if original_problem else ""
 
+    # FIX — Wrap user-controlled content inside XML-like delimiters to
+    # create a hard structural boundary between system instructions and
+    # user input, preventing prompt injection from hijacking the rewriter.
     rewrite_prompt = (
         f"{anchor}"
-        f"Pesan-pesan user sebelumnya:\n{history_text}\n"
-        f"Pesan terbaru: {question}\n\n"
-        "Tugas: Tulis ulang pesan terbaru menjadi satu kalimat pencarian mandiri "
+        f"Pesan-pesan user sebelumnya:\n"
+        f"<user_history>\n{history_text}\n</user_history>\n"
+        f"Pesan terbaru:\n"
+        f"<current_query>\n{question}\n</current_query>\n\n"
+        "Tugas: Tulis ulang <current_query> menjadi satu kalimat pencarian mandiri "
         "dalam Bahasa Indonesia untuk database pencarian.\n"
         "WAJIB: Pertahankan topik masalah yang SAMA, sertakan apa yang sudah dicoba.\n"
         "DILARANG: Mengubah topik, menambah masalah baru, atau menginterpretasi jawaban bot.\n"
@@ -938,10 +971,21 @@ def get_relevant_context(
     if not vector_store or not embedding_service:
         return None
 
-    results = retrieve_context(
-        question, vector_store, embedding_service,
-        doc_type="TROUBLESHOOT", top_k=3,
-    )
+    # FIX — Wrap retrieve_context in try/except so a transient DB/vector-store
+    # failure does not crash the Django worker; return None to let the caller
+    # fall through to the LLM fallback path gracefully.
+    try:
+        results = retrieve_context(
+            question, vector_store, embedding_service,
+            doc_type="TROUBLESHOOT", top_k=3,
+        )
+    except Exception as e:
+        logger.error("rag_retrieval_error", extra={
+            "error": str(e),
+            "query": question[:60],
+            "doc_type": "TROUBLESHOOT",
+        })
+        return None
 
     if not results:
         logger.info("rag_no_results", extra={"query": question[:60]})
@@ -1396,7 +1440,7 @@ def _extract_order_link_from_results(results, doc_type: str) -> Tuple[Optional[s
     # Minimum semantic/re-rank score to consider a candidate valid.
     # Very low scores indicate non-relevant matches and should be ignored
     # to avoid returning generic fallback forms.
-    MIN_VALID_RETRIEVAL_SCORE = 0.01
+    
 
     # Explicit "no link" markers in the raw KB text (case-insensitive)
     _NA_MARKERS = re.compile(
@@ -1490,11 +1534,149 @@ def _extract_order_link_from_results(results, doc_type: str) -> Tuple[Optional[s
     return None, None
 
 
-def _find_service_order_link(query_issue: str, vector_store, embedding_service) -> Tuple[Optional[str], Optional[str]]:
-    results = retrieve_context(
-        query_issue, vector_store, embedding_service,
-        doc_type="ORDER_LINK", top_k=3,
+def _keyword_search_order_link(query_issue: str) -> List[Dict]:
+    """
+    HYBRID SEARCH — LAYER 1: Exact / high-overlap keyword match.
+
+    Strategy:
+    ----------
+    Each ORDER_LINK DocumentChunk stores a structured `TRIGGER KEYWORD: …`
+    line whose comma-separated tokens directly represent the domain vocabulary
+    an admin intended for that form.  When the user's refined query contains
+    multiple of those tokens, vector similarity often *underfits* because the
+    embedding model spreads its attention across function words and connectives.
+    A straight token-coverage score is far more reliable in that scenario.
+
+    Algorithm:
+    ----------
+    1. Tokenise `query_issue` into lowercase words (strip punctuation).
+    2. For each candidate token, issue a fast DB `icontains` scan limited to
+       ORDER_LINK chunks — this uses the existing Django index on `content`.
+    3. For every chunk that matches at least one token, count how many unique
+       query tokens appear in the chunk's `TRIGGER KEYWORD` line specifically
+       (not the full content, to avoid false positives from form names/URLs).
+    4. Compute coverage = matched_unique_tokens / total_query_tokens.
+    5. Return chunks sorted by coverage desc as mock retrieval results with
+       score = coverage, ready for `_extract_order_link_from_results`.
+
+    The caller treats any result with score ≥ MIN_VALID_RETRIEVAL_SCORE as a
+    valid keyword hit and skips the (slower) vector search.
+    """
+    # ── Tokenise query ────────────────────────────────────────────────────────
+    # Strip non-alphanumeric chars, lowercase, deduplicate, minimum 2 chars.
+    raw_tokens = re.split(r'[\s,\-/]+', query_issue.lower())
+    tokens: List[str] = list({t.strip('.,;:()[]') for t in raw_tokens if len(t.strip('.,;:()[]')) >= 2})
+
+    if not tokens:
+        return []
+
+    # ── Regex to isolate the TRIGGER KEYWORD line inside a chunk ─────────────
+    _TK_LINE_RE = re.compile(
+        r'^TRIGGER\s+KEYWORD\s*:\s*(.+?)$',
+        re.IGNORECASE | re.MULTILINE,
     )
+
+    # ── Candidate collection ──────────────────────────────────────────────────
+    # Use a single queryset that ANDs icontains filters for all tokens so we
+    # only load chunks that already contain *every* token somewhere in content.
+    # Then refine the score by counting matches inside the TRIGGER KEYWORD line.
+    # NOTE: DocumentChunk has no doc_type field — it inherits it from Document.
+    # pyrefly: ignore [missing-import]
+    from django.db.models import Q
+    try:
+        qs = DocumentChunk.objects.filter(
+            document__doc_type="ORDER_LINK",
+        )
+        # Require chunk content to mention at least ONE query token somewhere
+        token_filter = Q()
+        for tok in tokens:
+            token_filter |= Q(content__icontains=tok)
+        qs = qs.filter(token_filter).select_related("document")
+    except Exception as e:
+        logger.warning("keyword_search_db_error", extra={"error": str(e)})
+        return []
+
+    scored: List[Dict] = []
+    for chunk in qs:
+        content = chunk.content or ""
+        tk_match = _TK_LINE_RE.search(content)
+        if not tk_match:
+            # No TRIGGER KEYWORD line — skip (guards against non-KB chunks)
+            continue
+
+        tk_line = tk_match.group(1).lower()
+        # Count how many unique query tokens appear in the TRIGGER KEYWORD line
+        matched = [t for t in tokens if t in tk_line]
+        coverage = len(matched) / len(tokens)
+
+        if coverage > 0:
+            scored.append({
+                "content": content,
+                "score": round(coverage, 4),
+                "document_chunk_id": chunk.pk,
+                "_matched_tokens": matched,
+            })
+
+    # Sort descending by coverage so the best match is first
+    scored.sort(key=lambda r: r["score"], reverse=True)
+
+    if scored:
+        logger.info("keyword_search_order_link_hit", extra={
+            "query": query_issue[:80],
+            "top_score": scored[0]["score"],
+            "top_chunk_id": scored[0]["document_chunk_id"],
+            "matched_tokens": scored[0]["_matched_tokens"],
+            "total_candidates": len(scored),
+        })
+
+    return scored
+
+
+def _find_service_order_link(query_issue: str, vector_store, embedding_service, raw_question: str = None) -> Tuple[Optional[str], Optional[str]]:
+    """
+    Hybrid / Cascade Search for ORDER_LINK forms.
+
+    ┌─ LAYER 1: Keyword Match (DB icontains on TRIGGER KEYWORD line) ──────────┐
+    │  Fast, zero-latency, zero-embedding-cost.  Best for short exact queries  │
+    │  like "upgrade quota mailbox email" where vector dilution is a problem.  │
+    └──────────────────────────────────────────────────────────────────────────┘
+         │ hit (coverage ≥ MIN_VALID_RETRIEVAL_SCORE) → return immediately
+         ▼ miss
+    ┌─ LAYER 2: Semantic Vector Search (retrieve_context) ────────────────────┐
+    │  Handles paraphrased, colloquial, and multi-concept queries.            │
+    └─────────────────────────────────────────────────────────────────────────┘
+    """
+    # ── LAYER 1: Keyword Match ────────────────────────────────────────────────
+    search_query = raw_question if raw_question is not None else query_issue
+    kw_results = _keyword_search_order_link(search_query)
+    # Accept the keyword hit only when its coverage is at least the global
+    # similarity threshold (re-uses the same MIN_VALID_RETRIEVAL_SCORE guard
+    # already applied by _extract_order_link_from_results).
+    if kw_results and kw_results[0].get("score", 0) >= MIN_VALID_RETRIEVAL_SCORE:
+        logger.info("find_service_order_using_keyword_layer", extra={
+            "query": search_query[:80],
+            "top_score": kw_results[0]["score"],
+        })
+        return _extract_order_link_from_results(kw_results, "ORDER_LINK")
+
+    logger.debug("find_service_order_keyword_miss_fallback_to_vector", extra={
+        "query": search_query[:80],
+        "kw_candidates": len(kw_results),
+    })
+
+    # ── LAYER 2: Semantic Vector Search ──────────────────────────────────────
+    try:
+        results = retrieve_context(
+            query_issue, vector_store, embedding_service,
+            doc_type="ORDER_LINK", top_k=3,
+        )
+    except Exception as e:
+        logger.error("find_service_order_retrieval_error", extra={
+            "error": str(e),
+            "query": query_issue[:60],
+        })
+        return None, None
+
     # Extra debug: log raw retrieval candidates for troubleshooting relevance
     try:
         logger.debug("find_service_order_raw_results", extra={
@@ -1569,8 +1751,8 @@ def escalation_guide(query_issue: str, vector_store, embedding_service, doc_type
                 return (
                     f"Form yang sesuai untuk permintaan Anda adalah **{form_name}**.\n\n"
                     f"Saat ini link langsung untuk form ini belum tersedia di database kami. "
-                    f"Silakan kunjungi Portal IT Support dan cari form **\"{form_name}\"** secara manual:\n\n"
-                    f"🌐 **Portal IT Support:** [{_PORTAL_FALLBACK_URL}]({_PORTAL_FALLBACK_URL})\n\n"
+                    f"Silakan kunjungi MySSC dan cari form **\"{form_name}\"** secara manual:\n\n"
+                    f"🌐 **MySSC:** [{_PORTAL_FALLBACK_URL}]({_PORTAL_FALLBACK_URL})\n\n"
                     f"Tim IT kami siap membantu Anda jika mengalami kesulitan!"
                 )
 
@@ -1582,7 +1764,7 @@ def escalation_guide(query_issue: str, vector_store, embedding_service, doc_type
         })
         return (
             "Panduan spesifik untuk permintaan ini belum tersedia di database.\n\n"
-            f"Silakan kunjungi Portal IT Support untuk membuat tiket secara manual: "
+            f"Silakan kunjungi MySSC untuk membuat tiket secara manual: "
             f"[{_PORTAL_FALLBACK_URL}]({_PORTAL_FALLBACK_URL})\n\n"
             "Tim IT kami siap membantu Anda selanjutnya!"
         )
@@ -1594,7 +1776,7 @@ def escalation_guide(query_issue: str, vector_store, embedding_service, doc_type
         })
         return (
             "Terjadi kesalahan saat mengambil panduan eskalasi.\n\n"
-            "Silakan hubungi IT Support melalui Portal IT Support."
+            "Silakan hubungi IT Support melalui MySSC."
         )
 
 
@@ -1786,7 +1968,7 @@ def _build_sop_system_msg(context: str, failed_steps: List[str], user_device: Op
             f"\nPERINGATAN: Pengguna menyebut perangkat: {user_device}. "
             "Anda WAJIB mencocokkan jenis perangkat ini dengan perangkat yang terdapat di dokumen SOP di atas. "
             "Jika dokumen SOP yang ditemukan untuk masalah ini ditujukan untuk perangkat berbeda (mis. Handphone/Tablet vs PC/Laptop), JANGAN membuat langkah pemecahan masalah khusus perangkat. "
-            "Sebagai gantinya, jawab bahwa panduan spesifik untuk perangkat pengguna tidak ditemukan di database dan arahkan user untuk membuat tiket di Portal IT Support."
+            "Sebagai gantinya, jawab bahwa panduan spesifik untuk perangkat pengguna tidak ditemukan di database dan arahkan user untuk membuat tiket di MySSC."
         )
 
     return _SOP_SYSTEM_PROMPT_TEMPLATE.format(context=context, failed_note=failed_note) + device_note
@@ -2354,6 +2536,21 @@ def _process_chat_sync(
     # 2. Intent Detection
     intent = detect_intent(question, embedding_service)
 
+    # ── SHADOW SEARCH UNTUK MENCEGAH FALSE OUT_OF_SCOPE ──
+    if intent == "OUT_OF_SCOPE":
+        # 1. Ekstrak kata kunci menggunakan fungsi yang sudah ada
+        extracted_items = _extract_service_items_with_llm(question)
+        search_query = " ".join(extracted_items) if extracted_items else question
+        
+        # 2. Cek ke database Knowledge Base khusus form pengadaan
+        form_name, form_link = _find_service_order_link(search_query, vector_store, embedding_service)
+        
+        # 3. Jika form ditemukan, batalkan status Out of Scope!
+        if form_name:
+            intent = "SERVICE_ORDER"
+            logger.info("oos_overridden_by_kb", extra={"reason": f"Found in KB: {form_name}"})
+    # ─────────────────────────────────────────────────────
+
     # 3. Routing Berdasarkan Intent
     if intent == "GENERAL_CHAT":
         answer = get_llm_response(question, session["history"], "small_talk")
@@ -2427,7 +2624,7 @@ def _process_chat_sync(
             "search_query": query_issue[:80],
             "items": items,
         })
-        form_name, final_link = _find_service_order_link(query_issue, vector_store, embedding_service)
+        form_name, final_link = _find_service_order_link(query_issue, vector_store, embedding_service, raw_question=question)
         if form_name and final_link and final_link != _LINK_NA_SENTINEL:
             answer = (
                 "Baik! Permintaan Anda terdeteksi sebagai **Service Order** (Pengadaan/Pemasangan).\n\n"
@@ -2440,8 +2637,8 @@ def _process_chat_sync(
                 "Baik! Permintaan Anda terdeteksi sebagai **Service Order** (Pengadaan/Pemasangan).\n\n"
                 f"Form yang sesuai untuk permintaan Anda adalah **{form_name}**.\n\n"
                 f"Saat ini link langsung untuk form ini belum tersedia. "
-                f"Silakan kunjungi Portal IT Support dan cari form **\"{form_name}\"** secara manual:\n\n"
-                f"🌐 **Portal IT Support:** [{_PORTAL_FALLBACK_URL}]({_PORTAL_FALLBACK_URL})"
+                f"Silakan kunjungi MySSC dan cari form **\"{form_name}\"** secara manual:\n\n"
+                f"🌐 **Link MySSC:** [{_PORTAL_FALLBACK_URL}]({_PORTAL_FALLBACK_URL})"
             )
         else:
             guide = escalation_guide(query_issue, vector_store, embedding_service, doc_type="ORDER_LINK")
@@ -2511,6 +2708,18 @@ def _process_chat_stream(
 
     # Variable untuk menyimpan jawaban lengkap guna update history di akhir
     answer = ""
+
+    # ── SHADOW SEARCH UNTUK MENCEGAH FALSE OUT_OF_SCOPE ──
+    if intent == "OUT_OF_SCOPE":
+        extracted_items = _extract_service_items_with_llm(question)
+        search_query = " ".join(extracted_items) if extracted_items else question
+        
+        form_name, form_link = _find_service_order_link(search_query, vector_store, embedding_service)
+        
+        if form_name:
+            intent = "SERVICE_ORDER"
+            logger.info("oos_overridden_by_kb_stream", extra={"reason": f"Found in KB: {form_name}"})
+    # ─────────────────────────────────────────────────────
 
     # 3. Routing Berdasarkan Intent
     if intent == "GENERAL_CHAT":
@@ -2583,7 +2792,7 @@ def _process_chat_stream(
             "search_query": query_issue[:80],
             "items": items,
         })
-        form_name, final_link = _find_service_order_link(query_issue, vector_store, embedding_service)
+        form_name, final_link = _find_service_order_link(query_issue, vector_store, embedding_service, raw_question=question)
         if form_name and final_link and final_link != _LINK_NA_SENTINEL:
             answer = (
                 "Baik! Permintaan Anda terdeteksi sebagai **Service Order** (Pengadaan/Pemasangan).\n\n"
@@ -2595,8 +2804,8 @@ def _process_chat_stream(
                 "Baik! Permintaan Anda terdeteksi sebagai **Service Order** (Pengadaan/Pemasangan).\n\n"
                 f"Form yang sesuai untuk permintaan Anda adalah **{form_name}**.\n\n"
                 f"Saat ini link langsung untuk form ini belum tersedia. "
-                f"Silakan kunjungi Portal IT Support dan cari form **\"{form_name}\"** secara manual:\n\n"
-                f"🌐 **Portal IT Support:** [{_PORTAL_FALLBACK_URL}]({_PORTAL_FALLBACK_URL})"
+                f"Silakan kunjungi MySSC dan cari form **\"{form_name}\"** secara manual:\n\n"
+                f"🌐 **MySSC:** [{_PORTAL_FALLBACK_URL}]({_PORTAL_FALLBACK_URL})"
             )
         else:
             guide = escalation_guide(query_issue, vector_store, embedding_service, doc_type="ORDER_LINK")
@@ -2643,9 +2852,6 @@ def _process_chat_stream(
         
         answer = "".join(full_answer_list)
         session["attempts"] += 1
-
-        # Konfirmasi "Sudah/Belum" sudah ditambahkan oleh _post_process_troubleshoot().
-        # JANGAN yield/append _SOLVED_CONFIRMATION_PROMPT di sini — itu penyebab duplikasi.
         session["offered_support"] = True
         session["awaiting_support_confirmation"] = True
 
