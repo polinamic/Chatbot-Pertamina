@@ -784,3 +784,126 @@ def download_kb_file(request, pk):
             'status': 'error',
             'message': f'Gagal download file: {str(e)}'
         }, status=500)
+
+
+@login_required
+@user_passes_test(is_admin_or_staff)
+@require_http_methods(["POST"])
+def edit_kb_content(request, pk):
+    """API untuk edit/update isi text file Knowledge Base dengan re-chunking & re-embedding
+    
+    Request body (JSON):
+        {
+            'content': '<teks baru>'
+        }
+    
+    Flow:
+        1. Parse JSON body
+        2. Update Document.content field
+        3. Overwrite file .txt (UTF-8)
+        4. Delete chunks lama
+        5. Re-chunk dan re-embed dengan ingest_document()
+        6. Return success
+    
+    Returns:
+        JsonResponse: {
+            'status': 'success',
+            'message': 'Konten berhasil diupdate',
+            'document_id': pk,
+            'chunks_created': <jumlah chunks baru>
+        }
+    """
+    import logging
+    logger = logging.getLogger(__name__)
+    
+    try:
+        # Parse JSON body
+        try:
+            body = json.loads(request.body)
+        except json.JSONDecodeError:
+            logger.warning('Invalid JSON in request body')
+            return JsonResponse({
+                'status': 'error',
+                'message': 'Request body harus JSON valid'
+            }, status=400)
+        
+        new_content = body.get('content', '').strip()
+        
+        if not new_content:
+            return JsonResponse({
+                'status': 'error',
+                'message': 'Konten tidak boleh kosong'
+            }, status=400)
+        
+        # Get document
+        document = Document.objects.get(id=pk)
+        logger.info(f'Editing KB content: {document.file_name} by user {request.user.username}')
+        
+        # Update content field
+        document.content = new_content
+        
+        # Update file if it exists
+        if document.file:
+            try:
+                file_path = document.file.path
+                with open(file_path, 'w', encoding='utf-8') as f:
+                    f.write(new_content)
+                logger.info(f'File content updated: {file_path}')
+            except Exception as e:
+                logger.error(f'Error writing file: {str(e)}')
+                # Still continue with ingestion even if file write fails
+        
+        # Save to database
+        document.save()
+        
+        # ===== RE-CHUNKING & RE-EMBEDDING =====
+        # Delete chunks lama dan create chunks baru dengan embedding
+        try:
+            old_chunks_count = document.chunks.count()
+            ingest_document(document)
+            new_chunks_count = document.chunks.count()
+            
+            logger.info(
+                f'Document re-ingested after edit',
+                extra={
+                    'document_id': pk,
+                    'old_chunks_count': old_chunks_count,
+                    'new_chunks_count': new_chunks_count
+                }
+            )
+        except Exception as e:
+            logger.error(f'Error re-ingesting document: {str(e)}', exc_info=True)
+            # Return error if re-ingestion failed
+            return JsonResponse({
+                'status': 'error',
+                'message': f'Konten disimpan tapi gagal melakukan re-chunking: {str(e)}'
+            }, status=500)
+        
+        # Log activity
+        ActivityLog.objects.create(
+            action='UPDATE',
+            description=f'Edited KB content: {document.file_name or document.title} ({new_chunks_count} chunks re-processed)',
+            user_id=request.user.id,
+        )
+        
+        logger.info(f'Document edit completed successfully: {document.file_name} (ID={pk})')
+        
+        return JsonResponse({
+            'status': 'success',
+            'message': '✅ Konten berhasil diupdate dan di-re-chunk',
+            'document_id': pk,
+            'chunks_created': new_chunks_count
+        }, status=200)
+        
+    except Document.DoesNotExist:
+        logger.warning(f'Document not found: ID={pk}')
+        return JsonResponse({
+            'status': 'error',
+            'message': 'Document tidak ditemukan'
+        }, status=404)
+    except Exception as e:
+        logger.error(f'Error editing document: {str(e)}', exc_info=True)
+        return JsonResponse({
+            'status': 'error',
+            'message': f'Gagal mengupdate konten: {str(e)}'
+        }, status=500)

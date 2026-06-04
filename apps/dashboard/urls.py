@@ -27,4 +27,5 @@ urlpatterns = [
     path('api/settings/save/', views.api_save_global_setting, name='api_save_global_setting'),
     path('api/knowledge-base/view/<int:pk>/', views.view_kb_content, name='view_kb_content'),
     path('api/knowledge-base/download/<int:pk>/', views.download_kb_file, name='download_kb_file'),
+    path('api/knowledge-base/edit/<int:pk>/', views.edit_kb_content, name='edit_kb_content'),
 ]
