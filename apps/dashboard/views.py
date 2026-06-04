@@ -1,12 +1,13 @@
 from django.shortcuts import render, get_object_or_404
 from django.contrib.auth.decorators import login_required, user_passes_test
-from django.http import JsonResponse
+from django.http import JsonResponse, FileResponse
 from django.views.decorators.http import require_http_methods
 from django.db.models import Count, Q, Avg
 from django.utils import timezone
 from datetime import timedelta
 from django.core.paginator import Paginator
 import json
+import os
 
 from apps.chatbot.models import Conversation, Message
 from apps.users.models import User
@@ -666,3 +667,120 @@ def api_save_global_setting(request):
     except Exception as e:
         _logger.error(f'api_save_global_setting_error: {e}', exc_info=True)
         return JsonResponse({'status': 'error', 'message': f'Gagal menyimpan: {str(e)}'}, status=500)
+
+
+@login_required
+@user_passes_test(is_admin_or_staff)
+@require_http_methods(["GET"])
+def view_kb_content(request, pk):
+    """API untuk menampilkan isi text file Knowledge Base sebagai JSON
+    
+    Returns:
+        JsonResponse: {
+            'status': 'success',
+            'content': '<isi file text>',
+            'file_name': 'nama_file.txt'
+        }
+    """
+    import logging
+    logger = logging.getLogger(__name__)
+    
+    try:
+        document = Document.objects.get(id=pk)
+        logger.info(f'View KB content: {document.file_name} by user {request.user.username}')
+        
+        # Ambil content dari field content atau dari file
+        if document.content:
+            content = document.content
+        elif document.file:
+            try:
+                with open(document.file.path, 'r', encoding='utf-8') as f:
+                    content = f.read()
+            except Exception as e:
+                logger.error(f'Error reading file: {str(e)}')
+                content = f'[Error membaca file: {str(e)}]'
+        else:
+            content = '[Tidak ada konten tersimpan]'
+        
+        return JsonResponse({
+            'status': 'success',
+            'content': content,
+            'file_name': document.file_name or document.title
+        }, status=200)
+        
+    except Document.DoesNotExist:
+        logger.warning(f'Document not found: ID={pk}')
+        return JsonResponse({
+            'status': 'error',
+            'message': 'Document tidak ditemukan'
+        }, status=404)
+    except Exception as e:
+        logger.error(f'Error viewing document: {str(e)}', exc_info=True)
+        return JsonResponse({
+            'status': 'error',
+            'message': f'Gagal membaca konten: {str(e)}'
+        }, status=500)
+
+
+@login_required
+@user_passes_test(is_admin_or_staff)
+@require_http_methods(["GET"])
+def download_kb_file(request, pk):
+    """API untuk download file Knowledge Base
+    
+    Returns:
+        FileResponse: File dengan content-disposition attachment
+    """
+    import logging
+    logger = logging.getLogger(__name__)
+    
+    try:
+        document = Document.objects.get(id=pk)
+        
+        if not document.file:
+            logger.warning(f'No file associated with document: {document.id}')
+            return JsonResponse({
+                'status': 'error',
+                'message': 'File tidak ditemukan pada sistem'
+            }, status=404)
+        
+        file_path = document.file.path
+        
+        # Check if file exists
+        if not os.path.exists(file_path):
+            logger.error(f'File not found on disk: {file_path}')
+            return JsonResponse({
+                'status': 'error',
+                'message': 'File tidak ditemukan di storage'
+            }, status=404)
+        
+        # Get file name
+        file_name = document.file_name or document.title or 'knowledge_base.txt'
+        if not file_name.endswith('.txt'):
+            file_name += '.txt'
+        
+        logger.info(f'Downloading file: {file_name} by user {request.user.username}')
+        
+        # Open file and return as response
+        response = FileResponse(
+            open(file_path, 'rb'),
+            as_attachment=True,
+            filename=file_name
+        )
+        response['Content-Type'] = 'text/plain; charset=utf-8'
+        response['Content-Disposition'] = f'attachment; filename="{file_name}"'
+        
+        return response
+        
+    except Document.DoesNotExist:
+        logger.warning(f'Document not found: ID={pk}')
+        return JsonResponse({
+            'status': 'error',
+            'message': 'Document tidak ditemukan'
+        }, status=404)
+    except Exception as e:
+        logger.error(f'Error downloading document: {str(e)}', exc_info=True)
+        return JsonResponse({
+            'status': 'error',
+            'message': f'Gagal download file: {str(e)}'
+        }, status=500)
