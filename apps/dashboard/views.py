@@ -401,12 +401,12 @@ def system_settings(request):
     settings_data = {
         'system_name': 'SITI',
         'system_version': '1.0.0',
-        'model': 'Llama 3 (8B Parameters)',
+        'model': 'Qwen 2.5 (7B Parameters)',
         'deployment': 'On-Premise',
         'database': 'MSSQL',
         'rag_enabled': True,
         'max_document_size': '50MB',
-        'supported_formats': ['PDF', 'DOCX', 'TXT', 'MD'],
+        'supported_formats': ['TXT'],
         'auto_refresh_interval': 30,  # seconds
     }
     

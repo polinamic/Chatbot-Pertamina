@@ -1562,12 +1562,34 @@ def _keyword_search_order_link(query_issue: str) -> List[Dict]:
     The caller treats any result with score ≥ MIN_VALID_RETRIEVAL_SCORE as a
     valid keyword hit and skips the (slower) vector search.
     """
+    # ── Stop-word filter ──────────────────────────────────────────────────────
+    # Common Indonesian conversational fillers and pronouns that carry no
+    # domain-specific signal.  A short word like "ada" must NOT match the
+    # substring "pengadaan", so we strip these before any lookup.
+    _STOPWORDS: set = {
+        'ada', 'mau', 'saya', 'aku', 'di', 'ke', 'dari', 'ini', 'itu',
+        'dan', 'atau', 'yang', 'dengan', 'untuk', 'pada', 'ya', 'ga',
+        'tidak', 'bisa', 'dong', 'deh', 'nih', 'lah', 'kan', 'kah',
+        'si', 'nya', 'mu', 'ku', 'pun', 'sih', 'aja', 'juga', 'jadi',
+        'apa', 'bagaimana', 'kenapa', 'dimana', 'kapan', 'siapa',
+    }
+
     # ── Tokenise query ────────────────────────────────────────────────────────
     # Strip non-alphanumeric chars, lowercase, deduplicate, minimum 2 chars.
+    # After deduplication apply stop-word removal so fillers never reach the DB.
     raw_tokens = re.split(r'[\s,\-/]+', query_issue.lower())
-    tokens: List[str] = list({t.strip('.,;:()[]') for t in raw_tokens if len(t.strip('.,;:()[]')) >= 2})
+    tokens: List[str] = list(
+        {
+            t.strip('.,;:()[]')
+            for t in raw_tokens
+            if len(t.strip('.,;:()[]')) >= 2
+            and t.strip('.,;:()[]') not in _STOPWORDS
+        }
+    )
 
     if not tokens:
+        # All meaningful tokens were filtered out (e.g., user typed only "ada").
+        # Signal to the caller that the keyword layer has nothing to work with.
         return []
 
     # ── Regex to isolate the TRIGGER KEYWORD line inside a chunk ─────────────
@@ -1587,7 +1609,10 @@ def _keyword_search_order_link(query_issue: str) -> List[Dict]:
         qs = DocumentChunk.objects.filter(
             document__doc_type="ORDER_LINK",
         )
-        # Require chunk content to mention at least ONE query token somewhere
+        # Require chunk content to mention at least ONE query token somewhere.
+        # Use word-boundary aware REGEXP where the DB supports it; fall back to
+        # icontains only as a broad pre-filter — exact matching happens in
+        # Python below on the TRIGGER KEYWORD line.
         token_filter = Q()
         for tok in tokens:
             token_filter |= Q(content__icontains=tok)
@@ -1605,8 +1630,17 @@ def _keyword_search_order_link(query_issue: str) -> List[Dict]:
             continue
 
         tk_line = tk_match.group(1).lower()
-        # Count how many unique query tokens appear in the TRIGGER KEYWORD line
-        matched = [t for t in tokens if t in tk_line]
+
+        # ── STRICT whole-word matching ─────────────────────────────────────────
+        # BUG-FIX: replace plain `t in tk_line` (substring) with a \b-anchored
+        # regex so that a short token like "ada" does NOT match inside the word
+        # "pengadaan".  re.escape() prevents tokens with special regex chars
+        # (e.g., "c++") from raising an error.
+        def _whole_word_match(token: str, text: str) -> bool:
+            pattern = r'\b' + re.escape(token) + r'\b'
+            return bool(re.search(pattern, text, re.IGNORECASE))
+
+        matched = [t for t in tokens if _whole_word_match(t, tk_line)]
         coverage = len(matched) / len(tokens)
 
         if coverage > 0:
